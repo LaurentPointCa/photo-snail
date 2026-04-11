@@ -20,13 +20,20 @@ import PhotoSnailCore
 final class LibraryStore {
 
     /// Base filter applied to the library grid. Compound filters (search,
-    /// active-tag chips) will layer on top of this in Phase 4.
+    /// active-tag chips) layer on top of this.
     enum Filter: Hashable {
         case all
         case tagged
         case untouched
         case pending
         case failed
+    }
+
+    /// Tag + count pair for the sidebar's popular-tags list.
+    struct TagFrequency: Hashable, Identifiable {
+        let tag: String
+        let count: Int
+        var id: String { tag }
     }
 
     // MARK: - Observable state
@@ -36,16 +43,54 @@ final class LibraryStore {
     var loadError: String? = nil
     var isLoading: Bool = false
 
-    /// Optional single-tag filter applied on top of `filter`. Set via
-    /// `setTagFilter(_:)`, typically from the inspector's tag-chip
-    /// right-click menu. Phase 4 will generalize to multi-tag AND filters.
-    var activeTagFilter: String? = nil
+    /// Active tag filters. Empty set = no tag filter applied. Non-empty set
+    /// is AND-composed with the base `filter`: a row must contain every tag
+    /// in the set to be included. The sidebar's "Active Filters" section
+    /// and the inspector's tag chips mutate this set.
+    var activeTagFilters: Set<String> = []
+
+    /// Case-insensitive substring search over description + tags. An empty
+    /// string disables the filter. Text is matched against the in-memory
+    /// row cache only, so untouched photos (no row) are hidden when a
+    /// search is active.
+    ///
+    /// The `didSet` rebuilds `displayOrder` on mutation so the SwiftUI
+    /// `.searchable` modifier can bind directly without going through a
+    /// helper method — typing in the toolbar search field flows straight
+    /// through to the filter without an intermediate view-layer plumbing step.
+    var searchText: String = "" {
+        didSet {
+            guard oldValue != searchText else { return }
+            rebuildDisplayOrder()
+        }
+    }
 
     /// Current sentinel from `Settings`, loaded once at `load()` time and
     /// kept in memory for the session. Used as the fallback sentinel when
     /// saving an edit on a row that doesn't have its own stored sentinel
     /// (i.e. a pre-v1 row that was processed before the schema migration).
     private(set) var currentSentinel: String = Settings.default.sentinel
+
+    /// Inverted tag index: `tag → set of PHAsset.localIdentifier`. Built
+    /// from the full row cache at load time and patched by the change
+    /// stream. Used by the popular-tags sidebar section and by Phase 5's
+    /// bulk tag operations.
+    private(set) var tagIndex: [String: Set<String>] = [:]
+
+    /// Top-N tags by frequency within the currently-displayed set
+    /// (base filter ∩ active tag filters ∩ search). Recomputed at the
+    /// tail of `rebuildDisplayOrder` so the sidebar's popular-tags
+    /// section adapts to whatever the user is looking at right now —
+    /// cheaper than a stored "global tag histogram" and more useful:
+    /// clicking "cat" then reveals "cat's neighbors" like "kitten" and
+    /// "window" rather than library-wide generic tags.
+    private(set) var popularTags: [TagFrequency] = []
+
+    /// Convenience alphabetically-sorted view of `activeTagFilters` for
+    /// stable rendering in the sidebar. `Set` has no order of its own.
+    var activeTagFiltersOrdered: [String] {
+        activeTagFilters.sorted()
+    }
 
     /// Ordered asset ids as returned by `PHFetchResult`. Source of truth for
     /// total library size. Sorted creation-date ascending at fetch time and
@@ -172,6 +217,7 @@ final class LibraryStore {
             return
         }
 
+        rebuildTagIndex()
         rebuildDisplayOrder()
     }
 
@@ -183,12 +229,49 @@ final class LibraryStore {
         rebuildDisplayOrder()
     }
 
-    /// Set or clear the active tag filter. Passing `nil` clears it.
-    /// Composes AND-style with the base `filter` in `rebuildDisplayOrder`.
-    func setTagFilter(_ tag: String?) {
-        let normalized = tag?.isEmpty == true ? nil : tag
-        guard activeTagFilter != normalized else { return }
-        activeTagFilter = normalized
+    /// Whether a given tag is currently in the active filter set.
+    func isTagActive(_ tag: String) -> Bool {
+        activeTagFilters.contains(tag)
+    }
+
+    /// Add a tag to the filter set. No-op if already present.
+    func addTagFilter(_ tag: String) {
+        guard !tag.isEmpty, !activeTagFilters.contains(tag) else { return }
+        activeTagFilters.insert(tag)
+        rebuildDisplayOrder()
+    }
+
+    /// Remove a tag from the filter set. No-op if absent.
+    func removeTagFilter(_ tag: String) {
+        guard activeTagFilters.contains(tag) else { return }
+        activeTagFilters.remove(tag)
+        rebuildDisplayOrder()
+    }
+
+    /// Toggle a tag's membership in the filter set. The primary left-click
+    /// action on a tag chip: click to include, click again to exclude.
+    func toggleTagFilter(_ tag: String) {
+        if activeTagFilters.contains(tag) {
+            activeTagFilters.remove(tag)
+        } else {
+            activeTagFilters.insert(tag)
+        }
+        rebuildDisplayOrder()
+    }
+
+    /// Replace the active tag set with a single tag. Used by the chip
+    /// context menu's "View only photos with this tag" option.
+    func setSoleTagFilter(_ tag: String) {
+        let next: Set<String> = tag.isEmpty ? [] : [tag]
+        guard activeTagFilters != next else { return }
+        activeTagFilters = next
+        rebuildDisplayOrder()
+    }
+
+    /// Clear every active tag filter.
+    func clearTagFilters() {
+        guard !activeTagFilters.isEmpty else { return }
+        activeTagFilters.removeAll()
         rebuildDisplayOrder()
     }
 
@@ -255,10 +338,12 @@ final class LibraryStore {
                 rows[id] = row
             }
         }
-        // Rebuilding displayOrder on every change is the simple path. At 10k
-        // entries the rebuild is still a few ms. If this becomes a bottleneck
-        // during an active run (worker emits ~1 event per ~65 s, plus any
-        // GUI edits), Phase 7 can switch to incremental patches.
+        // Rebuild the tag index AND the display order. Full-rebuild is the
+        // simple path; at 10k rows × ~8 tags it stays sub-ms for each, and
+        // change events arrive ~1/minute during a run plus at most a few per
+        // second during a bulk edit — easily inside budget. Phase 7 can
+        // switch to incremental patches if this shows up in traces.
+        rebuildTagIndex()
         rebuildDisplayOrder()
     }
 
@@ -269,17 +354,40 @@ final class LibraryStore {
         // fetch, so reverse at filter time. (Lazy reversal via `.reversed()`
         // on Arrays is O(1) — it just swaps indices.)
         let ordered = assetIds.reversed()
-        let tagFilter = activeTagFilter
+
+        let activeTags = activeTagFilters
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let hasSearch = !query.isEmpty
+
         displayOrder = ordered.filter { id in
-            // Base filter
+            // 1. Base filter (status-based).
             guard matchesBaseFilter(id: id) else { return false }
-            // Tag filter (AND with base) — only rows with tags can match; a
-            // row without a row at all, or without the tag, is filtered out.
-            if let t = tagFilter {
-                guard let r = rows[id], r.tags.contains(t) else { return false }
+
+            // 2. Tag filter (AND). Every active tag must be present on the
+            //    row. Untouched rows never match a tag filter (no tags).
+            if !activeTags.isEmpty {
+                guard let r = rows[id] else { return false }
+                for tag in activeTags where !r.tags.contains(tag) {
+                    return false
+                }
             }
+
+            // 3. Text search (substring). Matches on description OR any tag.
+            //    Untouched rows have no description/tags and can't match a
+            //    non-empty query.
+            if hasSearch {
+                guard let r = rows[id] else { return false }
+                let descMatch = r.description.map { $0.lowercased().contains(query) } ?? false
+                if !descMatch {
+                    let tagMatch = r.tags.contains { $0.lowercased().contains(query) }
+                    if !tagMatch { return false }
+                }
+            }
+
             return true
         }
+
+        rebuildPopularTags()
     }
 
     private func matchesBaseFilter(id: String) -> Bool {
@@ -298,6 +406,44 @@ final class LibraryStore {
         case .untouched:
             return rows[id] == nil
         }
+    }
+
+    /// Full rebuild of the inverted tag index from the current row cache.
+    /// Called at `load()` time and on every `applyChange` — at 10k rows ×
+    /// ~8 tags/row the rebuild is a few ms, well within the "imperceptible"
+    /// budget for a change event arriving every ~65 s from the worker.
+    private func rebuildTagIndex() {
+        var idx: [String: Set<String>] = [:]
+        for (id, row) in rows {
+            for tag in row.tags {
+                idx[tag, default: []].insert(id)
+            }
+        }
+        tagIndex = idx
+    }
+
+    /// Recompute the sidebar's popular-tags histogram from the current
+    /// `displayOrder`. Scoped to the displayed set (not the full library)
+    /// so clicking into a filter produces contextually-relevant suggestions
+    /// — filtering by "cat" surfaces "kitten"/"window"/"sunny", not
+    /// library-wide generic tags. Excludes already-active filter tags so
+    /// the list shows only "what else" rather than what's already applied.
+    private func rebuildPopularTags() {
+        var counts: [String: Int] = [:]
+        for id in displayOrder {
+            guard let r = rows[id] else { continue }
+            for tag in r.tags {
+                counts[tag, default: 0] += 1
+            }
+        }
+        for t in activeTagFilters { counts.removeValue(forKey: t) }
+        popularTags = counts
+            .sorted { lhs, rhs in
+                if lhs.value != rhs.value { return lhs.value > rhs.value }
+                return lhs.key < rhs.key
+            }
+            .prefix(20)
+            .map { TagFrequency(tag: $0.key, count: $0.value) }
     }
 
     // No explicit teardown: the subscription task holds `[weak self]`, and

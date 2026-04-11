@@ -55,6 +55,47 @@ struct LibrarySidebar: View {
                 filterRow(.pending, label: "Pending", count: store.pendingCount, systemImage: "hourglass")
                 filterRow(.failed, label: "Failed", count: store.failedCount, systemImage: "exclamationmark.triangle")
             }
+
+            // Active compound filters — only rendered when there's something
+            // to show, so the sidebar stays clean at rest.
+            if !store.activeTagFilters.isEmpty {
+                Section {
+                    ForEach(store.activeTagFiltersOrdered, id: \.self) { tag in
+                        ActiveFilterRow(tag: tag) {
+                            store.removeTagFilter(tag)
+                        }
+                    }
+                    Button("Clear all") {
+                        store.clearTagFilters()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                } header: {
+                    HStack {
+                        Text("Active Filters")
+                        Spacer()
+                        Text("\(store.activeTagFilters.count)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+            }
+
+            // Popular tags in the current display set. Hidden when there's
+            // nothing interesting to show — avoids a lonely empty section.
+            if !store.popularTags.isEmpty {
+                Section("Popular Tags") {
+                    ForEach(store.popularTags) { freq in
+                        PopularTagRow(
+                            frequency: freq,
+                            isActive: store.isTagActive(freq.tag)
+                        ) {
+                            store.toggleTagFilter(freq.tag)
+                        }
+                    }
+                }
+            }
         }
         .listStyle(.sidebar)
         .navigationTitle("photo-snail")
@@ -81,6 +122,65 @@ struct LibrarySidebar: View {
     }
 }
 
+/// One row in the sidebar's Active Filters section: the tag name in a
+/// compact pill + a tap-target × button to remove it.
+private struct ActiveFilterRow: View {
+    let tag: String
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "tag.fill")
+                .imageScale(.small)
+                .foregroundStyle(Color.accentColor)
+            Text(tag)
+                .font(.caption)
+                .lineLimit(1)
+            Spacer()
+            Button {
+                onRemove()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .imageScale(.small)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+/// One row in the sidebar's Popular Tags section: tag name + count. Tap
+/// toggles the tag's membership in `activeTagFilters`. The active state
+/// is indicated by a check glyph plus an accent highlight.
+private struct PopularTagRow: View {
+    let frequency: LibraryStore.TagFrequency
+    let isActive: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack {
+                Image(systemName: isActive ? "checkmark.circle.fill" : "number")
+                    .imageScale(.small)
+                    .foregroundStyle(isActive ? Color.accentColor : .secondary)
+                Text(frequency.tag)
+                    .font(.caption)
+                    .lineLimit(1)
+                Spacer()
+                Text("\(frequency.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(
+            isActive ? Color.accentColor.opacity(0.12) : Color.clear
+        )
+    }
+}
+
 // MARK: - Grid
 
 /// Thumbnail grid bound to `LibraryStore.displayOrder`. Phase 2 uses a
@@ -94,20 +194,23 @@ struct LibraryGrid: View {
     private let gridSpacing: CGFloat = 10
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Active-filter strip: shown only when a compound filter (tag
-            // filter today; multi-tag/search in Phase 4) is in effect. Gives
-            // the user a visible "why is the grid smaller than expected"
-            // answer plus a one-click clear.
-            if let tag = store.activeTagFilter {
-                activeFilterStrip(tag: tag)
-                Divider()
-            }
+        gridBody
+            .navigationTitle(navigationTitleText)
+            .navigationSubtitle(subtitle)
+            // Search field placement is up to the OS: on macOS in a
+            // NavigationSplitView this lands in the toolbar above the grid.
+            .searchable(
+                text: Bindable(store).searchText,
+                placement: .toolbar,
+                prompt: "Search descriptions and tags"
+            )
+    }
 
-            gridBody
-        }
-        .navigationTitle(navigationTitleText)
-        .navigationSubtitle("\(store.displayOrder.count) of \(store.totalCount)")
+    private var subtitle: String {
+        let shown = store.displayOrder.count
+        let total = store.totalCount
+        if shown == total { return "\(total)" }
+        return "\(shown) of \(total)"
     }
 
     @ViewBuilder
@@ -142,36 +245,6 @@ struct LibraryGrid: View {
                 .padding(gridSpacing)
             }
         }
-    }
-
-    @ViewBuilder
-    private func activeFilterStrip(tag: String) -> some View {
-        HStack(spacing: 8) {
-            Text("Filtered by tag")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            HStack(spacing: 4) {
-                Text(tag)
-                    .font(.caption)
-                Button {
-                    store.setTagFilter(nil)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .imageScale(.small)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                Capsule().fill(Color.accentColor.opacity(0.18))
-            )
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(.bar)
     }
 
     // MARK: Dynamic chrome

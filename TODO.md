@@ -202,12 +202,16 @@ _Replace the "batch monitor" GUI with a full library browser: grid of every phot
 - [x] Grid gains a small active-filter strip above the thumbnails when `activeTagFilter != nil`, with a one-click ✕ to clear.
 - [x] Verified: build clean, GUI launches with `PHOTO_SNAIL_NEW_UI=1`, all seven inspector sections render, selection switch resets all per-photo state, tag-filter round-trips work, pre-v1 rows gracefully show "—" for unrecorded fields.
 
-#### Phase 4 — Filters, search, tag-filter magic
-- [ ] Sidebar filter list (All / Tagged / Untouched / Pending / Failed) with live counts.
-- [ ] Active filter chip strip (AND semantics).
-- [ ] Popular tags section (top 20 by frequency in current base filter).
-- [ ] Text search (debounced, matches on description + tags via the in-memory cache).
-- [ ] Right-click on a tag chip → "View photos with this tag" sets the filter.
+#### Phase 4 — Filters, search, tag-filter magic ✅ (2026-04-11)
+- [x] Sidebar filter list with live counts — already in Phase 2; unchanged.
+- [x] Active Filters section in the sidebar: shows each active tag as a row with an inline × to remove, plus a "Clear all" button. Hidden when the set is empty.
+- [x] Popular Tags section: top 20 tags by frequency **within the current display set** (not the global library), so clicking "cat" surfaces neighboring tags instead of library-wide generics. Active tags are excluded to show "what else".
+- [x] `.searchable` on the grid column, placed in the toolbar. `searchText` on LibraryStore has a `didSet` that triggers `rebuildDisplayOrder` on mutation — no view-layer plumbing needed. Substring match is case-insensitive over description OR any tag.
+- [x] LibraryStore gained a multi-tag filter: `activeTagFilters: Set<String>` composed AND-style with the base filter and search. API: `toggleTagFilter`, `addTagFilter`, `removeTagFilter`, `setSoleTagFilter`, `clearTagFilters`, `isTagActive`.
+- [x] Inverted tag index `[String: Set<String>]` rebuilt at load + on every change stream event; at ~80k entries the rebuild is sub-ms.
+- [x] Inspector tag chips: left-click toggles tag membership in the filter set; context menu has four verbs (View only / Add / Remove / Copy) + (in edit mode) Remove from photo.
+- [x] Grid active-filter strip removed — superseded by the sidebar's Active Filters section.
+- [x] Verified end-to-end: search filters as you type, popular tags update contextually, active filters section only appears when non-empty, chip toggle works from inspector and sidebar alike.
 
 #### Phase 5 — Bulk operations
 - [ ] Multi-select state in the grid (cmd/shift-click, arrow range, ⌘A/D).

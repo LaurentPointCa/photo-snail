@@ -261,17 +261,7 @@ private struct InspectorContent: View {
         } else {
             ChipFlowLayout(spacing: 6, runSpacing: 6) {
                 ForEach(activeTags, id: \.self) { tag in
-                    TagChipView(
-                        tag: tag,
-                        isActiveFilter: store.activeTagFilter == tag,
-                        canEdit: isEditing,
-                        onFilter: {
-                            store.setTagFilter(store.activeTagFilter == tag ? nil : tag)
-                        },
-                        onRemove: isEditing ? {
-                            draftTags.removeAll { $0 == tag }
-                        } : nil
-                    )
+                    inspectorTagChip(tag: tag)
                 }
             }
         }
@@ -587,6 +577,27 @@ private struct InspectorContent: View {
         }
     }
 
+    /// Build one tag chip for the inspector's tags section. Extracted as a
+    /// separate helper because the SwiftUI type-checker was timing out on
+    /// the inlined form with the multi-closure `TagChipView` initializer
+    /// and the ternary `onRemove:`.
+    @ViewBuilder
+    private func inspectorTagChip(tag: String) -> some View {
+        let isActive = store.isTagActive(tag)
+        let removeInEdit: (() -> Void)? = isEditing
+            ? { draftTags.removeAll { $0 == tag } }
+            : nil
+        TagChipView(
+            tag: tag,
+            isActiveFilter: isActive,
+            canEdit: isEditing,
+            onToggle: { store.toggleTagFilter(tag) },
+            onViewOnly: { store.setSoleTagFilter(tag) },
+            onRemoveFromFilters: isActive ? { store.removeTagFilter(tag) } : nil,
+            onRemoveFromPhoto: removeInEdit
+        )
+    }
+
     private func addDraftTag() {
         let trimmed = newTagText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !trimmed.isEmpty, !draftTags.contains(trimmed) else {
@@ -637,23 +648,28 @@ private struct InspectorContent: View {
 
 // MARK: - Tag chip
 
-/// Pill-shaped tag label with left-click-to-filter, right-click menu, and
-/// (in edit mode) an inline × remove button.
+/// Pill-shaped tag label with left-click-to-toggle, right-click context menu,
+/// and (in edit mode) an inline × to remove the tag from the photo. The
+/// toggle semantics match the sidebar Popular Tags row so both surfaces
+/// behave the same: click once to add to `activeTagFilters`, click again
+/// to take it back out.
 private struct TagChipView: View {
     let tag: String
     let isActiveFilter: Bool
     let canEdit: Bool
-    let onFilter: () -> Void
-    let onRemove: (() -> Void)?
+    let onToggle: () -> Void
+    let onViewOnly: () -> Void
+    let onRemoveFromFilters: (() -> Void)?
+    let onRemoveFromPhoto: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 4) {
             Text(tag)
                 .font(.caption)
                 .lineLimit(1)
-            if canEdit, let onRemove {
+            if canEdit, let onRemoveFromPhoto {
                 Button {
-                    onRemove()
+                    onRemoveFromPhoto()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .imageScale(.small)
@@ -673,16 +689,22 @@ private struct TagChipView: View {
                 .stroke(isActiveFilter ? Color.accentColor : Color.clear, lineWidth: 1)
         )
         .contentShape(Capsule())
-        .onTapGesture { onFilter() }
+        .onTapGesture { onToggle() }
         .contextMenu {
-            Button("View photos with this tag") { onFilter() }
+            Button("View only photos with this tag", action: onViewOnly)
+            if isActiveFilter, let onRemoveFromFilters {
+                Button("Remove from active filters", action: onRemoveFromFilters)
+            } else {
+                Button("Add to active filters", action: onToggle)
+            }
+            Divider()
             Button("Copy tag") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(tag, forType: .string)
             }
-            if canEdit, let onRemove {
+            if canEdit, let onRemoveFromPhoto {
                 Divider()
-                Button("Remove from this photo", role: .destructive, action: onRemove)
+                Button("Remove from this photo", role: .destructive, action: onRemoveFromPhoto)
             }
         }
     }
