@@ -37,6 +37,55 @@ final class LibraryStore {
         var id: String { tag }
     }
 
+    /// Grid sort order. Raw values are used as UserDefaults keys so the
+    /// user's choice persists across launches.
+    enum SortOrder: String, CaseIterable, Identifiable {
+        /// Creation date descending (newest first). Default. Matches the
+        /// first-launch behavior the grid has had since Phase 2.
+        case dateCreatedDesc
+        case dateCreatedAsc
+        /// Processed-at descending (most-recently-tagged first). Untouched
+        /// rows fall to the end. Useful when reviewing a live batch.
+        case dateProcessedDesc
+        case dateProcessedAsc
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .dateCreatedDesc:   return "Date created (newest)"
+            case .dateCreatedAsc:    return "Date created (oldest)"
+            case .dateProcessedDesc: return "Date processed (newest)"
+            case .dateProcessedAsc:  return "Date processed (oldest)"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .dateCreatedDesc, .dateProcessedDesc: return "arrow.down"
+            case .dateCreatedAsc, .dateProcessedAsc:   return "arrow.up"
+            }
+        }
+    }
+
+    /// Preset thumbnail sizes wired to the toolbar's segmented control
+    /// and to ⌘1/2/3 keyboard shortcuts.
+    enum ThumbnailSize: Int, CaseIterable, Identifiable {
+        case small = 100
+        case medium = 140
+        case large = 200
+
+        var id: Int { rawValue }
+        var points: CGFloat { CGFloat(rawValue) }
+        var label: String {
+            switch self {
+            case .small: return "Small"
+            case .medium: return "Medium"
+            case .large: return "Large"
+            }
+        }
+    }
+
     /// Live progress state for an in-flight bulk operation. Non-nil means
     /// a modal progress sheet is visible. Exposed so SwiftUI's
     /// `.sheet(item:)` can bind to it.
@@ -128,6 +177,45 @@ final class LibraryStore {
     /// `nil` before `load()` completes or if queue open failed.
     private(set) var engine: ProcessingEngine? = nil
 
+    // MARK: - View preferences (persisted)
+
+    /// Thumbnail size used by the grid. Mirrored to UserDefaults so it
+    /// persists across launches without polluting `settings.json` (which
+    /// the CLI reads and has no use for UI preferences).
+    var thumbnailSize: ThumbnailSize = .medium {
+        didSet {
+            guard oldValue != thumbnailSize else { return }
+            UserDefaults.standard.set(thumbnailSize.rawValue, forKey: Self.udKeyThumbnailSize)
+        }
+    }
+
+    /// Grid sort order. Default matches the Phase 2 behavior (newest first)
+    /// so existing users don't see their grid rearrange on upgrade.
+    var sortOrder: SortOrder = .dateCreatedDesc {
+        didSet {
+            guard oldValue != sortOrder else { return }
+            UserDefaults.standard.set(sortOrder.rawValue, forKey: Self.udKeySortOrder)
+            rebuildDisplayOrder()
+        }
+    }
+
+    /// When `true`, the grid auto-scrolls to the currently-processing
+    /// photo whenever the engine advances. Off by default because the
+    /// user is often browsing somewhere else intentionally while a batch
+    /// runs in the background.
+    var followCurrentProcessing: Bool = false {
+        didSet {
+            guard oldValue != followCurrentProcessing else { return }
+            UserDefaults.standard.set(followCurrentProcessing, forKey: Self.udKeyFollowCurrent)
+        }
+    }
+
+    // MARK: - UserDefaults keys
+
+    private static let udKeyThumbnailSize = "photo-snail.thumbnailSize"
+    private static let udKeySortOrder = "photo-snail.sortOrder"
+    private static let udKeyFollowCurrent = "photo-snail.followCurrentProcessing"
+
     /// Convenience alphabetically-sorted view of `activeTagFilters` for
     /// stable rendering in the sidebar. `Set` has no order of its own.
     var activeTagFiltersOrdered: [String] {
@@ -199,9 +287,25 @@ final class LibraryStore {
         isLoading = true
         defer { isLoading = false }
 
-        // 0. Load persistent settings for the sentinel fallback used on
-        //    description edits. A corrupt or missing file falls back to
-        //    `Settings.default` — same policy as the rest of the app.
+        // 0a. View preferences (thumbnail size, sort, follow toggle) from
+        //     UserDefaults. Suppresses the didSet writes by reading into
+        //     a temporary then assigning only if different from the
+        //     in-memory default.
+        if let raw = UserDefaults.standard.object(forKey: Self.udKeyThumbnailSize) as? Int,
+           let size = ThumbnailSize(rawValue: raw) {
+            self.thumbnailSize = size
+        }
+        if let raw = UserDefaults.standard.string(forKey: Self.udKeySortOrder),
+           let order = SortOrder(rawValue: raw) {
+            self.sortOrder = order
+        }
+        if UserDefaults.standard.object(forKey: Self.udKeyFollowCurrent) != nil {
+            self.followCurrentProcessing = UserDefaults.standard.bool(forKey: Self.udKeyFollowCurrent)
+        }
+
+        // 0b. Load persistent settings for the sentinel fallback used on
+        //     description edits. A corrupt or missing file falls back to
+        //     `Settings.default` — same policy as the rest of the app.
         if let loaded = try? Settings.load() {
             let runtime = loaded.withEnvOverrides()
             self.currentSentinel = runtime.sentinel
@@ -676,10 +780,30 @@ final class LibraryStore {
     // MARK: - Filter evaluation
 
     private func rebuildDisplayOrder() {
-        // Display newest-first. `assetIds` is creationDate-ascending from the
-        // fetch, so reverse at filter time. (Lazy reversal via `.reversed()`
-        // on Arrays is O(1) — it just swaps indices.)
-        let ordered = assetIds.reversed()
+        // Start from assetIds in the requested sort. PhotoKit returns them
+        // creationDate-ascending; reverse or re-sort accordingly. Processed-
+        // date sorts fall back to the creation order for rows with no
+        // processedAt (untouched/pending), pushing them to the end of the
+        // list in both ascending and descending orientations.
+        let ordered: [String]
+        switch sortOrder {
+        case .dateCreatedDesc:
+            ordered = Array(assetIds.reversed())
+        case .dateCreatedAsc:
+            ordered = assetIds
+        case .dateProcessedDesc:
+            ordered = assetIds.sorted { a, b in
+                let ta = rows[a]?.processedAt ?? Int64.min
+                let tb = rows[b]?.processedAt ?? Int64.min
+                return ta > tb
+            }
+        case .dateProcessedAsc:
+            ordered = assetIds.sorted { a, b in
+                let ta = rows[a]?.processedAt ?? Int64.max
+                let tb = rows[b]?.processedAt ?? Int64.max
+                return ta < tb
+            }
+        }
 
         let activeTags = activeTagFilters
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

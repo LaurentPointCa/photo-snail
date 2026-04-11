@@ -242,10 +242,13 @@ _Replace the "batch monitor" GUI with a full library browser: grid of every phot
 - [x] Inspector observes `wantsEdit` and auto-enters edit mode when the grid flips it.
 - [x] Deferred: up/down arrow nav (adaptive grid column count is unstable), SceneStorage (macOS auto-saves window frame), light/dark review (system colors already adapt).
 
-#### Phase 8 — Settings sheet refresh
-- [ ] Same capabilities as today (model / sentinel / Ollama).
-- [ ] Add: default thumbnail size, default sort order, "Follow current processing in grid" toggle.
-- [ ] Visual pass to match the rest of the revamp.
+#### Phase 8 — View preferences ✅ (2026-04-11)
+- [x] Thumbnail size presets (Small/Medium/Large) as a segmented picker in the window toolbar, bound directly to `store.thumbnailSize` via Bindable. Keyboard: ⌘1 / ⌘2 / ⌘3. Persisted via UserDefaults.
+- [x] Sort order menu in the toolbar with four options: Date created asc/desc, Date processed asc/desc. Current selection marked with a checkmark. Persisted via UserDefaults. `rebuildDisplayOrder` branches on the enum and handles the NULL-processedAt fallthrough for untouched/pending rows.
+- [x] "Follow in grid" toggle at the bottom of the runner dock. When on, `LibraryGrid.onChange(of: store.engine?.currentPhotoID)` scrolls the grid to the in-flight photo every engine advance. Persisted via UserDefaults.
+- [x] All three preferences loaded at `LibraryStore.load()` time from UserDefaults, written through on every mutation via `didSet`. Kept off `settings.json` deliberately — these are view-layer UI state, not CLI-relevant configuration.
+- [x] Legend popover updated with the new ⌘1/2/3 shortcut.
+- [x] Settings sheet visual pass skipped — it's fine as-is and the new prefs belong inline in the toolbar/dock, not buried in a modal.
 
 ### Phase H — (deferred) Production polish
 _Phase H was planned as an optional polish layer. A mid-batch review on 2026-04-11 (535/7,632 photos done, 0 failed) showed no quality issues that would justify the originally-planned work — descriptions averaged ~196 chars, tag counts 7–14, zero duplicates, zero failures. The four original items have been moved to "Potential future improvements" below. The active roadmap (Phases A–G) is complete and the CLI/GUI are in production use._

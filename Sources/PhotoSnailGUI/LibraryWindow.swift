@@ -41,6 +41,45 @@ struct LibraryWindow: View {
                         .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 440)
                 }
                 .toolbar {
+                    // Sort order menu — acts on the grid. Placed first so
+                    // the eye reaches it before the view-style picker.
+                    ToolbarItem(placement: .automatic) {
+                        Menu {
+                            ForEach(LibraryStore.SortOrder.allCases) { option in
+                                Button {
+                                    store.sortOrder = option
+                                } label: {
+                                    // Checkmark on the currently-selected
+                                    // option so the menu doubles as state.
+                                    if store.sortOrder == option {
+                                        Label(option.label, systemImage: "checkmark")
+                                    } else {
+                                        Text(option.label)
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label("Sort", systemImage: "arrow.up.arrow.down")
+                        }
+                        .help("Sort order")
+                    }
+
+                    // Thumbnail size — three-way segmented picker bound
+                    // directly to the store's preset enum. ⌘1/2/3 hit the
+                    // same code path via the grid's key handler.
+                    ToolbarItem(placement: .automatic) {
+                        Picker("Thumbnail size", selection: Bindable(store).thumbnailSize) {
+                            Image(systemName: "square.grid.4x3.fill")
+                                .tag(LibraryStore.ThumbnailSize.small)
+                            Image(systemName: "square.grid.3x3.fill")
+                                .tag(LibraryStore.ThumbnailSize.medium)
+                            Image(systemName: "square.grid.2x2.fill")
+                                .tag(LibraryStore.ThumbnailSize.large)
+                        }
+                        .pickerStyle(.segmented)
+                        .help("Thumbnail size (⌘1 / ⌘2 / ⌘3)")
+                    }
+
                     ToolbarItem(placement: .automatic) {
                         Button {
                             showLegend = true
@@ -228,7 +267,9 @@ private struct PopularTagRow: View {
 struct LibraryGrid: View {
     @Bindable var store: LibraryStore
 
-    private let thumbnailSize: CGFloat = 140
+    /// Derived from `store.thumbnailSize`. Kept as a computed property so
+    /// changing the store's preset automatically propagates to the grid.
+    private var thumbnailSize: CGFloat { store.thumbnailSize.points }
     private let gridSpacing: CGFloat = 10
 
     @State private var showingKeyboardClearConfirm: Bool = false
@@ -314,6 +355,15 @@ struct LibraryGrid: View {
         if press.modifiers.contains(.command) && press.characters == "a" {
             store.selectAllInView()
             return .handled
+        }
+        // ⌘1 / ⌘2 / ⌘3 → thumbnail size presets
+        if press.modifiers.contains(.command) {
+            switch press.characters {
+            case "1": store.thumbnailSize = .small;  return .handled
+            case "2": store.thumbnailSize = .medium; return .handled
+            case "3": store.thumbnailSize = .large;  return .handled
+            default:  break
+            }
         }
         // Arrow navigation — left/right through displayOrder. Up/down is
         // deferred because LazyVGrid.adaptive has no stable column count.
@@ -429,6 +479,16 @@ struct LibraryGrid: View {
                         withAnimation(.easeInOut(duration: 0.18)) {
                             proxy.scrollTo(id, anchor: .center)
                         }
+                    }
+                }
+                // Follow-current-processing: when the toggle in the runner
+                // dock is on, every engine advance scrolls the grid to the
+                // photo the worker is currently on. Firing via onChange of
+                // the engine's currentPhotoID means no extra polling.
+                .onChange(of: store.engine?.currentPhotoID) { _, new in
+                    guard store.followCurrentProcessing, let id = new else { return }
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(id, anchor: .center)
                     }
                 }
             }
@@ -790,6 +850,7 @@ struct LegendPopover: View {
                 keyRow("Return  E", "Edit description")
                 keyRow("⌘⏎", "Save edit")
                 keyRow("⌘A", "Select all visible")
+                keyRow("⌘1 / 2 / 3", "Small / medium / large thumbs")
                 keyRow("⌘-click", "Toggle selection")
                 keyRow("⇧-click", "Range-select")
                 keyRow("Esc", "Clear selection / close preview")
@@ -1006,6 +1067,18 @@ struct RunnerDock: View {
                     .controlSize(.small)
                 }
             }
+
+            // Follow-current-processing toggle. Off by default — the user
+            // is usually browsing somewhere else while a batch runs. When
+            // on, LibraryGrid's onChange(engine.currentPhotoID) scrolls
+            // the grid to the in-flight photo every advance.
+            Toggle(isOn: Bindable(store).followCurrentProcessing) {
+                Text("Follow in grid")
+                    .font(.caption)
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .help("Auto-scroll the grid to the currently-processing photo")
 
             // Primary action — changes label based on engine state.
             primaryButton
