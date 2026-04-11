@@ -213,11 +213,15 @@ _Replace the "batch monitor" GUI with a full library browser: grid of every phot
 - [x] Grid active-filter strip removed — superseded by the sidebar's Active Filters section.
 - [x] Verified end-to-end: search filters as you type, popular tags update contextually, active filters section only appears when non-empty, chip toggle works from inspector and sidebar alike.
 
-#### Phase 5 — Bulk operations
-- [ ] Multi-select state in the grid (cmd/shift-click, arrow range, ⌘A/D).
-- [ ] Bulk action bar (visible when selection > 0): Re-process · Clear description · Copy tags · Export JSON.
-- [ ] Confirmation dialogs for destructive ops (Clear description).
-- [ ] Progress sheet with cancel button for AppleScript-heavy ops.
+#### Phase 5 — Bulk operations ✅ (2026-04-11)
+- [x] Selection model upgraded from `String?` to `Set<String>` on LibraryStore, plus a `selectionAnchor` for range-select. Click handlers: plain = replace, ⌘-click = toggle, ⇧-click = range-extend in displayOrder space.
+- [x] Keyboard: `.onKeyPress` handler on the grid for Esc (clear) and ⌘A (select all visible).
+- [x] Inspector branches on `selection.count`: 0 → placeholder, 1 → existing single-photo view, 2+ → new `MultiSelectionSummary` with thumbnail filmstrip, status breakdown, date range, common tags (set intersection), and model breakdown.
+- [x] `BulkActionBar` above the grid, only rendered when `!selection.isEmpty`. Five buttons with `.help(...)` tooltips: Re-process, Clear description, Copy tags, Export JSON, Deselect. Includes an inline `bulkStatusMessage` area for transient feedback.
+- [x] Bulk ops on the store: `requeueSelection` (fast, one SQL transaction), `clearSelectionDescriptions` (slow, AppleScript per-photo, cancellable progress sheet), `copySelectionTagsToPasteboard` (instant), `exportSelectionJSON` (to NSSavePanel URL).
+- [x] `confirmationDialog` on Clear before touching Photos.app.
+- [x] `BulkProgressSheet` bound to `store.bulkProgress` — linear progress bar, completed/total counter, failed count, current id, Cancel button that cooperatively stops the loop after the in-flight item.
+- [x] Verified: click + modifier behaviors, bulk bar visibility, tooltips show on hover, multi-selection summary renders with aggregate stats.
 
 #### Phase 6 — Runner dock + engine migration
 - [ ] Compact runner card pinned to the bottom of the sidebar (last-completed + current + start/pause/resume + stats).

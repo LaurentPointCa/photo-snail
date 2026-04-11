@@ -194,16 +194,45 @@ struct LibraryGrid: View {
     private let gridSpacing: CGFloat = 10
 
     var body: some View {
-        gridBody
-            .navigationTitle(navigationTitleText)
-            .navigationSubtitle(subtitle)
-            // Search field placement is up to the OS: on macOS in a
-            // NavigationSplitView this lands in the toolbar above the grid.
-            .searchable(
-                text: Bindable(store).searchText,
-                placement: .toolbar,
-                prompt: "Search descriptions and tags"
-            )
+        VStack(spacing: 0) {
+            // Bulk action bar — only appears when something is selected.
+            // Hosted outside the ScrollView so it stays pinned when the
+            // grid scrolls.
+            if !store.selection.isEmpty {
+                BulkActionBar(store: store)
+                Divider()
+            }
+            gridBody
+        }
+        .navigationTitle(navigationTitleText)
+        .navigationSubtitle(subtitle)
+        .searchable(
+            text: Bindable(store).searchText,
+            placement: .toolbar,
+            prompt: "Search descriptions and tags"
+        )
+        // Keyboard shortcuts for selection — Esc clears, ⌘A selects all
+        // visible. Needs a focusable host and we disable the focus ring
+        // so the whole pane doesn't glow blue on every click.
+        .focusable()
+        .focusEffectDisabled()
+        .onKeyPress { press in
+            if press.key == .escape {
+                store.clearSelection()
+                return .handled
+            }
+            if press.modifiers.contains(.command) && press.characters == "a" {
+                store.selectAllInView()
+                return .handled
+            }
+            return .ignored
+        }
+        // Progress sheet for long bulk ops (Clear description). Bound to
+        // `bulkProgress` via Bindable so the sheet dismisses automatically
+        // when the store sets it back to nil.
+        .sheet(item: Bindable(store).bulkProgress) { _ in
+            BulkProgressSheet(store: store)
+        }
     }
 
     private var subtitle: String {
@@ -234,11 +263,22 @@ struct LibraryGrid: View {
                         ThumbnailCell(
                             id: id,
                             row: store.rows[id],
-                            isSelected: store.selection == id,
+                            isSelected: store.selection.contains(id),
                             size: thumbnailSize
                         )
                         .onTapGesture {
-                            store.selection = id
+                            // Read modifier keys at click time. ⌘-click
+                            // toggles, ⇧-click range-extends, plain click
+                            // replaces the selection. Matches Finder /
+                            // Photos.app conventions.
+                            let mods = NSEvent.modifierFlags
+                            if mods.contains(.command) {
+                                store.toggleInSelection(id)
+                            } else if mods.contains(.shift) {
+                                store.extendSelection(to: id)
+                            } else {
+                                store.select(id)
+                            }
                         }
                     }
                 }
@@ -420,3 +460,173 @@ struct StatusBadge: View {
 
 // Note: `LibraryInspector` lives in `LibraryInspector.swift` — it grew large
 // enough to deserve its own file in Phase 3.
+
+// MARK: - Bulk action bar
+
+/// The toolbar that appears above the grid when the user has selected one
+/// or more photos. Shows the count and four actions: Re-process, Clear,
+/// Copy tags, Export, plus a Deselect.
+///
+/// Destructive operations (Clear) go through a confirmation alert. The
+/// long-running Clear path flips `store.bulkProgress` which presents a
+/// modal progress sheet higher up in the view hierarchy.
+struct BulkActionBar: View {
+    @Bindable var store: LibraryStore
+
+    @State private var showingClearConfirm = false
+    @State private var showingExportError: String? = nil
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text("\(store.selection.count) selected")
+                .font(.callout.weight(.medium))
+
+            // Transient status message from the most recent bulk op.
+            // Non-intrusive — sits inline in the action bar and fades
+            // when the user clicks anything else.
+            if let msg = store.bulkStatusMessage {
+                Text(msg)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            Spacer()
+
+            // Re-process — fast, no confirmation needed. Just a SQL-level
+            // push back to pending; the actual run happens in the runner.
+            Button {
+                Task { await store.requeueSelection() }
+            } label: {
+                Label("Re-process", systemImage: "arrow.clockwise")
+            }
+            .help("Re-process — push these photos back into the pending queue")
+
+            // Clear description — destructive, gated on confirmation.
+            Button(role: .destructive) {
+                showingClearConfirm = true
+            } label: {
+                Label("Clear description", systemImage: "eraser")
+            }
+            .help("Clear description — remove photo-snail descriptions from Photos.app")
+
+            // Copy tags — instant, no confirmation.
+            Button {
+                store.copySelectionTagsToPasteboard()
+            } label: {
+                Label("Copy tags", systemImage: "doc.on.clipboard")
+            }
+            .help("Copy tags — union of all selected tags to the clipboard")
+
+            // Export JSON — opens an NSSavePanel.
+            Button {
+                runExport()
+            } label: {
+                Label("Export JSON", systemImage: "square.and.arrow.up")
+            }
+            .help("Export JSON — save every selected row to a file")
+
+            Divider()
+                .frame(height: 16)
+
+            Button {
+                store.clearSelection()
+            } label: {
+                Label("Deselect", systemImage: "xmark.circle")
+            }
+            .help("Deselect all")
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.borderless)
+        .imageScale(.medium)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.bar)
+        .confirmationDialog(
+            "Clear descriptions from \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
+            isPresented: $showingClearConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Clear descriptions", role: .destructive) {
+                Task { await store.clearSelectionDescriptions() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the photo-snail-written description from Photos.app and resets each queue row to pending. Original photos are not modified. This cannot be undone.")
+        }
+        .alert("Export failed", isPresented: Binding(
+            get: { showingExportError != nil },
+            set: { if !$0 { showingExportError = nil } }
+        )) {
+            Button("OK") { showingExportError = nil }
+        } message: {
+            Text(showingExportError ?? "")
+        }
+    }
+
+    private func runExport() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "photo-snail-export.json"
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                try store.exportSelectionJSON(to: url)
+            } catch {
+                showingExportError = "\(error)"
+            }
+        }
+    }
+}
+
+// MARK: - Bulk progress sheet
+
+/// Modal progress sheet shown during `clearSelectionDescriptions`. Observes
+/// `store.bulkProgress` and offers a Cancel button that cooperatively
+/// stops the loop after the current item finishes.
+struct BulkProgressSheet: View {
+    @Bindable var store: LibraryStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if let progress = store.bulkProgress {
+                Text(progress.title)
+                    .font(.headline)
+
+                ProgressView(value: Double(progress.completed), total: Double(max(1, progress.total)))
+                    .progressViewStyle(.linear)
+
+                HStack {
+                    Text("\(progress.completed) / \(progress.total)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                    Spacer()
+                    if !progress.failed.isEmpty {
+                        Text("\(progress.failed.count) failed")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                if let currentId = progress.currentId {
+                    Text(String(currentId.prefix(8)) + "…")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                HStack {
+                    Spacer()
+                    Button("Cancel", role: .cancel) {
+                        store.bulkProgress?.isCancelled = true
+                    }
+                    .disabled(progress.isCancelled)
+                }
+            }
+        }
+        .padding(20)
+        .frame(width: 360)
+    }
+}

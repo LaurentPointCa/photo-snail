@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Photos
 import PhotoSnailCore
 
@@ -36,12 +37,36 @@ final class LibraryStore {
         var id: String { tag }
     }
 
+    /// Live progress state for an in-flight bulk operation. Non-nil means
+    /// a modal progress sheet is visible. Exposed so SwiftUI's
+    /// `.sheet(item:)` can bind to it.
+    struct BulkProgress: Identifiable {
+        let id = UUID()
+        let title: String
+        let total: Int
+        var completed: Int
+        var currentId: String?
+        var isCancelled: Bool
+        var failed: [(id: String, error: String)]
+    }
+
     // MARK: - Observable state
 
     var filter: Filter = .all
-    var selection: String? = nil
     var loadError: String? = nil
     var isLoading: Bool = false
+
+    /// Set of currently-selected asset ids. Empty = nothing selected,
+    /// one = single-photo inspector, 2+ = multi-selection summary + bulk
+    /// actions. Stored as a `Set` for O(1) membership checks in the grid
+    /// and for efficient toggling in cmd-click.
+    var selection: Set<String> = []
+
+    /// The last id that was plain-clicked (without cmd/shift). Used as the
+    /// anchor for shift-click range selection: shift-clicking a new id
+    /// selects every asset between the anchor and the new id in the
+    /// current `displayOrder`. Reset on plain click and on clear.
+    var selectionAnchor: String? = nil
 
     /// Active tag filters. Empty set = no tag filter applied. Non-empty set
     /// is AND-composed with the base `filter`: a row must contain every tag
@@ -85,6 +110,15 @@ final class LibraryStore {
     /// clicking "cat" then reveals "cat's neighbors" like "kitten" and
     /// "window" rather than library-wide generic tags.
     private(set) var popularTags: [TagFrequency] = []
+
+    /// Current in-flight bulk operation, if any. Non-nil presents a
+    /// modal progress sheet. Set by `clearSelectionDescriptions` and
+    /// (future) similar long-running bulk actions.
+    var bulkProgress: BulkProgress? = nil
+
+    /// Transient message surfaced for non-destructive, fast bulk ops
+    /// (re-process, copy tags) that don't need a progress sheet.
+    var bulkStatusMessage: String? = nil
 
     /// Convenience alphabetically-sorted view of `activeTagFilters` for
     /// stable rendering in the sidebar. `Set` has no order of its own.
@@ -273,6 +307,240 @@ final class LibraryStore {
         guard !activeTagFilters.isEmpty else { return }
         activeTagFilters.removeAll()
         rebuildDisplayOrder()
+    }
+
+    // MARK: - Selection
+
+    /// Replace the selection with exactly one id. Sets the range-select
+    /// anchor too. Used for plain left-clicks on a grid cell.
+    func select(_ id: String) {
+        selection = [id]
+        selectionAnchor = id
+    }
+
+    /// Toggle an id in and out of the selection. Used for cmd-click.
+    /// Updates the anchor so a subsequent shift-click ranges from this id.
+    func toggleInSelection(_ id: String) {
+        if selection.contains(id) {
+            selection.remove(id)
+            // If the anchor was the one we just removed, reset it so the
+            // next shift-click starts from the most-recently-added member.
+            if selectionAnchor == id {
+                selectionAnchor = selection.first
+            }
+        } else {
+            selection.insert(id)
+            selectionAnchor = id
+        }
+    }
+
+    /// Extend the selection from the current anchor to the given id. If
+    /// there's no anchor yet, this acts like a plain `select`. The range
+    /// is computed in `displayOrder` space so shift-click matches what the
+    /// user sees in the grid rather than the raw library order.
+    func extendSelection(to id: String) {
+        guard let anchor = selectionAnchor else {
+            select(id)
+            return
+        }
+        // Find both endpoints in displayOrder
+        guard let anchorIdx = displayOrder.firstIndex(of: anchor),
+              let targetIdx = displayOrder.firstIndex(of: id) else {
+            select(id)
+            return
+        }
+        let lo = min(anchorIdx, targetIdx)
+        let hi = max(anchorIdx, targetIdx)
+        selection = Set(displayOrder[lo...hi])
+        // Leave the anchor in place so further shift-clicks pivot around
+        // the same starting point — matches Finder and macOS Photos.app.
+    }
+
+    /// Select every id currently visible in the grid.
+    func selectAllInView() {
+        selection = Set(displayOrder)
+        selectionAnchor = displayOrder.first
+    }
+
+    /// Drop every selected id and clear the anchor.
+    func clearSelection() {
+        selection.removeAll()
+        selectionAnchor = nil
+    }
+
+    /// Primary selected id for the inspector when exactly one is selected.
+    /// Returns nil for 0 or 2+ selections.
+    var singleSelection: String? {
+        selection.count == 1 ? selection.first : nil
+    }
+
+    // MARK: - Bulk operations
+
+    /// Re-queue every selected asset for reprocessing. Rows that already
+    /// exist in the queue are pushed back to `pending`; ids without a
+    /// queue row (untouched new photos) are enqueued first. This is a
+    /// single SQL transaction plus a broadcast — fast enough that we
+    /// don't need a progress sheet.
+    ///
+    /// The actual pipeline run happens when the batch runner is started;
+    /// this method only marks the queue.
+    func requeueSelection() async {
+        guard let queue = queue, !selection.isEmpty else { return }
+
+        var idsWithRow: [String] = []
+        var idsWithoutRow: [String] = []
+        for id in selection {
+            if rows[id] != nil {
+                idsWithRow.append(id)
+            } else {
+                idsWithoutRow.append(id)
+            }
+        }
+
+        do {
+            if !idsWithoutRow.isEmpty {
+                try await queue.enqueue(idsWithoutRow)
+            }
+            if !idsWithRow.isEmpty {
+                try await queue.requeue(idsWithRow)
+            }
+            let n = selection.count
+            bulkStatusMessage = "Re-queued \(n) photo\(n == 1 ? "" : "s") for processing"
+        } catch {
+            bulkStatusMessage = "Re-queue failed: \(error)"
+        }
+    }
+
+    /// Clear the description in Photos.app and reset the queue row to
+    /// pending for every selected asset. Destructive — the caller should
+    /// gate this on a confirmation dialog.
+    ///
+    /// Presents a progress sheet via `bulkProgress` since each asset
+    /// needs its own ~100 ms AppleScript round-trip; 500 photos is a
+    /// minute. Cancellable mid-operation: setting `bulkProgress.isCancelled`
+    /// stops the loop after the current item finishes.
+    func clearSelectionDescriptions() async {
+        guard let queue = queue, !selection.isEmpty else { return }
+        let ids = Array(selection).sorted()
+        let total = ids.count
+
+        bulkProgress = BulkProgress(
+            title: "Clearing \(total) description\(total == 1 ? "" : "s")",
+            total: total,
+            completed: 0,
+            currentId: nil,
+            isCancelled: false,
+            failed: []
+        )
+
+        for id in ids {
+            // Check the cancel flag before doing any work.
+            if bulkProgress?.isCancelled == true { break }
+
+            bulkProgress?.currentId = id
+
+            // Nothing to clear for rows without a description — still
+            // count them as completed so the progress bar reaches 100%.
+            guard let row = rows[id], row.description != nil else {
+                bulkProgress?.completed += 1
+                continue
+            }
+
+            // Write an empty description via AppleScript. NSAppleScript
+            // MUST run on the main thread per Phase F.1 findings — this
+            // method is @MainActor-isolated so we're already there.
+            let uuid = PhotoLibrary.uuidPrefix(id)
+            do {
+                _ = try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: "")
+                try await queue.clearResult(id)
+            } catch {
+                bulkProgress?.failed.append((id: id, error: "\(error)"))
+            }
+
+            bulkProgress?.completed += 1
+        }
+
+        // Snapshot stats for the status message, then drop the progress
+        // sheet. `defer` can't be used here because the progress sheet
+        // drives view updates mid-loop via the mutation visible to
+        // SwiftUI through @Observable.
+        let completed = bulkProgress?.completed ?? 0
+        let failed = bulkProgress?.failed.count ?? 0
+        let cancelled = bulkProgress?.isCancelled == true
+        bulkProgress = nil
+
+        if cancelled {
+            bulkStatusMessage = "Cancelled after \(completed)/\(total) photos"
+        } else if failed > 0 {
+            bulkStatusMessage = "Cleared \(completed - failed)/\(total) (\(failed) failed)"
+        } else {
+            bulkStatusMessage = "Cleared \(completed) description\(completed == 1 ? "" : "s")"
+        }
+    }
+
+    /// Union of every tag across the selection, copied to the pasteboard
+    /// as a comma-separated string. No-op if the selection has no tags.
+    func copySelectionTagsToPasteboard() {
+        guard !selection.isEmpty else { return }
+        var tags = Set<String>()
+        for id in selection {
+            if let row = rows[id] {
+                for t in row.tags { tags.insert(t) }
+            }
+        }
+        guard !tags.isEmpty else {
+            bulkStatusMessage = "No tags to copy"
+            return
+        }
+        let joined = tags.sorted().joined(separator: ", ")
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(joined, forType: .string)
+        bulkStatusMessage = "Copied \(tags.count) tag\(tags.count == 1 ? "" : "s")"
+    }
+
+    /// Write a JSON array of the selected rows to `url`. Each entry
+    /// includes every column from `AssetQueue.Row`. Throws if
+    /// serialization or the file write fails.
+    func exportSelectionJSON(to url: URL) throws {
+        struct ExportEntry: Encodable {
+            let id: String
+            let status: String
+            let attempts: Int
+            let error: String?
+            let processed_at: Int64?
+            let description: String?
+            let tags: [String]
+            let model: String?
+            let sentinel: String?
+            let vision_ms: Int?
+            let ollama_ms: Int?
+            let total_ms: Int?
+            let updated_at: Int64?
+        }
+
+        let entries = selection.sorted().compactMap { id -> ExportEntry? in
+            guard let r = rows[id] else { return nil }
+            return ExportEntry(
+                id: r.id,
+                status: r.status,
+                attempts: r.attempts,
+                error: r.error,
+                processed_at: r.processedAt,
+                description: r.description,
+                tags: r.tags,
+                model: r.model,
+                sentinel: r.sentinel,
+                vision_ms: r.visionMs,
+                ollama_ms: r.ollamaMs,
+                total_ms: r.totalMs,
+                updated_at: r.updatedAt
+            )
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(entries)
+        try data.write(to: url)
+        bulkStatusMessage = "Exported \(entries.count) row\(entries.count == 1 ? "" : "s") to \(url.lastPathComponent)"
     }
 
     // MARK: - Edits

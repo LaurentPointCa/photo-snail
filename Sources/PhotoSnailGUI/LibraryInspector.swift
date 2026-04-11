@@ -28,18 +28,213 @@ struct LibraryInspector: View {
 
     var body: some View {
         Group {
-            if let id = store.selection {
-                InspectorContent(store: store, assetId: id)
-                    .id(id)
-            } else {
+            switch store.selection.count {
+            case 0:
                 ContentUnavailableView(
                     "No selection",
                     systemImage: "photo",
                     description: Text("Select a photo in the grid to inspect it.")
                 )
+            case 1:
+                // `selection.first!` is safe inside `count == 1`.
+                let id = store.selection.first!
+                InspectorContent(store: store, assetId: id)
+                    .id(id)
+            default:
+                MultiSelectionSummary(store: store)
             }
         }
         .navigationTitle("Inspector")
+    }
+}
+
+// MARK: - Multi-selection summary
+
+/// Shown when the user has 2+ photos selected. Surfaces aggregate
+/// metadata and directs the user to the bulk action bar above the grid
+/// for operations. Intentionally simple — this isn't a second place
+/// to do bulk ops, just a summary of what's selected.
+private struct MultiSelectionSummary: View {
+    @Bindable var store: LibraryStore
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("\(store.selection.count) photos selected")
+                    .font(.title3.weight(.semibold))
+
+                thumbFilmstrip
+
+                Divider()
+
+                statsSection
+
+                if !commonTags.isEmpty {
+                    Divider()
+                    commonTagsSection
+                }
+
+                if !modelBreakdown.isEmpty {
+                    Divider()
+                    modelBreakdownSection
+                }
+
+                Divider()
+
+                Text("Use the bulk action bar above the grid to re-process, clear, copy tags, or export.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Spacer(minLength: 0)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: Filmstrip
+
+    @ViewBuilder
+    private var thumbFilmstrip: some View {
+        let ids = Array(store.selection.sorted().prefix(12))
+        let remaining = store.selection.count - ids.count
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(ids, id: \.self) { id in
+                    ThumbnailCell(id: id, row: store.rows[id], isSelected: true, size: 64)
+                }
+                if remaining > 0 {
+                    Text("+\(remaining)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 64, height: 64)
+                        .background(Color.gray.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+    }
+
+    // MARK: Aggregate stats
+
+    private var countsByStatus: (tagged: Int, pending: Int, failed: Int, untouched: Int) {
+        var tagged = 0, pending = 0, failed = 0, untouched = 0
+        for id in store.selection {
+            guard let row = store.rows[id] else { untouched += 1; continue }
+            switch row.status {
+            case "done":                    tagged += 1
+            case "pending", "in_progress":  pending += 1
+            case "failed":                  failed += 1
+            default:                        untouched += 1
+            }
+        }
+        return (tagged, pending, failed, untouched)
+    }
+
+    private var dateRange: (earliest: Int64?, latest: Int64?) {
+        var earliest: Int64? = nil
+        var latest: Int64? = nil
+        for id in store.selection {
+            guard let ts = store.rows[id]?.processedAt else { continue }
+            if earliest == nil || ts < earliest! { earliest = ts }
+            if latest == nil || ts > latest! { latest = ts }
+        }
+        return (earliest, latest)
+    }
+
+    @ViewBuilder
+    private var statsSection: some View {
+        let counts = countsByStatus
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Status").font(.caption).foregroundStyle(.secondary)
+            statRow("Tagged", counts.tagged)
+            statRow("Pending", counts.pending)
+            statRow("Failed", counts.failed)
+            statRow("Untouched", counts.untouched)
+        }
+
+        let range = dateRange
+        if let e = range.earliest, let l = range.latest, e != 0 || l != 0 {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Processed").font(.caption).foregroundStyle(.secondary)
+                Text("\(formatTimestamp(e)) → \(formatTimestamp(l))")
+                    .font(.caption)
+                    .textSelection(.enabled)
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    @ViewBuilder
+    private func statRow(_ label: String, _ count: Int) -> some View {
+        HStack {
+            Text(label).font(.caption)
+            Spacer()
+            Text("\(count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: Common tags
+
+    private var commonTags: [String] {
+        // Intersect every row's tag set. Rows without any tags drop out
+        // of the intersection entirely.
+        var iter = store.selection.makeIterator()
+        guard let firstId = iter.next(), let firstRow = store.rows[firstId] else { return [] }
+        var common = Set(firstRow.tags)
+        while let id = iter.next() {
+            guard let row = store.rows[id] else { return [] }
+            common.formIntersection(row.tags)
+            if common.isEmpty { return [] }
+        }
+        return common.sorted()
+    }
+
+    @ViewBuilder
+    private var commonTagsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Tags in every selected photo")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(commonTags.joined(separator: ", "))
+                .font(.caption)
+                .textSelection(.enabled)
+        }
+    }
+
+    // MARK: Model breakdown
+
+    private var modelBreakdown: [(String, Int)] {
+        var counts: [String: Int] = [:]
+        for id in store.selection {
+            let model = store.rows[id]?.model ?? "— (pre-v1 / unrecorded)"
+            counts[model, default: 0] += 1
+        }
+        return counts.sorted { $0.value > $1.value }
+    }
+
+    @ViewBuilder
+    private var modelBreakdownSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Models used")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            ForEach(modelBreakdown, id: \.0) { pair in
+                HStack {
+                    Text(pair.0).font(.system(.caption, design: .monospaced))
+                    Spacer()
+                    Text("\(pair.1)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func formatTimestamp(_ ts: Int64) -> String {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f.string(from: Date(timeIntervalSince1970: TimeInterval(ts)))
     }
 }
 
