@@ -94,40 +94,84 @@ struct LibraryGrid: View {
     private let gridSpacing: CGFloat = 10
 
     var body: some View {
-        Group {
-            if store.isLoading && store.displayOrder.isEmpty {
-                ProgressView("Loading library…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if store.displayOrder.isEmpty {
-                ContentUnavailableView(
-                    emptyStateTitle,
-                    systemImage: emptyStateIcon,
-                    description: Text(emptyStateDescription)
-                )
-            } else {
-                ScrollView {
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: thumbnailSize, maximum: thumbnailSize + 60), spacing: gridSpacing)],
-                        spacing: gridSpacing
-                    ) {
-                        ForEach(store.displayOrder, id: \.self) { id in
-                            ThumbnailCell(
-                                id: id,
-                                row: store.rows[id],
-                                isSelected: store.selection == id,
-                                size: thumbnailSize
-                            )
-                            .onTapGesture {
-                                store.selection = id
-                            }
-                        }
-                    }
-                    .padding(gridSpacing)
-                }
+        VStack(spacing: 0) {
+            // Active-filter strip: shown only when a compound filter (tag
+            // filter today; multi-tag/search in Phase 4) is in effect. Gives
+            // the user a visible "why is the grid smaller than expected"
+            // answer plus a one-click clear.
+            if let tag = store.activeTagFilter {
+                activeFilterStrip(tag: tag)
+                Divider()
             }
+
+            gridBody
         }
         .navigationTitle(navigationTitleText)
         .navigationSubtitle("\(store.displayOrder.count) of \(store.totalCount)")
+    }
+
+    @ViewBuilder
+    private var gridBody: some View {
+        if store.isLoading && store.displayOrder.isEmpty {
+            ProgressView("Loading library…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if store.displayOrder.isEmpty {
+            ContentUnavailableView(
+                emptyStateTitle,
+                systemImage: emptyStateIcon,
+                description: Text(emptyStateDescription)
+            )
+        } else {
+            ScrollView {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: thumbnailSize, maximum: thumbnailSize + 60), spacing: gridSpacing)],
+                    spacing: gridSpacing
+                ) {
+                    ForEach(store.displayOrder, id: \.self) { id in
+                        ThumbnailCell(
+                            id: id,
+                            row: store.rows[id],
+                            isSelected: store.selection == id,
+                            size: thumbnailSize
+                        )
+                        .onTapGesture {
+                            store.selection = id
+                        }
+                    }
+                }
+                .padding(gridSpacing)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func activeFilterStrip(tag: String) -> some View {
+        HStack(spacing: 8) {
+            Text("Filtered by tag")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                Text(tag)
+                    .font(.caption)
+                Button {
+                    store.setTagFilter(nil)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .imageScale(.small)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule().fill(Color.accentColor.opacity(0.18))
+            )
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.bar)
     }
 
     // MARK: Dynamic chrome
@@ -301,119 +345,5 @@ struct StatusBadge: View {
     }
 }
 
-// MARK: - Inspector (placeholder)
-
-/// Phase 2 placeholder. Phase 3 fills in the full thoroughness:
-/// hero preview, identity section, editable description, tag chips with
-/// context menus, processing provenance, Vision findings, raw queue row.
-struct LibraryInspector: View {
-    @Bindable var store: LibraryStore
-
-    var body: some View {
-        Group {
-            if let id = store.selection {
-                selectedContent(id: id)
-            } else {
-                ContentUnavailableView(
-                    "No selection",
-                    systemImage: "photo",
-                    description: Text("Select a photo in the grid to inspect it.")
-                )
-            }
-        }
-        .navigationTitle("Inspector")
-    }
-
-    @ViewBuilder
-    private func selectedContent(id: String) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Identifier")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(id)
-                    .font(.system(.caption, design: .monospaced))
-                    .textSelection(.enabled)
-
-                Divider()
-
-                if let row = store.rows[id] {
-                    queueRowDetails(row)
-                } else {
-                    Text("No queue row for this asset yet (untouched).")
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: 0)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    @ViewBuilder
-    private func queueRowDetails(_ row: AssetQueue.Row) -> some View {
-        Label(row.status, systemImage: statusIcon(row.status))
-            .foregroundStyle(statusColor(row.status))
-
-        if let desc = row.description, !desc.isEmpty {
-            Text("Description")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(desc)
-                .font(.body)
-                .textSelection(.enabled)
-        }
-
-        if !row.tags.isEmpty {
-            Text("Tags")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(row.tags.joined(separator: ", "))
-                .font(.system(.caption, design: .default))
-                .foregroundStyle(.secondary)
-        }
-
-        if let model = row.model {
-            Text("Model: \(model)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        if let sentinel = row.sentinel {
-            Text("Sentinel: \(sentinel)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        if let total = row.totalMs {
-            Text("Total: \(total) ms")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        if let err = row.error {
-            Text("Error")
-                .font(.caption)
-                .foregroundStyle(.red)
-            Text(err)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.red)
-        }
-    }
-
-    private func statusIcon(_ status: String) -> String {
-        switch status {
-        case "done":                    return "checkmark.seal.fill"
-        case "pending", "in_progress":  return "hourglass"
-        case "failed":                  return "exclamationmark.triangle.fill"
-        default:                        return "questionmark.circle"
-        }
-    }
-
-    private func statusColor(_ status: String) -> Color {
-        switch status {
-        case "done":                    return .green
-        case "pending", "in_progress":  return .orange
-        case "failed":                  return .red
-        default:                        return .secondary
-        }
-    }
-}
+// Note: `LibraryInspector` lives in `LibraryInspector.swift` — it grew large
+// enough to deserve its own file in Phase 3.

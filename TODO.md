@@ -190,14 +190,17 @@ _Replace the "batch monitor" GUI with a full library browser: grid of every phot
 - [x] Feature flag flipped: `PHOTO_SNAIL_NEW_UI=1` opts IN to the new UI, default stays on the old `ContentView`. Safer during development — regressions don't surprise a normal launch.
 - [x] Verified: build clean, bundle packaged, launched with env var, 30+ s alive at 0.1% CPU / 140 MB, user-visible sidebar counts match the queue (7,632 / 534 tagged / 7,098 pending / 0 failed), selection → inspector placeholder works.
 
-#### Phase 3 — Inspector (thoroughness)
-- [ ] Hero preview (requestImage at 2× inspector width).
-- [ ] Identity section (filename, uuid, dates, dimensions, mediaType, favorite, location + lazy reverse-geocode, album membership).
-- [ ] Description editor (`TextEditor` + Save/Revert, writes via `PhotosScripter.runBatch` preserving sentinel + updates queue row).
-- [ ] Tag chips with context menu (View photos with this tag / add-to-filter / remove-from-photo).
-- [ ] Processing provenance (model, sentinel, ran-at, timing bar, attempts, last error).
-- [ ] Vision findings visualization (classifications w/ confidence bars, animals, faces, OCR with stop-listed words greyed).
-- [ ] Raw queue row ("Developer" collapsible section).
+#### Phase 3 — Inspector (thoroughness) ✅ (2026-04-11)
+- [x] Hero preview via `PHImageManager.requestImage(.highQualityFormat)` with degraded-callback guard.
+- [x] Identity section: filename (KVC `filename` on `PHAsset`), created/modified dates, dimensions, media type, favorite star, raw lat/lon, album membership (via `PHAssetCollection.fetchAssetCollectionsContaining`), full asset id. Reverse-geocoding deferred to Phase 7.
+- [x] Description editor: `TextEditor` with draft state, dirty-dot indicator, Save/Revert buttons, inline error reporting. Save path: `PhotosScripter.runBatch` (main thread) + `queue.updateDescription` — the sentinel is preserved from the stored row (per the user's "edits are refinements, not new generations" decision), falling back to `Settings.default.sentinel` only for pre-v1 rows.
+- [x] Tag chips in a custom `ChipFlowLayout` (macOS 14 `Layout` protocol). Click = toggle tag filter, right-click = context menu (View photos / Copy tag / Remove from this photo in edit mode). Active filter shown with accent background + border.
+- [x] Processing provenance: status, model, sentinel, ran-at, timings (including a two-tone `TimingBar` showing Vision vs Ollama split), attempts, last error, edited-at.
+- [x] Vision findings: top-5 classifications with confidence bars, animal/face counts, OCR text, Vision time. Stop-list greying deferred to Phase 7.
+- [x] Developer section (collapsed `DisclosureGroup`): every raw queue column + the exact `Pipeline.formatDescription` payload that was / would be written to Photos.app.
+- [x] LibraryStore additions: loads `Settings` at startup for the `currentSentinel` fallback, exposes `activeTagFilter` with `setTagFilter(_:)`, `saveDescription(id:description:tags:)` entry point. `rebuildDisplayOrder` composes base filter AND tag filter.
+- [x] Grid gains a small active-filter strip above the thumbnails when `activeTagFilter != nil`, with a one-click ✕ to clear.
+- [x] Verified: build clean, GUI launches with `PHOTO_SNAIL_NEW_UI=1`, all seven inspector sections render, selection switch resets all per-photo state, tag-filter round-trips work, pre-v1 rows gracefully show "—" for unrecorded fields.
 
 #### Phase 4 — Filters, search, tag-filter magic
 - [ ] Sidebar filter list (All / Tagged / Untouched / Pending / Failed) with live counts.

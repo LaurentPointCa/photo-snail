@@ -36,6 +36,17 @@ final class LibraryStore {
     var loadError: String? = nil
     var isLoading: Bool = false
 
+    /// Optional single-tag filter applied on top of `filter`. Set via
+    /// `setTagFilter(_:)`, typically from the inspector's tag-chip
+    /// right-click menu. Phase 4 will generalize to multi-tag AND filters.
+    var activeTagFilter: String? = nil
+
+    /// Current sentinel from `Settings`, loaded once at `load()` time and
+    /// kept in memory for the session. Used as the fallback sentinel when
+    /// saving an edit on a row that doesn't have its own stored sentinel
+    /// (i.e. a pre-v1 row that was processed before the schema migration).
+    private(set) var currentSentinel: String = Settings.default.sentinel
+
     /// Ordered asset ids as returned by `PHFetchResult`. Source of truth for
     /// total library size. Sorted creation-date ascending at fetch time and
     /// displayed newest-first (reversed at filter time).
@@ -101,6 +112,14 @@ final class LibraryStore {
         isLoading = true
         defer { isLoading = false }
 
+        // 0. Load persistent settings for the sentinel fallback used on
+        //    description edits. A corrupt or missing file falls back to
+        //    `Settings.default` — same policy as the rest of the app.
+        if let loaded = try? Settings.load() {
+            let runtime = loaded.withEnvOverrides()
+            self.currentSentinel = runtime.sentinel
+        }
+
         // 1. Queue (migration runs inside AssetQueue.init if needed)
         let q: AssetQueue
         do {
@@ -164,6 +183,59 @@ final class LibraryStore {
         rebuildDisplayOrder()
     }
 
+    /// Set or clear the active tag filter. Passing `nil` clears it.
+    /// Composes AND-style with the base `filter` in `rebuildDisplayOrder`.
+    func setTagFilter(_ tag: String?) {
+        let normalized = tag?.isEmpty == true ? nil : tag
+        guard activeTagFilter != normalized else { return }
+        activeTagFilter = normalized
+        rebuildDisplayOrder()
+    }
+
+    // MARK: - Edits
+
+    /// Commit a user-edited description/tags for a single asset:
+    ///   1. Format the Photos.app payload, preserving the row's original
+    ///      sentinel (or the current settings sentinel if none stored).
+    ///   2. Write back via AppleScript on the main actor.
+    ///   3. Update the queue row — the queue broadcasts `.updated(id)`,
+    ///      which triggers our subscription and patches `rows[id]`
+    ///      automatically.
+    ///
+    /// Throws on either AppleScript failure or queue-update failure so the
+    /// caller can surface the error inline. On success, the store's cache
+    /// reflects the new values by the time the `await` returns (the change
+    /// stream runs synchronously from broadcast → applyChange).
+    func saveDescription(id: String, description: String, tags: [String]) async throws {
+        guard let queue = queue else {
+            throw PhotoSnailError.imageLoadFailed("Queue is not open")
+        }
+
+        // Preserve the row's sentinel if present — the sentinel records
+        // which generation produced the original description. An edit is
+        // a refinement of that generation, not a new one, so we keep it.
+        // Pre-v1 rows with no stored sentinel fall back to the settings
+        // sentinel (best available proxy for "what would we write today").
+        let sentinel = rows[id]?.sentinel ?? currentSentinel
+
+        let payload = Pipeline.formatDescription(
+            description: description,
+            tags: tags,
+            sentinel: sentinel
+        )
+
+        // The enclosing class is @MainActor, so this call is already on the
+        // main thread — no `MainActor.run` hop needed. NSAppleScript requires
+        // main thread per Phase F.1 findings.
+        let uuid = PhotoLibrary.uuidPrefix(id)
+        _ = try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
+
+        // Update the queue row. This broadcasts `.updated(id)`, which our
+        // own subscription handles by re-fetching the row and patching the
+        // cache — so by the end of this call the displayed row is fresh.
+        try await queue.updateDescription(id: id, description: description, tags: tags)
+    }
+
     // MARK: - Change stream handler
 
     private func applyChange(_ change: AssetQueue.QueueChange) async {
@@ -197,26 +269,34 @@ final class LibraryStore {
         // fetch, so reverse at filter time. (Lazy reversal via `.reversed()`
         // on Arrays is O(1) — it just swaps indices.)
         let ordered = assetIds.reversed()
+        let tagFilter = activeTagFilter
+        displayOrder = ordered.filter { id in
+            // Base filter
+            guard matchesBaseFilter(id: id) else { return false }
+            // Tag filter (AND with base) — only rows with tags can match; a
+            // row without a row at all, or without the tag, is filtered out.
+            if let t = tagFilter {
+                guard let r = rows[id], r.tags.contains(t) else { return false }
+            }
+            return true
+        }
+    }
+
+    private func matchesBaseFilter(id: String) -> Bool {
         switch filter {
         case .all:
-            displayOrder = Array(ordered)
+            return true
         case .tagged:
-            displayOrder = ordered.filter { id in
-                guard let r = rows[id] else { return false }
-                return r.status == "done" && (r.description?.isEmpty == false)
-            }
+            guard let r = rows[id] else { return false }
+            return r.status == "done" && (r.description?.isEmpty == false)
         case .pending:
-            displayOrder = ordered.filter { id in
-                guard let r = rows[id] else { return false }
-                return r.status == "pending" || r.status == "in_progress"
-            }
+            guard let r = rows[id] else { return false }
+            return r.status == "pending" || r.status == "in_progress"
         case .failed:
-            displayOrder = ordered.filter { id in
-                guard let r = rows[id] else { return false }
-                return r.status == "failed"
-            }
+            guard let r = rows[id] else { return false }
+            return r.status == "failed"
         case .untouched:
-            displayOrder = ordered.filter { rows[$0] == nil }
+            return rows[id] == nil
         }
     }
 
