@@ -23,6 +23,7 @@ final class ProcessingEngine {
     var currentThumbnail: CGImage? = nil
 
     // Last completed photo (top half)
+    var completedPhotoID: String? = nil
     var completedThumbnail: CGImage? = nil
     var completedDescription: String = ""
     var completedTags: [String] = []
@@ -55,10 +56,20 @@ final class ProcessingEngine {
 
     // MARK: - Private
 
-    private var queue: AssetQueue?
+    /// Shared with `LibraryStore` — both observe the same actor instance
+    /// so worker mutations fan out to the store's row cache via the
+    /// change stream. The store owns the queue's lifetime; we just hold
+    /// a reference to it for our own reads/writes.
+    private let queue: AssetQueue
     private var workerTask: Task<Void, Never>?
     private var isPausedFlag = false
     private var pauseContinuation: CheckedContinuation<Void, Never>?
+
+    // MARK: - Init
+
+    init(queue: AssetQueue) {
+        self.queue = queue
+    }
 
     // MARK: - Initial load (no processing, just stats + settings + Ollama probe)
 
@@ -76,10 +87,8 @@ final class ProcessingEngine {
         self.sentinel = runtime.sentinel
         self.connection = runtime.ollama
 
-        // 2. Open the queue.
+        // 2. Queue stats. The queue was passed in at init — we just read.
         do {
-            let q = try AssetQueue(dbPath: AssetQueue.defaultDBPath)
-            self.queue = q
             try await refreshStats()
         } catch {
             statusMessage = "Queue error: \(error)"
@@ -152,11 +161,6 @@ final class ProcessingEngine {
         }
 
         do {
-            if queue == nil {
-                queue = try AssetQueue(dbPath: AssetQueue.defaultDBPath)
-            }
-            guard let queue = queue else { return }
-
             statusMessage = "Enumerating library..."
             _ = try await PhotoLibraryEnumerator.fetchUnprocessedIdentifiers(
                 queue: queue,
@@ -200,7 +204,6 @@ final class ProcessingEngine {
     }
 
     func retryFailed(_ id: String) async {
-        guard let queue = queue else { return }
         do {
             try await queue.requeueFailed(id)
             try await refreshStats()
@@ -212,7 +215,6 @@ final class ProcessingEngine {
     }
 
     func retryAllFailed() async {
-        guard let queue = queue else { return }
         for failure in failures {
             try? await queue.requeueFailed(failure.id)
         }
@@ -224,7 +226,10 @@ final class ProcessingEngine {
     // MARK: - Worker
 
     private func launchWorker() {
-        guard let queue = queue else { return }
+        // Capture the queue (and other settings) into locals so the detached
+        // worker task can reference them without a main-actor hop. All are
+        // Sendable: `AssetQueue` is an actor, the rest are value types.
+        let queue = self.queue
         let model = self.model
         let sentinel = self.sentinel
         let connection = self.connection
@@ -344,7 +349,10 @@ final class ProcessingEngine {
                     }
 
                     await MainActor.run {
-                        // Promote current → completed
+                        // Promote current → completed. The id is captured
+                        // alongside the thumbnail so the runner-dock hover
+                        // popover has something to fetch a larger version from.
+                        self?.completedPhotoID = self?.currentPhotoID
                         self?.completedThumbnail = self?.currentThumbnail
                         self?.completedDescription = result.caption.description
                         self?.completedTags = result.mergedTags
@@ -384,7 +392,6 @@ final class ProcessingEngine {
     // MARK: - Helpers
 
     private func refreshStats() async throws {
-        guard let queue = queue else { return }
         let stats = try await queue.stats()
         totalCount = stats.total
         doneCount = stats.done
@@ -393,7 +400,6 @@ final class ProcessingEngine {
     }
 
     private func refreshFailures() async throws {
-        guard let queue = queue else { return }
         let rows = try await queue.listFailed()
         failures = rows.map { FailedAsset(id: $0.id, error: $0.error, attempts: $0.attempts) }
     }

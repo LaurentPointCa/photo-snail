@@ -223,11 +223,14 @@ _Replace the "batch monitor" GUI with a full library browser: grid of every phot
 - [x] `BulkProgressSheet` bound to `store.bulkProgress` — linear progress bar, completed/total counter, failed count, current id, Cancel button that cooperatively stops the loop after the in-flight item.
 - [x] Verified: click + modifier behaviors, bulk bar visibility, tooltips show on hover, multi-selection summary renders with aggregate stats.
 
-#### Phase 6 — Runner dock + engine migration
-- [ ] Compact runner card pinned to the bottom of the sidebar (last-completed + current + start/pause/resume + stats).
-- [ ] Current/last photo cards live there permanently (per user request #5).
-- [ ] Failures become the "Failed" filter; delete `FailureListView`.
-- [ ] Delete old `ContentView`, `StatusBar`, `ControlsView`, `CompletedPhotoView`, `CurrentPhotoView`. New `LibraryWindow` is the default.
+#### Phase 6 — Runner dock + engine migration ✅ (2026-04-11)
+- [x] `ProcessingEngine` refactored to take `queue: AssetQueue` in init and hold it as a non-optional `let`. Removes the redundant second SQLite connection the old code opened lazily and ensures worker mutations fan out through the same change stream the library store is subscribed to — grid thumbnails update live as the worker marks photos done.
+- [x] `LibraryStore` creates the `ProcessingEngine` once the queue is open and exposes it via `engine` for views to read directly (`@Observable` handles tracking).
+- [x] `RunnerDock` pinned to the bottom of the sidebar via `.safeAreaInset(edge: .bottom)`. Two `DockPhotoCard`s (Last completed + Processing/Idle), a session progress bar with `done/total` and ETA, and a context-sensitive primary button: Start / Pause / Resume / Enumerating spinner.
+- [x] Toolbar gear in `LibraryWindow` opens the existing `SettingsSheet` (unchanged — it just reads engine properties).
+- [x] Old UI deleted: `ContentView.swift`, `StatusBar.swift`, `ControlsView.swift`, `PhotoPreview.swift`, `FailureListView.swift`. `PhotoSnailApp.swift` simplified — no feature flag, `LibraryWindow` is the only UI.
+- [x] Hover-to-peek on dock photo cards: moving the mouse over either thumbnail pops out a ~75%-of-screen preview loaded via `PHImageManager.highQualityFormat` at Retina resolution. 120 ms dismiss delay prevents flicker on edge-grazing. `completedPhotoID` added to the engine so the top card also has an id to preview from.
+- [x] Verified on a real batch: processed several photos, runner dock updates live, grid thumbnails flip from amber ring to green dot as the worker progresses, hover preview shows crisp at popup size.
 
 #### Phase 7 — Polish
 - [ ] Keyboard shortcuts (⌘F, ⌘1/2/3, ⌘A/D, arrow nav, Space QuickLook, E edit, ⌘⏎ save, R reprocess, ⌫ clear).

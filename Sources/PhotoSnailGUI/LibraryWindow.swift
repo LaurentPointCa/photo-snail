@@ -9,6 +9,7 @@ import PhotoSnailCore
 /// top without changing the enclosing structure.
 struct LibraryWindow: View {
     @State private var store = LibraryStore()
+    @State private var showSettings = false
 
     var body: some View {
         Group {
@@ -22,12 +23,37 @@ struct LibraryWindow: View {
                 NavigationSplitView {
                     LibrarySidebar(store: store)
                         .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+                        .safeAreaInset(edge: .bottom) {
+                            // Pinned runner dock — visible whenever the engine
+                            // exists (post-load). Matches the priority of "the
+                            // current + last completed must always be visible"
+                            // from the Phase 0 plan.
+                            if let engine = store.engine {
+                                RunnerDock(engine: engine, store: store)
+                            }
+                        }
                 } content: {
                     LibraryGrid(store: store)
                         .navigationSplitViewColumnWidth(min: 500, ideal: 700)
                 } detail: {
                     LibraryInspector(store: store)
                         .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 440)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .automatic) {
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Label("Settings", systemImage: "gearshape")
+                        }
+                        .help("Model · sentinel · Ollama connection")
+                        .disabled(store.engine == nil)
+                    }
+                }
+                .sheet(isPresented: $showSettings) {
+                    if let engine = store.engine {
+                        SettingsSheet(engine: engine, isPresented: $showSettings)
+                    }
                 }
             }
         }
@@ -576,6 +602,317 @@ struct BulkActionBar: View {
             } catch {
                 showingExportError = "\(error)"
             }
+        }
+    }
+}
+
+// MARK: - Runner dock
+
+/// Compact runner pinned to the bottom of the sidebar. Surfaces the
+/// "what is the batch doing right now" state so it's always visible
+/// while the user browses or edits (priority #5 from the Phase 0
+/// plan). Two thumbnail cards (last-completed on top, current below),
+/// session stats, and a single Start/Pause/Resume button that adapts
+/// to the engine's state machine.
+struct RunnerDock: View {
+    @Bindable var engine: ProcessingEngine
+    @Bindable var store: LibraryStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            // Last-completed photo card (top). Stays on-screen between
+            // photos so the user always has a concrete sense of what the
+            // pipeline just did.
+            DockPhotoCard(
+                title: "Last completed",
+                thumbnail: engine.completedThumbnail,
+                caption: engine.completedDescription,
+                assetId: engine.completedPhotoID
+            )
+
+            // Current photo card (bottom). Shows a pulsing accent ring
+            // while the worker is running to match the Phase 0 mockup.
+            DockPhotoCard(
+                title: engine.state == .running ? "Processing" : "Idle",
+                thumbnail: engine.currentThumbnail,
+                caption: engine.statusMessage,
+                isLive: engine.state == .running,
+                assetId: engine.currentPhotoID
+            )
+
+            // Session stats + progress bar.
+            if engine.totalCount > 0 {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("\(engine.doneCount) / \(engine.totalCount)")
+                            .font(.caption.monospacedDigit())
+                        Spacer()
+                        if !engine.etaString.isEmpty && engine.etaString != "--" {
+                            Text("ETA \(engine.etaString)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    ProgressView(
+                        value: Double(engine.doneCount),
+                        total: Double(max(1, engine.totalCount))
+                    )
+                    .progressViewStyle(.linear)
+                    .controlSize(.small)
+                }
+            }
+
+            // Primary action — changes label based on engine state.
+            primaryButton
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .background(.bar)
+    }
+
+    @ViewBuilder
+    private var primaryButton: some View {
+        switch engine.state {
+        case .idle, .finished:
+            Button {
+                Task { await engine.start() }
+            } label: {
+                Label("Start", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.regular)
+        case .enumerating:
+            HStack {
+                ProgressView().controlSize(.small)
+                Text(engine.statusMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Spacer()
+            }
+        case .running:
+            Button {
+                engine.pause()
+            } label: {
+                Label("Pause", systemImage: "pause.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+        case .paused:
+            Button {
+                engine.resume()
+            } label: {
+                Label("Resume", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.regular)
+        }
+    }
+}
+
+/// One thumbnail + caption line inside the runner dock. The optional
+/// `isLive` flag draws a subtle accent ring that pulses slowly, used
+/// to mark the currently-processing card while the worker is active.
+///
+/// `assetId` (when non-nil) enables a hover-triggered popover that
+/// loads a larger version of the photo via `PHImageManager`. A short
+/// dismiss delay keeps the popover from flickering when the mouse
+/// grazes the card edge.
+private struct DockPhotoCard: View {
+    let title: String
+    let thumbnail: CGImage?
+    let caption: String
+    var isLive: Bool = false
+    var assetId: String? = nil
+
+    @State private var pulsePhase: Double = 0
+    @State private var isHovering: Bool = false
+    @State private var dismissTask: Task<Void, Never>? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+
+            HStack(alignment: .top, spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 56, height: 56)
+                    if let cg = thumbnail {
+                        Image(decorative: cg, scale: 1)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 56, height: 56)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    if isLive {
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.accentColor.opacity(0.8), lineWidth: 2)
+                            .frame(width: 56, height: 56)
+                            .scaleEffect(1 + 0.06 * pulsePhase)
+                            .opacity(1 - 0.4 * pulsePhase)
+                    }
+                }
+                // Hover-to-peek is scoped to the thumbnail only — we don't
+                // want the caption area triggering the popover because it's
+                // wide, close to other controls, and changes size when a
+                // new photo arrives.
+                .onHover { hovering in
+                    dismissTask?.cancel()
+                    if hovering {
+                        isHovering = true
+                    } else {
+                        // Small delay lets the mouse travel from the card
+                        // edge to the popover area without triggering a
+                        // dismiss-then-re-show flicker.
+                        dismissTask = Task {
+                            try? await Task.sleep(nanoseconds: 120_000_000)
+                            if !Task.isCancelled {
+                                isHovering = false
+                            }
+                        }
+                    }
+                }
+                .popover(
+                    isPresented: Binding(
+                        get: { isHovering && assetId != nil },
+                        set: { isHovering = $0 }
+                    ),
+                    arrowEdge: .trailing
+                ) {
+                    if let id = assetId {
+                        HoverPhotoPreview(assetId: id)
+                    }
+                }
+
+                Text(caption.isEmpty ? "—" : caption)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .onAppear {
+            if isLive {
+                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    pulsePhase = 1
+                }
+            }
+        }
+        .onChange(of: isLive) { _, nowLive in
+            if nowLive {
+                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    pulsePhase = 1
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    pulsePhase = 0
+                }
+            }
+        }
+    }
+}
+
+/// Popover content for the runner dock's hover-peek. Loads a larger
+/// version of the asset from `PHImageManager` on first appear. Shows a
+/// spinner while waiting, then the image. `.task(id: assetId)` cancels
+/// and re-fetches cleanly if the id changes mid-hover.
+///
+/// The frame is sized to 75% of the main screen's shorter dimension so
+/// the popover fills a substantial chunk of the display regardless of
+/// whether the image is portrait or landscape, while still leaving room
+/// for the popover arrow and enough margin to avoid spilling off-screen.
+private struct HoverPhotoPreview: View {
+    let assetId: String
+
+    @State private var image: NSImage? = nil
+    @State private var failed: Bool = false
+
+    /// Screen-relative max dimension, computed once at view creation.
+    /// On a 14" MacBook Pro (~1512 × 982 effective points) this is ~735;
+    /// on a 27" 5K display it's ~1620.
+    private let maxDimension: CGFloat = {
+        let screen = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1400, height: 900)
+        return min(screen.width, screen.height) * 0.75
+    }()
+
+    var body: some View {
+        ZStack {
+            if let img = image {
+                Image(nsImage: img)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: maxDimension, maxHeight: maxDimension)
+                    .fixedSize()
+            } else if failed {
+                VStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle")
+                    Text("Preview unavailable")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: maxDimension * 0.6, height: maxDimension * 0.6)
+            } else {
+                // Reserve the expected footprint while loading so the popover
+                // doesn't jump in size the moment the image arrives.
+                ProgressView()
+                    .controlSize(.large)
+                    .frame(width: maxDimension * 0.6, height: maxDimension * 0.6)
+            }
+        }
+        .padding(6)
+        .task(id: assetId) {
+            await loadLarge()
+        }
+    }
+
+    private func loadLarge() async {
+        image = nil
+        failed = false
+        guard let asset = PhotoLibrary.fetch(id: assetId) else {
+            failed = true
+            return
+        }
+        // Target pixel size: 2× the display cap, because PHImageManager's
+        // `targetSize` is in pixels and Retina displays double the density.
+        // `.highQualityFormat` still sometimes delivers a degraded frame
+        // first on iCloud assets; guard against it so we don't flash a
+        // blurry preview.
+        let px = maxDimension * 2
+        let target = CGSize(width: px, height: px)
+        let opts = PHImageRequestOptions()
+        opts.deliveryMode = .highQualityFormat
+        opts.isNetworkAccessAllowed = true
+        opts.isSynchronous = false
+
+        let loaded: NSImage? = await withCheckedContinuation { cont in
+            var didResume = false
+            PHImageManager.default().requestImage(
+                for: asset, targetSize: target, contentMode: .aspectFit, options: opts
+            ) { img, info in
+                if didResume { return }
+                if let degraded = info?[PHImageResultIsDegradedKey] as? Bool, degraded {
+                    return
+                }
+                didResume = true
+                cont.resume(returning: img)
+            }
+        }
+        if Task.isCancelled { return }
+        if let loaded {
+            image = loaded
+        } else {
+            failed = true
         }
     }
 }

@@ -120,6 +120,14 @@ final class LibraryStore {
     /// (re-process, copy tags) that don't need a progress sheet.
     var bulkStatusMessage: String? = nil
 
+    /// The shared processing engine that owns the worker loop. Created in
+    /// `load()` once the queue is open. Views observe its state (current
+    /// photo, last completed, throughput, session counts) directly; it's
+    /// `@Observable`, so reads are tracked automatically.
+    ///
+    /// `nil` before `load()` completes or if queue open failed.
+    private(set) var engine: ProcessingEngine? = nil
+
     /// Convenience alphabetically-sorted view of `activeTagFilters` for
     /// stable rendering in the sidebar. `Set` has no order of its own.
     var activeTagFiltersOrdered: [String] {
@@ -208,6 +216,13 @@ final class LibraryStore {
             self.loadError = "Queue open failed: \(error)"
             return
         }
+
+        // 1a. Processing engine — shares the queue so worker mutations
+        //     flow through one change stream (ours) rather than splitting
+        //     into two SQLite connections with divergent caches.
+        let engine = ProcessingEngine(queue: q)
+        self.engine = engine
+        await engine.loadInitialStats()
 
         // 2. Subscribe BEFORE fetching the snapshot so events that arrive
         //    during the snapshot are buffered in the stream, not lost.
