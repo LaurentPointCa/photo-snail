@@ -166,6 +166,69 @@ For each PHAsset:
 - Documented in CLAUDE.md (settings shape, security tradeoff, family rule, all flags).
 - Known minor bug: diagnostic flags (`--list-models`, `--ollama-test`) return before settings save, so combining them with `--ollama-url` etc. doesn't persist. Re-run without the diagnostic flag.
 
+### Phase UI — Library revamp (in progress, started 2026-04-11)
+
+_Replace the "batch monitor" GUI with a full library browser: grid of every photo, status badges, inspector with full processing provenance, tag-filter on right-click, bulk operations, runner dock pinned to sidebar. Design: Option A (Photos-native NavigationSplitView) with Option-C thoroughness in the inspector. macOS 14+. See the plan in the conversation memory / chat._
+
+#### Phase 1 — Data layer (no visible UI change) ✅ (2026-04-11)
+- [x] `AssetQueue`: schema migration from `user_version` 0 → 1. Adds nullable columns: `model`, `sentinel`, `vision_json`, `vision_ms`, `ollama_ms`, `total_ms`, `updated_at`.
+- [x] `AssetQueue`: one-time backup of `queue.sqlite` (+ `-wal`/`-shm`) to `queue.sqlite.pre-v1.backup` before the first migration. Skipped if already at v1 or on a brand-new DB.
+- [x] `AssetQueue.markDone` gains a required `sentinel:` parameter and persists the new fields from `PipelineResult`.
+- [x] New queue methods: `fetchAllRows()`, `fetchRow(id:)`, `updateDescription(id:description:tags:)`, `requeue(_:)`, `clearResult(_:)`.
+- [x] New public `AssetQueue.Row` struct exposing the full row shape for the library view.
+- [x] Call-site updates: `Sources/PhotoSnailApp/QueueRunner.swift`, `Sources/PhotoSnailGUI/ProcessingEngine.swift`, `Sources/photo-snail-cli/main.swift` all pass `sentinel:` through.
+- [x] New `--verify-queue` flag on `photo-snail-app` as a health check + migration trigger.
+- [x] Build: `swift build -c release` green in 2.6 s.
+- [x] Verified on the real 7,632-row queue: pre-migration `user_version=0`, post-migration `user_version=1`, `queue.sqlite.pre-v1.backup` created with the pre-v0 schema and same row counts, `pragma table_info(assets)` shows 14 columns, row counts unchanged (534 done / 7,098 pending / 0 failed), idempotent on re-run (backup mtime unchanged).
+- [ ] **Still to verify**: real `markDone` actually populates the new columns. Happens automatically on the next real processing run (not dry-run).
+
+#### Phase 2 — LibraryStore + grid skeleton
+- [ ] `@Observable @MainActor LibraryStore`: holds `PHFetchResult<PHAsset>` + `[String: QueueRow]` cache + inverted tag index.
+- [ ] `AsyncStream<QueueChange>` on `AssetQueue` for live cache updates.
+- [ ] New `LibraryWindow` with three-column `NavigationSplitView`.
+- [ ] `LazyVGrid` with `PHCachingImageManager`, adaptive column layout, status badges, hover lift.
+- [ ] Feature flag `PHOTO_SNAIL_OLD_UI=1` → falls back to the current `ContentView`.
+
+#### Phase 3 — Inspector (thoroughness)
+- [ ] Hero preview (requestImage at 2× inspector width).
+- [ ] Identity section (filename, uuid, dates, dimensions, mediaType, favorite, location + lazy reverse-geocode, album membership).
+- [ ] Description editor (`TextEditor` + Save/Revert, writes via `PhotosScripter.runBatch` preserving sentinel + updates queue row).
+- [ ] Tag chips with context menu (View photos with this tag / add-to-filter / remove-from-photo).
+- [ ] Processing provenance (model, sentinel, ran-at, timing bar, attempts, last error).
+- [ ] Vision findings visualization (classifications w/ confidence bars, animals, faces, OCR with stop-listed words greyed).
+- [ ] Raw queue row ("Developer" collapsible section).
+
+#### Phase 4 — Filters, search, tag-filter magic
+- [ ] Sidebar filter list (All / Tagged / Untouched / Pending / Failed) with live counts.
+- [ ] Active filter chip strip (AND semantics).
+- [ ] Popular tags section (top 20 by frequency in current base filter).
+- [ ] Text search (debounced, matches on description + tags via the in-memory cache).
+- [ ] Right-click on a tag chip → "View photos with this tag" sets the filter.
+
+#### Phase 5 — Bulk operations
+- [ ] Multi-select state in the grid (cmd/shift-click, arrow range, ⌘A/D).
+- [ ] Bulk action bar (visible when selection > 0): Re-process · Clear description · Copy tags · Export JSON.
+- [ ] Confirmation dialogs for destructive ops (Clear description).
+- [ ] Progress sheet with cancel button for AppleScript-heavy ops.
+
+#### Phase 6 — Runner dock + engine migration
+- [ ] Compact runner card pinned to the bottom of the sidebar (last-completed + current + start/pause/resume + stats).
+- [ ] Current/last photo cards live there permanently (per user request #5).
+- [ ] Failures become the "Failed" filter; delete `FailureListView`.
+- [ ] Delete old `ContentView`, `StatusBar`, `ControlsView`, `CompletedPhotoView`, `CurrentPhotoView`. New `LibraryWindow` is the default.
+
+#### Phase 7 — Polish
+- [ ] Keyboard shortcuts (⌘F, ⌘1/2/3, ⌘A/D, arrow nav, Space QuickLook, E edit, ⌘⏎ save, R reprocess, ⌫ clear).
+- [ ] Hover states, 150 ms fades, tabular figures.
+- [ ] `SceneStorage` for window size / split widths / inspector collapsed.
+- [ ] Badge legend in a toolbar "?" popover.
+- [ ] Light + dark mode review.
+
+#### Phase 8 — Settings sheet refresh
+- [ ] Same capabilities as today (model / sentinel / Ollama).
+- [ ] Add: default thumbnail size, default sort order, "Follow current processing in grid" toggle.
+- [ ] Visual pass to match the rest of the revamp.
+
 ### Phase H — (deferred) Production polish
 _Phase H was planned as an optional polish layer. A mid-batch review on 2026-04-11 (535/7,632 photos done, 0 failed) showed no quality issues that would justify the originally-planned work — descriptions averaged ~196 chars, tag counts 7–14, zero duplicates, zero failures. The four original items have been moved to "Potential future improvements" below. The active roadmap (Phases A–G) is complete and the CLI/GUI are in production use._
 

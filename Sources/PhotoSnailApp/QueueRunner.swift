@@ -165,7 +165,7 @@ enum QueueRunner {
                             // Only mark done AFTER write-back succeeds — and only in real mode.
                             // Dry-run intentionally leaves the queue untouched.
                             if !dryRun {
-                                try? await queue.markDone(id, result: result)
+                                try? await queue.markDone(id, result: result, sentinel: sentinel)
                             }
                             let count = await doneCounter.increment()
                             let secs = String(format: "%.1fs", result.totalElapsedSeconds)

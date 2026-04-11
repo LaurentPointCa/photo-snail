@@ -340,7 +340,7 @@ final class ProcessingEngine {
 
                     // markDone only in real mode — dry-run leaves the queue untouched.
                     if !dryRun {
-                        try? await queue.markDone(id, result: result)
+                        try? await queue.markDone(id, result: result, sentinel: sentinel)
                     }
 
                     await MainActor.run {

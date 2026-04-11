@@ -185,7 +185,11 @@ private func runQueue(args: CLIArgs) async {
 
                     do {
                         let result = try await workerPipeline.process(imagePath: id)
-                        try? await queue.markDone(id, result: result)
+                        // The file-path queue mode has no Photos.app write-back and
+                        // therefore no real sentinel to preserve. Record the default
+                        // sentinel as a provenance marker so the inspector in the GUI
+                        // shows something coherent if these rows are ever viewed.
+                        try? await queue.markDone(id, result: result, sentinel: Settings.default.sentinel)
                         let secs = String(format: "%.1fs", result.totalElapsedSeconds)
                         let preview = result.caption.description.prefix(80)
                         print("[done a\(attempts)] \(secs) \(id) — \(preview)")

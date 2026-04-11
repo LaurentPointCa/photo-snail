@@ -1,7 +1,7 @@
 import Foundation
 import PhotoSnailCore
 
-// Usage: photo-snail-app [--list [N]] [--list-models] [--ollama-test]
+// Usage: photo-snail-app [--list [N]] [--list-models] [--ollama-test] [--verify-queue]
 //                      [--model <name>] [--bare|--hybrid] [--no-downsize]
 //                      [--db <path>] [--concurrency <N>]
 //                      [--sentinel <marker>] [--keep-sentinel]
@@ -11,6 +11,10 @@ import PhotoSnailCore
 //   --list [N]           List N most-recent image assets and exit (default: 10)
 //   --list-models        Print Ollama's installed models and exit
 //   --ollama-test        Probe Ollama (/api/tags) with current config and exit
+//   --verify-queue       Open the queue (triggers any pending schema migration),
+//                        print schema version + row counts, and exit. Useful as
+//                        a one-shot health check or to trigger the v0→v1
+//                        migration without starting a real batch.
 //   --model <name>       Ollama model to use (e.g. gemma4:31b, llava:13b)
 //                        Persists to settings.json. Switching to a different family
 //                        requires --sentinel or --keep-sentinel.
@@ -38,6 +42,7 @@ struct AppArgs {
     var list: Int? = nil          // nil = not listing, Int = number to list
     var listModels: Bool = false
     var ollamaTest: Bool = false
+    var verifyQueue: Bool = false
 
     // CLI overrides; nil means "use whatever is in settings.json"
     var model: String? = nil
@@ -72,6 +77,8 @@ func parseArgs(_ argv: [String]) -> AppArgs {
             out.listModels = true
         case "--ollama-test":
             out.ollamaTest = true
+        case "--verify-queue":
+            out.verifyQueue = true
         case "--model":
             i += 1
             if i < argv.count { out.model = argv[i] }
@@ -240,6 +247,53 @@ private func runListModels(connection: OllamaConnection, currentModel: String) a
     }
 }
 
+// MARK: - --verify-queue
+
+/// Opens the queue (running any pending schema migration) and prints a short
+/// status report. Exits with code 0 on success, 1 on any error. Does NOT touch
+/// PhotoKit or Ollama — this is purely a local SQLite health check.
+private func runVerifyQueue(dbPath: URL?) async {
+    let path = dbPath ?? AssetQueue.defaultDBPath
+    eprint("queue: \(path.path)")
+
+    // Detect whether a backup exists before we open the queue — if the DB is
+    // still at v0 the open will create one, and we want to report that fact.
+    let backupPath = path.deletingLastPathComponent()
+        .appendingPathComponent("queue.sqlite.pre-v1.backup")
+    let hadBackupBefore = FileManager.default.fileExists(atPath: backupPath.path)
+
+    let queue: AssetQueue
+    do {
+        queue = try AssetQueue(dbPath: path)
+    } catch {
+        eprint("FAIL — open failed: \(error)")
+        exit(1)
+    }
+
+    // Fetch stats via the public API.
+    let stats: AssetQueue.Stats
+    do {
+        stats = try await queue.stats()
+    } catch {
+        eprint("FAIL — stats failed: \(error)")
+        exit(1)
+    }
+
+    // Report backup state.
+    let hadBackupAfter = FileManager.default.fileExists(atPath: backupPath.path)
+    if hadBackupAfter && !hadBackupBefore {
+        eprint("migration: v0 → v1 (backup created at \(backupPath.lastPathComponent))")
+    } else if hadBackupAfter {
+        eprint("migration: already at v1 (prior backup present)")
+    } else {
+        eprint("migration: already at v1 (no prior v0 backup)")
+    }
+
+    print("OK — schema v\(AssetQueue.currentSchemaVersion), \(stats.total) rows "
+          + "(done=\(stats.done) pending=\(stats.pending) failed=\(stats.failed) in_progress=\(stats.inProgress))")
+    exit(0)
+}
+
 // MARK: - --ollama-test
 
 private func runOllamaTest(connection: OllamaConnection) async {
@@ -288,6 +342,10 @@ struct App {
         }
         if args.ollamaTest {
             await runOllamaTest(connection: runtime.ollama)
+            return
+        }
+        if args.verifyQueue {
+            await runVerifyQueue(dbPath: args.dbPath.map { URL(fileURLWithPath: $0) })
             return
         }
 
