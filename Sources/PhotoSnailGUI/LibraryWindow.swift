@@ -10,6 +10,7 @@ import PhotoSnailCore
 struct LibraryWindow: View {
     @State private var store = LibraryStore()
     @State private var showSettings = false
+    @State private var showLegend = false
 
     var body: some View {
         Group {
@@ -40,6 +41,17 @@ struct LibraryWindow: View {
                         .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 440)
                 }
                 .toolbar {
+                    ToolbarItem(placement: .automatic) {
+                        Button {
+                            showLegend = true
+                        } label: {
+                            Label("Legend", systemImage: "questionmark.circle")
+                        }
+                        .help("Keyboard shortcuts + status badge legend")
+                        .popover(isPresented: $showLegend, arrowEdge: .top) {
+                            LegendPopover()
+                        }
+                    }
                     ToolbarItem(placement: .automatic) {
                         Button {
                             showSettings = true
@@ -219,6 +231,9 @@ struct LibraryGrid: View {
     private let thumbnailSize: CGFloat = 140
     private let gridSpacing: CGFloat = 10
 
+    @State private var showingKeyboardClearConfirm: Bool = false
+    @State private var showingKeyboardReprocessConfirm: Bool = false
+
     var body: some View {
         VStack(spacing: 0) {
             // Bulk action bar — only appears when something is selected.
@@ -237,21 +252,12 @@ struct LibraryGrid: View {
             placement: .toolbar,
             prompt: "Search descriptions and tags"
         )
-        // Keyboard shortcuts for selection — Esc clears, ⌘A selects all
-        // visible. Needs a focusable host and we disable the focus ring
-        // so the whole pane doesn't glow blue on every click.
+        // Keyboard shortcuts. The grid is the focusable host; disabling the
+        // focus effect keeps the whole pane from glowing blue on every click.
         .focusable()
         .focusEffectDisabled()
-        .onKeyPress { press in
-            if press.key == .escape {
-                store.clearSelection()
-                return .handled
-            }
-            if press.modifiers.contains(.command) && press.characters == "a" {
-                store.selectAllInView()
-                return .handled
-            }
-            return .ignored
+        .onKeyPress(phases: .down) { press in
+            handleKeyPress(press)
         }
         // Progress sheet for long bulk ops (Clear description). Bound to
         // `bulkProgress` via Bindable so the sheet dismisses automatically
@@ -259,6 +265,108 @@ struct LibraryGrid: View {
         .sheet(item: Bindable(store).bulkProgress) { _ in
             BulkProgressSheet(store: store)
         }
+        // Full-screen photo preview triggered by Space on a single selection.
+        .sheet(isPresented: Bindable(store).wantsPreview) {
+            FullscreenPreviewSheet(store: store)
+        }
+        // Keyboard-triggered bulk confirmations. These live here rather than
+        // on BulkActionBar because the key handler is on the grid.
+        .confirmationDialog(
+            "Clear descriptions from \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
+            isPresented: $showingKeyboardClearConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Clear descriptions", role: .destructive) {
+                Task { await store.clearSelectionDescriptions() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the photo-snail-written description from Photos.app and resets each queue row to pending. Original photos are not modified. This cannot be undone.")
+        }
+        .confirmationDialog(
+            "Re-process \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
+            isPresented: $showingKeyboardReprocessConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Re-process") {
+                Task { await store.requeueSelection() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Queued photos will be processed on the next Start.")
+        }
+    }
+
+    /// Keyboard dispatch for the grid. Factored out of `.onKeyPress`
+    /// because the switch got big enough that inlining it hurt type-check
+    /// time. Returns `.handled` when we consumed the press, `.ignored`
+    /// otherwise so SwiftUI can route it further (e.g. to `.searchable`).
+    private func handleKeyPress(_ press: KeyPress) -> KeyPress.Result {
+        // Esc → clear selection
+        if press.key == .escape {
+            if !store.selection.isEmpty {
+                store.clearSelection()
+                return .handled
+            }
+            return .ignored
+        }
+        // ⌘A → select all visible
+        if press.modifiers.contains(.command) && press.characters == "a" {
+            store.selectAllInView()
+            return .handled
+        }
+        // Arrow navigation — left/right through displayOrder. Up/down is
+        // deferred because LazyVGrid.adaptive has no stable column count.
+        if press.key == .leftArrow {
+            store.moveSelectionPrev()
+            return .handled
+        }
+        if press.key == .rightArrow {
+            store.moveSelectionNext()
+            return .handled
+        }
+        // Space → full-screen preview of the single selection
+        if press.characters == " " && press.modifiers.isEmpty {
+            if store.singleSelection != nil {
+                store.wantsPreview = true
+                return .handled
+            }
+            return .ignored
+        }
+        // E (or Return) → enter edit mode for the single selection's
+        // description. The inspector observes `wantsEdit` and flips into
+        // edit mode on the next render.
+        if press.characters == "e" && press.modifiers.isEmpty {
+            if store.singleSelection != nil {
+                store.wantsEdit = true
+                return .handled
+            }
+            return .ignored
+        }
+        if press.key == .return && press.modifiers.isEmpty {
+            if store.singleSelection != nil {
+                store.wantsEdit = true
+                return .handled
+            }
+            return .ignored
+        }
+        // R → bulk re-process (with confirmation when >10)
+        if press.characters == "r" && press.modifiers.isEmpty {
+            guard !store.selection.isEmpty else { return .ignored }
+            if store.selection.count > 10 {
+                showingKeyboardReprocessConfirm = true
+            } else {
+                Task { await store.requeueSelection() }
+            }
+            return .handled
+        }
+        // Delete / Backspace → bulk clear descriptions (always confirmed)
+        if press.key == .delete || press.key == .deleteForward {
+            guard !store.selection.isEmpty else { return .ignored }
+            showingKeyboardClearConfirm = true
+            return .handled
+        }
+        return .ignored
     }
 
     private var subtitle: String {
@@ -280,35 +388,49 @@ struct LibraryGrid: View {
                 description: Text(emptyStateDescription)
             )
         } else {
-            ScrollView {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: thumbnailSize, maximum: thumbnailSize + 60), spacing: gridSpacing)],
-                    spacing: gridSpacing
-                ) {
-                    ForEach(store.displayOrder, id: \.self) { id in
-                        ThumbnailCell(
-                            id: id,
-                            row: store.rows[id],
-                            isSelected: store.selection.contains(id),
-                            size: thumbnailSize
-                        )
-                        .onTapGesture {
-                            // Read modifier keys at click time. ⌘-click
-                            // toggles, ⇧-click range-extends, plain click
-                            // replaces the selection. Matches Finder /
-                            // Photos.app conventions.
-                            let mods = NSEvent.modifierFlags
-                            if mods.contains(.command) {
-                                store.toggleInSelection(id)
-                            } else if mods.contains(.shift) {
-                                store.extendSelection(to: id)
-                            } else {
-                                store.select(id)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: thumbnailSize, maximum: thumbnailSize + 60), spacing: gridSpacing)],
+                        spacing: gridSpacing
+                    ) {
+                        ForEach(store.displayOrder, id: \.self) { id in
+                            ThumbnailCell(
+                                id: id,
+                                row: store.rows[id],
+                                isSelected: store.selection.contains(id),
+                                size: thumbnailSize
+                            )
+                            .id(id)
+                            .onTapGesture {
+                                // Read modifier keys at click time. ⌘-click
+                                // toggles, ⇧-click range-extends, plain click
+                                // replaces the selection. Matches Finder /
+                                // Photos.app conventions.
+                                let mods = NSEvent.modifierFlags
+                                if mods.contains(.command) {
+                                    store.toggleInSelection(id)
+                                } else if mods.contains(.shift) {
+                                    store.extendSelection(to: id)
+                                } else {
+                                    store.select(id)
+                                }
                             }
                         }
                     }
+                    .padding(gridSpacing)
                 }
-                .padding(gridSpacing)
+                // Scroll the grid to follow the current single selection
+                // when it changes. `anchor: .center` keeps the active
+                // photo near the middle of the viewport so arrow-key
+                // navigation feels continuous even on long scroll lists.
+                .onChange(of: store.singleSelection) { _, new in
+                    if let id = new {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            proxy.scrollTo(id, anchor: .center)
+                        }
+                    }
+                }
             }
         }
     }
@@ -368,6 +490,7 @@ struct ThumbnailCell: View {
 
     @State private var image: NSImage? = nil
     @State private var loadTask: Task<Void, Never>? = nil
+    @State private var isHovering: Bool = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -395,6 +518,18 @@ struct ThumbnailCell: View {
         }
         .frame(width: size, height: size)
         .contentShape(Rectangle())
+        // Subtle lift + soft shadow on hover. Makes the grid feel alive
+        // without being distracting; 120 ms ease is short enough that
+        // fast mouse sweeps don't leave trailing shadow artifacts.
+        .scaleEffect(isHovering ? 1.03 : 1.0)
+        .shadow(
+            color: .black.opacity(isHovering ? 0.18 : 0),
+            radius: isHovering ? 5 : 0,
+            x: 0,
+            y: isHovering ? 2 : 0
+        )
+        .animation(.easeOut(duration: 0.12), value: isHovering)
+        .onHover { isHovering = $0 }
         .onAppear {
             loadTask?.cancel()
             loadTask = Task { await loadThumbnail() }
@@ -408,24 +543,45 @@ struct ThumbnailCell: View {
         guard image == nil else { return }
         guard let asset = PhotoLibrary.fetch(id: id) else { return }
 
-        // Scale 2× for Retina. `.fastFormat` gives a single delivery (one
-        // completion callback), which avoids the "continuation called twice"
-        // trap from `.opportunistic`. Use `.highQualityFormat` later if the
-        // fast thumbnails look muddy.
-        let target = CGSize(width: size * 2, height: size * 2)
+        // Pixel target = display points × backing scale factor, with a 2×
+        // floor for standard 2× Retina. On a 3× display (recent MacBook
+        // Pros) this asks PhotoKit for 3× resolution so the thumbnail
+        // stays crisp at its rendered size.
+        let scale = max(NSScreen.main?.backingScaleFactor ?? 2.0, 2.0)
+        let target = CGSize(width: size * scale, height: size * scale)
+
+        // .highQualityFormat + .exact resize produces a properly filtered
+        // thumbnail at the requested pixel size — not the tiny cached
+        // preview that .fastFormat returns. The cost is an extra render
+        // per cell the first time it appears (PhotoKit caches the result
+        // internally, so later scrolls are fast).
+        //
+        // Network access is left disabled: for iCloud-only assets we'd
+        // rather show a grey placeholder than pay cloud latency on every
+        // grid scroll. The hover preview + full-screen preview do enable
+        // network because they're per-photo intentional peeks.
         let options = PHImageRequestOptions()
-        options.deliveryMode = .fastFormat
-        options.resizeMode = .fast
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .exact
         options.isNetworkAccessAllowed = false
         options.isSynchronous = false
 
+        // .highQualityFormat is single-delivery in theory, but iCloud
+        // assets can still yield a degraded callback first. Same pattern
+        // as HoverPhotoPreview: resume on the non-degraded frame only.
         let loaded: NSImage? = await withCheckedContinuation { cont in
+            var didResume = false
             PHImageManager.default().requestImage(
                 for: asset,
                 targetSize: target,
                 contentMode: .aspectFill,
                 options: options
-            ) { img, _ in
+            ) { img, info in
+                if didResume { return }
+                if let degraded = info?[PHImageResultIsDegradedKey] as? Bool, degraded {
+                    return
+                }
+                didResume = true
                 cont.resume(returning: img)
             }
         }
@@ -602,6 +758,193 @@ struct BulkActionBar: View {
             } catch {
                 showingExportError = "\(error)"
             }
+        }
+    }
+}
+
+// MARK: - Legend popover
+
+/// Toolbar-attached popover that documents the status badges and the
+/// keyboard shortcuts. Discoverability aid — the rest of the app tries
+/// to be obvious, this is where the non-obvious bits live.
+struct LegendPopover: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Status badges")
+                    .font(.headline)
+                badgeRow(color: .green, label: "Tagged", description: "Photo has a description in Photos.app.")
+                badgeRow(color: .orange, label: "Pending", description: "Queued for processing. Live ring while in-progress.", ringed: true)
+                badgeRow(color: .red, label: "Failed", description: "Processing failed. Retry via bulk Re-process.")
+                badgeRow(color: .gray.opacity(0.3), label: "Untouched", description: "Not yet enumerated into the queue.")
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Keyboard shortcuts")
+                    .font(.headline)
+                keyRow("⌘F", "Search descriptions + tags")
+                keyRow("←  →", "Previous / next photo")
+                keyRow("Space", "Full-screen preview")
+                keyRow("Return  E", "Edit description")
+                keyRow("⌘⏎", "Save edit")
+                keyRow("⌘A", "Select all visible")
+                keyRow("⌘-click", "Toggle selection")
+                keyRow("⇧-click", "Range-select")
+                keyRow("Esc", "Clear selection / close preview")
+                keyRow("R", "Re-process selection")
+                keyRow("⌫", "Clear descriptions for selection")
+            }
+        }
+        .padding(16)
+        .frame(width: 360)
+    }
+
+    @ViewBuilder
+    private func badgeRow(color: Color, label: String, description: String, ringed: Bool = false) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            ZStack {
+                if ringed {
+                    Circle().strokeBorder(color, lineWidth: 2)
+                } else {
+                    Circle().fill(color)
+                }
+            }
+            .frame(width: 14, height: 14)
+            .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label).font(.callout.weight(.medium))
+                Text(description).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func keyRow(_ key: String, _ action: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text(key)
+                .font(.system(.caption, design: .monospaced))
+                .frame(width: 80, alignment: .leading)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.secondary.opacity(0.12))
+                )
+            Text(action).font(.caption)
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Fullscreen preview sheet
+
+/// Large photo preview presented when the user hits Space with exactly
+/// one selection. Dismissed by Esc, by the X button, or by clicking
+/// outside the image. Reads the single selection from the store, loads
+/// a high-quality version via `PHImageManager`, and sizes itself to fit
+/// within the current window.
+///
+/// Kept deliberately simple: it's not QuickLook and it's not a sheet
+/// with navigation chrome. Just a dim backdrop, a big image, and a
+/// close affordance. The runner-dock hover popover already covers the
+/// "small peek" case; this is the "take it all in" case.
+struct FullscreenPreviewSheet: View {
+    @Bindable var store: LibraryStore
+
+    @State private var image: NSImage? = nil
+    @State private var failed: Bool = false
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.opacity(0.92)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    store.wantsPreview = false
+                }
+
+            Group {
+                if let img = image {
+                    Image(nsImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .padding(24)
+                } else if failed {
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                        Text("Preview unavailable")
+                    }
+                    .foregroundStyle(.white.opacity(0.8))
+                } else {
+                    ProgressView()
+                        .controlSize(.large)
+                        .tint(.white)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Button {
+                store.wantsPreview = false
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .black.opacity(0.5))
+            }
+            .buttonStyle(.plain)
+            .padding(16)
+            .keyboardShortcut(.cancelAction)
+        }
+        // ~85% of main screen; modal sheet already has some chrome.
+        .frame(
+            minWidth: 600, idealWidth: idealSize.width, maxWidth: .infinity,
+            minHeight: 400, idealHeight: idealSize.height, maxHeight: .infinity
+        )
+        .task(id: store.singleSelection) {
+            await loadImage()
+        }
+    }
+
+    private var idealSize: CGSize {
+        let screen = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1400, height: 900)
+        return CGSize(width: screen.width * 0.85, height: screen.height * 0.85)
+    }
+
+    private func loadImage() async {
+        image = nil
+        failed = false
+        guard let id = store.singleSelection,
+              let asset = PhotoLibrary.fetch(id: id) else {
+            failed = true
+            return
+        }
+        let screen = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1600, height: 1200)
+        let target = CGSize(width: screen.width * 2, height: screen.height * 2)
+        let opts = PHImageRequestOptions()
+        opts.deliveryMode = .highQualityFormat
+        opts.isNetworkAccessAllowed = true
+        opts.isSynchronous = false
+
+        let loaded: NSImage? = await withCheckedContinuation { cont in
+            var didResume = false
+            PHImageManager.default().requestImage(
+                for: asset, targetSize: target, contentMode: .aspectFit, options: opts
+            ) { img, info in
+                if didResume { return }
+                if let degraded = info?[PHImageResultIsDegradedKey] as? Bool, degraded {
+                    return
+                }
+                didResume = true
+                cont.resume(returning: img)
+            }
+        }
+        if Task.isCancelled { return }
+        if let loaded {
+            image = loaded
+        } else {
+            failed = true
         }
     }
 }

@@ -232,12 +232,15 @@ _Replace the "batch monitor" GUI with a full library browser: grid of every phot
 - [x] Hover-to-peek on dock photo cards: moving the mouse over either thumbnail pops out a ~75%-of-screen preview loaded via `PHImageManager.highQualityFormat` at Retina resolution. 120 ms dismiss delay prevents flicker on edge-grazing. `completedPhotoID` added to the engine so the top card also has an id to preview from.
 - [x] Verified on a real batch: processed several photos, runner dock updates live, grid thumbnails flip from amber ring to green dot as the worker progresses, hover preview shows crisp at popup size.
 
-#### Phase 7 — Polish
-- [ ] Keyboard shortcuts (⌘F, ⌘1/2/3, ⌘A/D, arrow nav, Space QuickLook, E edit, ⌘⏎ save, R reprocess, ⌫ clear).
-- [ ] Hover states, 150 ms fades, tabular figures.
-- [ ] `SceneStorage` for window size / split widths / inspector collapsed.
-- [ ] Badge legend in a toolbar "?" popover.
-- [ ] Light + dark mode review.
+#### Phase 7 — Polish ✅ (2026-04-11)
+- [x] Keyboard: ⌘F (existing via .searchable), ⌘A, Esc, ← / → (grid nav with auto-scroll via ScrollViewReader), Space (full-screen preview sheet), E / Return (inspector edit mode), ⌘⏎ (save, existing), R (bulk re-process with confirmation when >10), ⌫ (bulk clear with confirmation).
+- [x] Hover lift on grid thumbnails: 3% scale + soft shadow on hover, 120 ms ease.
+- [x] Full-screen preview sheet triggered by Space — dim backdrop, ~85% screen, close button + Esc + tap-outside. Uses the same degraded-callback guard pattern as the hover peek.
+- [x] Badge legend toolbar button (?) opening a popover with badge meanings + a full keyboard shortcut reference.
+- [x] Thumbnail quality fix: switched from `.fastFormat`/`.resizeMode = .fast` to `.highQualityFormat`/`.resizeMode = .exact` at `display points × backing scale factor` pixel target. Retina-sharp at the cost of a slightly slower first render; PHCachingImageManager still deferred (not needed at current perf).
+- [x] LibraryStore gained: `moveSelectionPrev/Next`, `wantsPreview`, `wantsEdit` — observable signals the grid and inspector cross-communicate through.
+- [x] Inspector observes `wantsEdit` and auto-enters edit mode when the grid flips it.
+- [x] Deferred: up/down arrow nav (adaptive grid column count is unstable), SceneStorage (macOS auto-saves window frame), light/dark review (system colors already adapt).
 
 #### Phase 8 — Settings sheet refresh
 - [ ] Same capabilities as today (model / sentinel / Ollama).

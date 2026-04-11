@@ -287,6 +287,16 @@ private struct InspectorContent: View {
         .task(id: assetId) {
             await loadContent()
         }
+        // React to the keyboard-triggered edit signal from the grid (E or
+        // Return key). The grid sets `wantsEdit = true`; we flip into edit
+        // mode for the current description and reset the flag so the
+        // same keystroke doesn't re-trigger on the next render.
+        .onChange(of: store.wantsEdit) { _, newValue in
+            guard newValue else { return }
+            let current = store.rows[assetId]?.description ?? ""
+            beginEditing(with: current)
+            store.wantsEdit = false
+        }
     }
 
     // MARK: - Hero preview

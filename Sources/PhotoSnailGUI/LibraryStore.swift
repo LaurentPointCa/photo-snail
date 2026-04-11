@@ -389,6 +389,49 @@ final class LibraryStore {
         selection.count == 1 ? selection.first : nil
     }
 
+    /// Advance the selection to the previous photo in `displayOrder` (left
+    /// arrow). Replaces the current selection with exactly one id. No-op
+    /// when the grid is empty or the current selection is already at the
+    /// first item. Called by the grid's ← key handler.
+    func moveSelectionPrev() {
+        guard !displayOrder.isEmpty else { return }
+        if let current = singleSelection,
+           let idx = displayOrder.firstIndex(of: current),
+           idx > 0 {
+            select(displayOrder[idx - 1])
+        } else {
+            // No single selection yet → jump to the first visible photo.
+            select(displayOrder[0])
+        }
+    }
+
+    /// Advance the selection to the next photo in `displayOrder` (right
+    /// arrow). See `moveSelectionPrev` for semantics.
+    func moveSelectionNext() {
+        guard !displayOrder.isEmpty else { return }
+        if let current = singleSelection,
+           let idx = displayOrder.firstIndex(of: current),
+           idx < displayOrder.count - 1 {
+            select(displayOrder[idx + 1])
+        } else {
+            select(displayOrder[0])
+        }
+    }
+
+    // MARK: - Keyboard-driven hints
+
+    /// Flipped to `true` when the user presses `Space` over the grid, read
+    /// by `LibraryGrid` to present a full-screen preview sheet for the
+    /// current single selection. The consumer resets it to `false` when
+    /// the sheet closes.
+    var wantsPreview: Bool = false
+
+    /// Flipped to `true` when the user presses `E` (or `Return`) with a
+    /// single selection, read by the inspector to auto-enter edit mode
+    /// on the description field. The inspector resets it once it has
+    /// consumed the signal.
+    var wantsEdit: Bool = false
+
     // MARK: - Bulk operations
 
     /// Re-queue every selected asset for reprocessing. Rows that already
