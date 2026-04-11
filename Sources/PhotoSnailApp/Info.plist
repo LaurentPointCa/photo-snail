@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>com.laurentchouinard.photo-snail</string>
+	<key>CFBundleName</key>
+	<string>photo-snail</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>photo-snail reads your Photos library to generate descriptions and tags for each photo using a local AI model.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>photo-snail writes AI-generated descriptions and tags back to your Photos library metadata.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>photo-snail drives Photos.app via AppleScript to write descriptions that sync via iCloud.</string>
+	<key>LSUIElement</key>
+	<true/>
+</dict>
+</plist>

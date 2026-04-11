@@ -1,0 +1,32 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Claude Code local settings (local permission allowlist, not for sharing)
+.claude/settings.local.json
+
+# Sample images — keep the folder, ignore the contents
+sample/*
+!sample/.gitkeep
+!sample/README.md
