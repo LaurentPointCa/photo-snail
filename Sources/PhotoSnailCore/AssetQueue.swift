@@ -48,6 +48,19 @@ public actor AssetQueue {
         public var total: Int { pending + inProgress + done + failed }
     }
 
+    /// Mutation event broadcast to subscribers of `changes()`. Consumers use
+    /// this to keep their row cache (e.g. the GUI's `LibraryStore`) in sync
+    /// with worker activity without polling.
+    ///
+    /// `.inserted` carries ALL ids passed to `enqueue` rather than only the
+    /// ones that were actually new — the queue uses `INSERT OR IGNORE` and
+    /// the distinction is more expensive to compute than it's worth. Consumers
+    /// are expected to patch idempotently.
+    public enum QueueChange: Sendable {
+        case inserted([String])
+        case updated(String)
+    }
+
     /// Full-row projection for the library view and inspector. All fields after
     /// `tagsJson` are nullable because (a) they're only populated on `done` rows,
     /// and (b) pre-v1 rows that existed before the schema migration stay NULL
@@ -86,6 +99,10 @@ public actor AssetQueue {
 
     private let db: SQLiteDB
     private let encoder: JSONEncoder
+
+    /// Active change-stream subscribers keyed by id so onTermination can remove
+    /// them. The continuations are Sendable; storing them in actor state is safe.
+    private var subscribers: [UUID: AsyncStream<QueueChange>.Continuation] = [:]
 
     public init(dbPath: URL) throws {
         // Ensure the parent directory exists.
@@ -234,6 +251,7 @@ public actor AssetQueue {
                 try stmt.reset()
             }
         }
+        broadcast(.inserted(ids))
     }
 
     /// Atomically claim the lowest-rowid pending row: bump attempts, set status='in_progress',
@@ -257,6 +275,9 @@ public actor AssetQueue {
 
             result = Claim(id: id, attempts: Int(newAttempts))
         }
+        if let claim = result {
+            broadcast(.updated(claim.id))
+        }
         return result
     }
 
@@ -269,6 +290,7 @@ public actor AssetQueue {
         try stmt.bind(Self.now(), at: 2)
         try stmt.bind(id, at: 3)
         _ = try stmt.step()
+        broadcast(.updated(id))
     }
 
     /// Successful completion: persist description, tags, and the full processing
@@ -336,6 +358,7 @@ public actor AssetQueue {
         try stmt.bind(now, at: 10)
         try stmt.bind(id, at: 11)
         _ = try stmt.step()
+        broadcast(.updated(id))
     }
 
     /// Mark an asset as done during sentinel bootstrap (no PipelineResult available).
@@ -346,6 +369,7 @@ public actor AssetQueue {
         try stmt.bind(Self.now(), at: 1)
         try stmt.bind(id, at: 2)
         _ = try stmt.step()
+        broadcast(.updated(id))
     }
 
     /// Terminal failure: row stays as `failed` until manually re-queued (Phase G concern).
@@ -356,6 +380,7 @@ public actor AssetQueue {
         try stmt.bind(Self.now(), at: 2)
         try stmt.bind(id, at: 3)
         _ = try stmt.step()
+        broadcast(.updated(id))
     }
 
     /// List all failed rows with their error messages, most recent first.
@@ -379,6 +404,44 @@ public actor AssetQueue {
         defer { stmt.finalize() }
         try stmt.bind(id, at: 1)
         _ = try stmt.step()
+        broadcast(.updated(id))
+    }
+
+    // MARK: - Change broadcast
+
+    /// Subscribe to mutation events. Returns an `AsyncStream` that yields a
+    /// `QueueChange` for every mutation from this point on. The caller
+    /// typically subscribes before loading their initial snapshot so they
+    /// don't miss events between load-start and subscribe-start.
+    ///
+    /// Registration is synchronous on the actor, so no event can slip through
+    /// between the stream's creation and the subscriber being added.
+    /// `onTermination` removes the subscriber when the consumer drops the stream.
+    public func changes() -> AsyncStream<QueueChange> {
+        let id = UUID()
+        let (stream, continuation) = AsyncStream<QueueChange>.makeStream()
+        subscribers[id] = continuation
+        continuation.onTermination = { @Sendable [weak self] _ in
+            // Hop back into the actor to remove the subscriber. Capturing
+            // `self` weakly means a torn-down queue won't keep subscribers alive.
+            Task { [weak self] in
+                await self?.removeSubscriber(id)
+            }
+        }
+        return stream
+    }
+
+    private func removeSubscriber(_ id: UUID) {
+        subscribers.removeValue(forKey: id)
+    }
+
+    /// Fan out a change to every subscriber. Safe to call from any
+    /// actor-isolated method; yielding to an `AsyncStream.Continuation` is
+    /// thread-safe and non-blocking.
+    private func broadcast(_ change: QueueChange) {
+        for cont in subscribers.values {
+            cont.yield(change)
+        }
     }
 
     // MARK: - Library view (Phase UI)
@@ -447,6 +510,7 @@ public actor AssetQueue {
         try stmt.bind(Self.now(), at: 3)
         try stmt.bind(id, at: 4)
         _ = try stmt.step()
+        broadcast(.updated(id))
     }
 
     /// Push rows back to pending from any state. Resets attempts to 0 and clears
@@ -470,6 +534,9 @@ public actor AssetQueue {
                 _ = try stmt.step()
                 try stmt.reset()
             }
+        }
+        for id in ids {
+            broadcast(.updated(id))
         }
     }
 
@@ -498,6 +565,7 @@ public actor AssetQueue {
         try stmt.bind(Self.now(), at: 1)
         try stmt.bind(id, at: 2)
         _ = try stmt.step()
+        broadcast(.updated(id))
     }
 
     // MARK: - Row decoding helper

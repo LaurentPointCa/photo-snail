@@ -182,12 +182,13 @@ _Replace the "batch monitor" GUI with a full library browser: grid of every phot
 - [x] Verified on the real 7,632-row queue: pre-migration `user_version=0`, post-migration `user_version=1`, `queue.sqlite.pre-v1.backup` created with the pre-v0 schema and same row counts, `pragma table_info(assets)` shows 14 columns, row counts unchanged (534 done / 7,098 pending / 0 failed), idempotent on re-run (backup mtime unchanged).
 - [ ] **Still to verify**: real `markDone` actually populates the new columns. Happens automatically on the next real processing run (not dry-run).
 
-#### Phase 2 — LibraryStore + grid skeleton
-- [ ] `@Observable @MainActor LibraryStore`: holds `PHFetchResult<PHAsset>` + `[String: QueueRow]` cache + inverted tag index.
-- [ ] `AsyncStream<QueueChange>` on `AssetQueue` for live cache updates.
-- [ ] New `LibraryWindow` with three-column `NavigationSplitView`.
-- [ ] `LazyVGrid` with `PHCachingImageManager`, adaptive column layout, status badges, hover lift.
-- [ ] Feature flag `PHOTO_SNAIL_OLD_UI=1` → falls back to the current `ContentView`.
+#### Phase 2 — LibraryStore + grid skeleton ✅ (2026-04-11)
+- [x] `@Observable @MainActor LibraryStore`: holds `PHFetchResult<PHAsset>` + `[String: AssetQueue.Row]` cache. Inverted tag index deferred to Phase 4 (when tag filtering actually lands).
+- [x] `AsyncStream<QueueChange>` on `AssetQueue`: new `QueueChange` enum, subscriber map, `changes()` method, broadcast calls wired into every mutating method (enqueue, claimNext, recordRetry, markDone, markBootstrapped, markFailed, requeueFailed, updateDescription, requeue, clearResult).
+- [x] New `LibraryWindow` with three-column `NavigationSplitView` (sidebar / content / detail).
+- [x] `LazyVGrid` with adaptive columns, per-cell `PHImageManager.requestImage` (fastFormat), status badges (green/amber/red dots). `PHCachingImageManager` deferred to Phase 7 if scroll perf is a problem on large libraries.
+- [x] Feature flag flipped: `PHOTO_SNAIL_NEW_UI=1` opts IN to the new UI, default stays on the old `ContentView`. Safer during development — regressions don't surprise a normal launch.
+- [x] Verified: build clean, bundle packaged, launched with env var, 30+ s alive at 0.1% CPU / 140 MB, user-visible sidebar counts match the queue (7,632 / 534 tagged / 7,098 pending / 0 failed), selection → inspector placeholder works.
 
 #### Phase 3 — Inspector (thoroughness)
 - [ ] Hero preview (requestImage at 2× inspector width).
