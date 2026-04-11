@@ -14,23 +14,82 @@ public struct OllamaImageOptions: Sendable {
     }
 }
 
+/// Connection settings for reaching an Ollama instance.
+///
+/// Default targets the local Ollama daemon on the conventional port. Override
+/// `baseURL` to point at a remote/proxied instance, set `apiKey` for proxies that
+/// expect `Authorization: Bearer <key>`, or use `headers` for proxies with custom
+/// auth schemes (e.g. `X-API-Key`, Basic auth). Headers override `apiKey` if both
+/// set the `Authorization` field.
+public struct OllamaConnection: Codable, Sendable {
+    public var baseURL: URL
+    public var apiKey: String?
+    public var headers: [String: String]
+
+    public init(baseURL: URL = URL(string: "http://localhost:11434")!,
+                apiKey: String? = nil,
+                headers: [String: String] = [:]) {
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.headers = headers
+    }
+
+    public static let `default` = OllamaConnection()
+
+    /// Redacted form of `apiKey` for log lines: `sk-***` or `nil`.
+    /// Always use this when printing the connection — never the raw key.
+    public var redactedKey: String {
+        guard let k = apiKey, !k.isEmpty else { return "(none)" }
+        let prefix = k.prefix(3)
+        return "\(prefix)***"
+    }
+}
+
+/// One model entry returned by Ollama's `/api/tags` endpoint.
+public struct OllamaModel: Codable, Sendable, Identifiable {
+    public let name: String
+    public let sizeBytes: Int64
+    public let modifiedAt: String?
+
+    public var id: String { name }
+
+    public init(name: String, sizeBytes: Int64, modifiedAt: String?) {
+        self.name = name
+        self.sizeBytes = sizeBytes
+        self.modifiedAt = modifiedAt
+    }
+
+    /// Human-readable size like "9.6 GB" or "512 MB".
+    public var sizeLabel: String {
+        let gb = Double(sizeBytes) / 1_000_000_000
+        if gb >= 1 {
+            return String(format: "%.1f GB", gb)
+        }
+        let mb = Double(sizeBytes) / 1_000_000
+        return String(format: "%.0f MB", mb)
+    }
+}
+
 /// Minimal HTTP client for the Ollama /api/generate endpoint with image attachments.
 public final class OllamaClient {
 
-    public let baseURL: URL
+    public let connection: OllamaConnection
     public let session: URLSession
     public var imageOptions: OllamaImageOptions
 
-    public init(baseURL: URL = URL(string: "http://localhost:11434")!,
+    public init(connection: OllamaConnection = .default,
                 timeoutSeconds: TimeInterval = 1800,
                 imageOptions: OllamaImageOptions = OllamaImageOptions()) {
-        self.baseURL = baseURL
+        self.connection = connection
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeoutSeconds
         config.timeoutIntervalForResource = timeoutSeconds
         self.session = URLSession(configuration: config)
         self.imageOptions = imageOptions
     }
+
+    /// Convenience for `baseURL` to keep call sites short.
+    public var baseURL: URL { connection.baseURL }
 
     /// Send a prompt + image to Ollama and return the parsed CaptionResult.
     /// The image is downsized per `imageOptions` before being sent (default: 1024 px long edge, JPEG q=0.8).
@@ -89,6 +148,52 @@ public final class OllamaClient {
 
     // MARK: - Shared Ollama HTTP call
 
+    /// Apply the connection's auth + custom headers to a request.
+    /// Bearer token is set first; explicit `headers` then override (so users
+    /// can supply `Authorization: Basic ...` or any other scheme via `headers`).
+    private func applyAuth(to req: inout URLRequest) {
+        if let key = connection.apiKey, !key.isEmpty {
+            req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        }
+        for (k, v) in connection.headers {
+            req.setValue(v, forHTTPHeaderField: k)
+        }
+    }
+
+    /// Fetch the list of locally-installed models from `/api/tags`.
+    /// Used by the model picker in the CLI/GUI and the `--ollama-test` flag.
+    public func listModels() async throws -> [OllamaModel] {
+        var req = URLRequest(url: baseURL.appendingPathComponent("api/tags"))
+        req.httpMethod = "GET"
+        applyAuth(to: &req)
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: req)
+        } catch {
+            throw PhotoSnailError.ollamaRequestFailed("listModels: \(error.localizedDescription)")
+        }
+
+        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            let body = String(data: data, encoding: .utf8) ?? "<binary>"
+            throw PhotoSnailError.ollamaRequestFailed("listModels HTTP \(http.statusCode): \(body)")
+        }
+
+        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw PhotoSnailError.ollamaResponseParseFailed("listModels: not a JSON object")
+        }
+        guard let models = obj["models"] as? [[String: Any]] else {
+            throw PhotoSnailError.ollamaResponseParseFailed("listModels: missing 'models' array")
+        }
+
+        return models.compactMap { entry in
+            guard let name = entry["name"] as? String else { return nil }
+            let size = (entry["size"] as? Int64) ?? Int64((entry["size"] as? Int) ?? 0)
+            let modified = entry["modified_at"] as? String
+            return OllamaModel(name: name, sizeBytes: size, modifiedAt: modified)
+        }
+    }
+
     private func sendToOllama(model: String, prompt: String, imageData: Data,
                               pixelW: Int, pixelH: Int) async throws -> CaptionResult {
         let b64 = imageData.base64EncodedString()
@@ -105,6 +210,7 @@ public final class OllamaClient {
         var req = URLRequest(url: baseURL.appendingPathComponent("api/generate"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applyAuth(to: &req)
         req.httpBody = payload
 
         let t0 = Date()

@@ -192,6 +192,22 @@ public actor AssetQueue {
         _ = try stmt.step()
     }
 
+    /// Read-only snapshot of all pending row IDs in rowid order.
+    /// Used by dry-run mode to iterate pending photos without mutating the
+    /// queue. Pair with `DryRunCursor` for the worker-side iteration.
+    /// Safe to call repeatedly — no SELECT/UPDATE side effects.
+    public func peekAllPendingIds() throws -> [String] {
+        let stmt = try db.prepare("SELECT id FROM assets WHERE status = 'pending' ORDER BY rowid")
+        defer { stmt.finalize() }
+        var ids: [String] = []
+        while try stmt.step() == .row {
+            if let id = stmt.columnText(0) {
+                ids.append(id)
+            }
+        }
+        return ids
+    }
+
     public func stats() throws -> Stats {
         var counts: [String: Int] = [:]
         let stmt = try db.prepare("SELECT status, COUNT(*) FROM assets GROUP BY status")
@@ -212,4 +228,34 @@ public actor AssetQueue {
     private static func now() -> Int64 {
         return Int64(Date().timeIntervalSince1970)
     }
+}
+
+/// Iterator over a snapshot of pending asset IDs for dry-run mode.
+///
+/// The point of this type is to keep the queue completely untouched during a
+/// dry-run: no `claimNext` (no `in_progress` flips), no `markDone`, no
+/// `markFailed`. The worker pulls IDs from this in-memory cursor, runs the
+/// pipeline, prints the result, and moves on. The next real run sees the
+/// queue exactly as it was before the dry-run.
+///
+/// Concurrency: every `next()` call is fully atomic in the actor — there's no
+/// internal `await`, so even if multiple workers race, each gets a unique ID.
+public actor DryRunCursor {
+    private let ids: [String]
+    private var index: Int = 0
+
+    public init(ids: [String]) {
+        self.ids = ids
+    }
+
+    /// Pull the next ID, or nil when the snapshot is exhausted.
+    public func next() -> String? {
+        guard index < ids.count else { return nil }
+        let id = ids[index]
+        index += 1
+        return id
+    }
+
+    public var totalCount: Int { ids.count }
+    public var consumedCount: Int { index }
 }

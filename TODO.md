@@ -155,11 +155,28 @@ For each PHAsset:
 - [x] Platform bumped to `.macOS(.v14)` for `@Observable` macro
 - [x] `ProcessingEngine` — `@Observable @MainActor` state machine with `Task.detached` worker + `CheckedContinuation` pause/resume
 
-### Phase H — Production polish (only if needed)  ← NEXT
-- [ ] Quality scoring heuristic: short/generic outputs → re-run with stronger prompt
-- [ ] Optional Claude Opus escalation pass on a user-selected album (favorites, etc.)
-- [ ] Optional re-run with prompt v2 by bumping sentinel to `ai:gemma4-v2`
-- [ ] Export tags to original-file IPTC for portability outside Photos.app
+### Feature: configurable model + Ollama connection ✅ (2026-04-11)
+- [x] `PhotoSnailCore/Settings.swift` — Codable, JSON at `~/Library/Application Support/photo-snail/settings.json` (mode 0600), atomic save, env-var override via `withEnvOverrides()`
+- [x] `PhotoSnailCore/Sentinel.swift` — `family(of:)`, `family(ofSentinel:)`, `propose(forModel:currentSentinel:)`. Switching tags within a family does not propose a new sentinel; switching families does.
+- [x] `PhotoSnailCore/OllamaClient.swift` — `OllamaConnection` (baseURL/apiKey/headers), `OllamaModel`, `listModels()` against `/api/tags`, `applyAuth(to:)` for both Bearer + custom headers
+- [x] CLI flags: `--list-models`, `--ollama-test`, `--ollama-url`, `--ollama-key`, `--ollama-header K=V`, `--keep-sentinel`. Family-change gate refuses model switches without explicit `--sentinel` or `--keep-sentinel` (exit 2).
+- [x] `PHOTO_SNAIL_OLLAMA_API_KEY` env-var override — applied at runtime, never persisted to disk.
+- [x] GUI: `ProcessingEngine` loads settings + fetches models in background. New `SettingsSheet.swift`: model picker, sentinel choice (keep / propose / custom), Ollama connection (base URL, API key with show toggle, advanced custom headers, Test Connection button). Toolbar gear icon opens it.
+- [x] Smoke-tested: `--list-models` against live Ollama, family-gate exit 2, family-gate accepts `--keep-sentinel` and `--sentinel`, bad URL fails clearly, key redacted as `sk-***`, env var picked up, custom headers parsed.
+- Documented in CLAUDE.md (settings shape, security tradeoff, family rule, all flags).
+- Known minor bug: diagnostic flags (`--list-models`, `--ollama-test`) return before settings save, so combining them with `--ollama-url` etc. doesn't persist. Re-run without the diagnostic flag.
+
+### Phase H — (deferred) Production polish
+_Phase H was planned as an optional polish layer. A mid-batch review on 2026-04-11 (535/7,632 photos done, 0 failed) showed no quality issues that would justify the originally-planned work — descriptions averaged ~196 chars, tag counts 7–14, zero duplicates, zero failures. The four original items have been moved to "Potential future improvements" below. The active roadmap (Phases A–G) is complete and the CLI/GUI are in production use._
+
+## Potential future improvements
+
+_Not on the active roadmap. Captured so the rationale isn't lost. Each is independent and can be picked up later if a concrete need surfaces._
+
+- **Quality scoring heuristic** — detect short/generic outputs and re-run with a stronger prompt. **Deferred**: the 535-photo production sample showed no cluster of weak outputs to rescue (avg description length ~196 chars, zero duplicates across the sample, tag counts healthy 7–14). Revisit only if the remaining photos surface a pattern worth automating around.
+- **Claude Opus escalation pass** — optional cloud-based re-caption on a user-selected album (favorites, portfolio shots) for the ~5–10% of photos where top-shelf quality is worth the ~$0.10/photo. Self-contained work: album picker UI, cloud call path, a separate sentinel (e.g. `ai:opus-4-6-v1`) so it's idempotent and distinguishable from the local-LLM pass. Explicitly breaks the "fully local default" priority and must remain opt-in.
+- **Prompt v2 / sentinel bump** — re-run the full library with a new prompt by bumping sentinel to `ai:gemma4-v2`. Infrastructure is trivial (one constant + a migration path); only meaningful once there's a concrete v2 prompt in hand that outperforms the current one on a blind A/B.
+- **IPTC/XMP export to original files** — write description and tags into IPTC/XMP metadata on a *copy* of the original file (never mutating originals in place). Portability hedge for the day the user leaves Photos.app or wants embedded metadata readable by other tools. Touches file-system layout and needs a destination-directory convention.
 
 ## Open questions
 
@@ -232,4 +249,4 @@ The full decision history and findings are in `~/.claude/projects/-Users-laurent
 - `PhotoLibrary.swift`, `PhotosScripter.swift`, `PhotoLibraryEnumerator.swift` copied from PhotoSnailApp (minor logging adaptation).
 - Build: `./bundle-gui.sh` → `open .build/release/PhotoSnail.app`. CLI (`photo-snail-app`) preserved as-is, shares the same SQLite queue.
 
-**Active phase: H** (Production polish) — unstarted. CLI batch run in progress (~7,630 photos).
+**Active roadmap complete as of Phase G.** Phase H deferred 2026-04-11 — see "Potential future improvements". Mid-batch quality check at 535/7,632 done, 0 failed: avg description ~196 chars, tag counts 7–14, zero duplicates, no weak-output cluster. The Phase F.1 bootstrap asset row (`64EAA6CF-…`) was reset to `pending` on 2026-04-11 so it's processed by the pipeline like any other asset when the batch resumes (the Photos.app write-back will replace the spike's test description).

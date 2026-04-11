@@ -10,12 +10,14 @@ It's slow on purpose. ~65 seconds per photo on Apple Silicon. A 10,000-photo lib
 
 ## Features
 
-- **Fully on-device.** Apple Vision + a local LLM via [Ollama](https://ollama.com). No API keys, no rate limits, no privacy concessions.
+- **Fully on-device by default.** Apple Vision + a local LLM via [Ollama](https://ollama.com). No API keys, no rate limits, no privacy concessions.
 - **Specific descriptions.** "A black cat sitting on a Sonos speaker next to a white cat" — not "two animals indoors."
 - **Searchable tags.** 5–15 lowercase tags per photo, including brands and named objects when visible.
 - **Writes back to Photos.app.** Uses AppleScript to populate the `description` field — iCloud syncs it to your iPhone, iPad, and Spotlight.
 - **Resilient.** SQLite-backed queue survives restarts, sleep/wake, and crashes. Re-running on a processed library is a no-op.
-- **Two interfaces.** A SwiftUI dashboard with live photo preview, pause/resume, and a failure inspector — plus a CLI for headless / scripted runs.
+- **Configurable Ollama.** Default targets `localhost:11434`, but you can point at a remote Ollama instance, an HTTPS proxy, or a setup behind Bearer / Basic / `X-API-Key` auth. Runs against any vision-capable Ollama model you can pick from a list.
+- **Per-model sentinels.** Switch models and the tool proposes a matching sentinel (`ai:<family>-v1`) so re-runs across models stay distinguishable, or keep the existing one if you'd rather mix.
+- **Two interfaces.** A SwiftUI dashboard with live photo preview, pause/resume, settings sheet, and a failure inspector — plus a CLI for headless / scripted runs.
 
 ## How it works
 
@@ -110,7 +112,8 @@ You can pause and resume at any time. Closing the window does not stop processin
 # Process the entire library
 .build/release/photo-snail-app
 
-# Dry-run: pipeline only, no write-back
+# Dry-run: full pipeline, no Photos.app write-back, no queue mutation.
+# Safe to run on a real queue — it leaves every row exactly as it was.
 .build/release/photo-snail-app --dry-run
 
 # Limit to N photos (for testing)
@@ -118,6 +121,38 @@ You can pause and resume at any time. Closing the window does not stop processin
 ```
 
 The first run requests Photos and Automation permissions. The queue persists at `~/Library/Application Support/photo-snail/queue.sqlite` — you can interrupt and resume freely.
+
+### CLI — picking a model and configuring Ollama
+
+```bash
+# List models installed in Ollama (current marked with *)
+.build/release/photo-snail-app --list-models
+
+# Probe Ollama with the current connection config
+.build/release/photo-snail-app --ollama-test
+
+# Switch to a different tag of the same family — silent (sentinel unchanged)
+.build/release/photo-snail-app --model gemma4:latest
+
+# Switch to a different model family — REQUIRES an explicit sentinel choice
+.build/release/photo-snail-app --model llava:13b --sentinel ai:llava-v1
+.build/release/photo-snail-app --model llava:13b --keep-sentinel    # mix under one sentinel
+
+# Point at a remote / proxied Ollama
+.build/release/photo-snail-app --ollama-url https://ollama.my.lan
+.build/release/photo-snail-app --ollama-url https://ollama.my.lan --ollama-key sk-...
+
+# Custom auth headers (Basic, X-API-Key, etc.)
+.build/release/photo-snail-app --ollama-header "X-API-Key=..."
+.build/release/photo-snail-app --ollama-header "Authorization=Basic dXNlcjpwYXNz"
+
+# Avoid persisting the API key to disk — env var takes precedence at runtime
+PHOTO_SNAIL_OLLAMA_API_KEY=sk-... .build/release/photo-snail-app
+```
+
+Settings persist to `~/Library/Application Support/photo-snail/settings.json` (file mode `0600`). The API key is stored in plain text there as a deliberate tradeoff — set the `PHOTO_SNAIL_OLLAMA_API_KEY` environment variable instead if you'd rather not persist it. The GUI exposes the same settings via a gear icon in the toolbar.
+
+A model switch that crosses the model family boundary is rejected with exit code `2` and a clear error unless you pass `--sentinel` or `--keep-sentinel` — this prevents a multi-day batch from silently flipping which sentinel is being written into your photos.
 
 ## How long will it take?
 
@@ -151,7 +186,7 @@ Phases A–G complete:
 - F. PhotoKit integration + AppleScript write-back
 - G. SwiftUI GUI
 
-Phase H (production polish) is next. See [`TODO.md`](TODO.md) for the full plan and progress.
+Phase H (production polish) was deferred after a mid-batch quality review showed no weak-output cluster to rescue. The CLI and GUI are in production use against the author's full library. See [`TODO.md`](TODO.md) for the phased plan, the parked items under "Potential future improvements", and the running progress notes.
 
 ## Sample images
 

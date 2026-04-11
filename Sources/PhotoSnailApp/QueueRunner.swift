@@ -18,6 +18,7 @@ enum QueueRunner {
         var sentinel: String = "ai:gemma4-v1"
         var dryRun: Bool = false
         var limit: Int = 0  // 0 = unlimited
+        var connection: OllamaConnection = .default
     }
 
     static func run(config: Config) async {
@@ -79,6 +80,22 @@ enum QueueRunner {
 
         let doneCounter = DoneCounter(start: alreadyDone, total: total)
 
+        // Dry-run uses an in-memory cursor over a snapshot of pending IDs so the
+        // queue is never mutated. See CLAUDE.md "dry-run" for the rationale.
+        let dryRunCursor: DryRunCursor?
+        if dryRun {
+            do {
+                let snapshot = try await queue.peekAllPendingIds()
+                dryRunCursor = DryRunCursor(ids: snapshot)
+                eprint("dry-run: snapshot of \(snapshot.count) pending IDs taken — queue will not be mutated")
+            } catch {
+                eprint("ERROR snapshotting pending IDs: \(error)")
+                exit(1)
+            }
+        } else {
+            dryRunCursor = nil
+        }
+
         await withTaskGroup(of: Void.self) { group in
             for _ in 0..<concurrency {
                 group.addTask {
@@ -89,23 +106,37 @@ enum QueueRunner {
                     )
 
                     while true {
-                        let claim: AssetQueue.Claim?
-                        do {
-                            claim = try await queue.claimNext()
-                        } catch {
-                            eprint("ERROR claimNext: \(error)")
-                            return
+                        // Source the next ID: dry-run uses the in-memory cursor (no
+                        // queue mutation), real run uses claimNext (atomic claim).
+                        let id: String
+                        let attempts: Int
+                        if let cursor = dryRunCursor {
+                            guard let nextId = await cursor.next() else { return }
+                            id = nextId
+                            attempts = 1   // attempts has no meaning in dry-run
+                        } else {
+                            let claim: AssetQueue.Claim?
+                            do {
+                                claim = try await queue.claimNext()
+                            } catch {
+                                eprint("ERROR claimNext: \(error)")
+                                return
+                            }
+                            guard let c = claim else { return }
+                            id = c.id
+                            attempts = c.attempts
                         }
-                        guard let claim = claim else { return }
-                        let id = claim.id
-                        let attempts = claim.attempts
 
                         do {
                             // Fetch image data from Photos
                             guard let asset = PhotoLibrary.fetch(id: id) else {
                                 let err = PhotoSnailError.imageLoadFailed("PHAsset not found: \(id)")
-                                try? await queue.markFailed(id, error: err)
-                                eprint("[failed] asset not found: \(id)")
+                                if dryRun {
+                                    eprint("[skipped \(String(id.prefix(8)))] asset not found")
+                                } else {
+                                    try? await queue.markFailed(id, error: err)
+                                    eprint("[failed] asset not found: \(id)")
+                                }
                                 continue
                             }
 
@@ -131,8 +162,11 @@ enum QueueRunner {
                                 }
                             }
 
-                            // Only mark done AFTER write-back succeeds
-                            try? await queue.markDone(id, result: result)
+                            // Only mark done AFTER write-back succeeds — and only in real mode.
+                            // Dry-run intentionally leaves the queue untouched.
+                            if !dryRun {
+                                try? await queue.markDone(id, result: result)
+                            }
                             let count = await doneCounter.increment()
                             let secs = String(format: "%.1fs", result.totalElapsedSeconds)
                             let preview = String(result.caption.description.prefix(60))
@@ -146,7 +180,10 @@ enum QueueRunner {
                             }
 
                         } catch let e as PhotoSnailError {
-                            if e.isRetriable && attempts < maxAttempts {
+                            if dryRun {
+                                eprint("[skipped \(String(id.prefix(8)))] \(e.shortMessage)")
+                                // No markFailed, no retry — just move on.
+                            } else if e.isRetriable && attempts < maxAttempts {
                                 try? await queue.recordRetry(id, error: e)
                                 let delay = backoff[attempts - 1]
                                 eprint("[retry \(attempts)/\(maxAttempts)] \(id) — \(e.shortMessage), sleeping \(Int(delay))s")
@@ -156,20 +193,25 @@ enum QueueRunner {
                                 eprint("[failed] \(id) — \(e.shortMessage)")
                             }
                         } catch let e as ScripterError {
-                            // AppleScript failures are not retriable (permission/script bugs)
+                            // ScripterError can only happen in non-dry-run path because
+                            // the AppleScript call is gated on `!dryRun` above.
                             let wrapped = PhotoSnailError.ollamaRequestFailed("AppleScript: \(e)")
                             try? await queue.markFailed(id, error: wrapped)
                             eprint("[failed] \(id) — \(e)")
                         } catch {
-                            let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
-                            if wrapped.isRetriable && attempts < maxAttempts {
-                                try? await queue.recordRetry(id, error: wrapped)
-                                let delay = backoff[attempts - 1]
-                                eprint("[retry \(attempts)/\(maxAttempts)] \(id) — \(error), sleeping \(Int(delay))s")
-                                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                            if dryRun {
+                                eprint("[skipped \(String(id.prefix(8)))] \(error)")
                             } else {
-                                try? await queue.markFailed(id, error: wrapped)
-                                eprint("[failed] \(id) — \(error)")
+                                let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
+                                if wrapped.isRetriable && attempts < maxAttempts {
+                                    try? await queue.recordRetry(id, error: wrapped)
+                                    let delay = backoff[attempts - 1]
+                                    eprint("[retry \(attempts)/\(maxAttempts)] \(id) — \(error), sleeping \(Int(delay))s")
+                                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                                } else {
+                                    try? await queue.markFailed(id, error: wrapped)
+                                    eprint("[failed] \(id) — \(error)")
+                                }
                             }
                         }
                     }

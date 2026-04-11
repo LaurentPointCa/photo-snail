@@ -41,11 +41,17 @@ final class ProcessingEngine {
         let attempts: Int
     }
 
-    // MARK: - Config
+    // MARK: - Config (driven by Settings on disk)
 
-    var model: String = "gemma4:31b"
-    var sentinel: String = "ai:gemma4-v1"
+    var model: String = Settings.default.model
+    var sentinel: String = Settings.default.sentinel
+    var connection: OllamaConnection = .default
     var dryRun: Bool = false
+
+    /// Models discovered from Ollama at startup. Empty until `refreshAvailableModels()`
+    /// completes (or returns empty if Ollama is unreachable).
+    var availableModels: [OllamaModel] = []
+    var modelsLoadError: String? = nil
 
     // MARK: - Private
 
@@ -54,9 +60,23 @@ final class ProcessingEngine {
     private var isPausedFlag = false
     private var pauseContinuation: CheckedContinuation<Void, Never>?
 
-    // MARK: - Initial load (no processing, just stats)
+    // MARK: - Initial load (no processing, just stats + settings + Ollama probe)
 
     func loadInitialStats() async {
+        // 1. Load settings from disk (or defaults). Apply env-var overrides for runtime.
+        let loaded: Settings
+        do {
+            loaded = try Settings.load()
+        } catch {
+            statusMessage = "Settings error: \(error)"
+            return
+        }
+        let runtime = loaded.withEnvOverrides()
+        self.model = runtime.model
+        self.sentinel = runtime.sentinel
+        self.connection = runtime.ollama
+
+        // 2. Open the queue.
         do {
             let q = try AssetQueue(dbPath: AssetQueue.defaultDBPath)
             self.queue = q
@@ -64,6 +84,57 @@ final class ProcessingEngine {
         } catch {
             statusMessage = "Queue error: \(error)"
         }
+
+        // 3. Kick off Ollama model discovery in the background — non-blocking.
+        Task { await refreshAvailableModels() }
+    }
+
+    /// Probe Ollama and update `availableModels`. Safe to call repeatedly
+    /// (e.g. after the user changes the connection in the settings sheet).
+    func refreshAvailableModels() async {
+        let conn = self.connection
+        let client = OllamaClient(connection: conn)
+        do {
+            let models = try await client.listModels()
+            await MainActor.run {
+                self.availableModels = models.sorted { $0.name < $1.name }
+                self.modelsLoadError = nil
+            }
+        } catch {
+            await MainActor.run {
+                self.availableModels = []
+                self.modelsLoadError = "\(error)"
+            }
+        }
+    }
+
+    /// Apply a model + sentinel + connection change from the settings sheet.
+    /// Persists to settings.json. Caller is responsible for asking the user
+    /// about sentinel choice on a family change BEFORE calling this.
+    /// Changes take effect on the next `start()` — does NOT interrupt a running batch.
+    func applyConfigChange(model: String, sentinel: String, connection: OllamaConnection) async {
+        self.model = model
+        self.sentinel = sentinel
+        self.connection = connection
+
+        // Persist (without env-var overrides — those are runtime-only).
+        // Build a Settings from current state, but strip the env-var key if present
+        // so we don't accidentally write the env value to disk.
+        let envKey = ProcessInfo.processInfo.environment["PHOTO_SNAIL_OLLAMA_API_KEY"]
+        var persisted = connection
+        if let envKey = envKey, !envKey.isEmpty, persisted.apiKey == envKey {
+            persisted.apiKey = nil
+        }
+        let s = Settings(model: model, sentinel: sentinel, ollama: persisted)
+        do {
+            try s.save()
+            statusMessage = "Settings saved"
+        } catch {
+            statusMessage = "Save failed: \(error)"
+        }
+
+        // Re-probe Ollama with the new connection.
+        await refreshAvailableModels()
     }
 
     // MARK: - Controls
@@ -156,14 +227,31 @@ final class ProcessingEngine {
         guard let queue = queue else { return }
         let model = self.model
         let sentinel = self.sentinel
+        let connection = self.connection
         let dryRun = self.dryRun
+
+        // Dry-run uses an in-memory cursor over a snapshot of pending IDs so the
+        // queue is never mutated. Build it on the actor before detaching the worker.
+        let dryRunCursorTask: Task<DryRunCursor?, Error> = Task {
+            guard dryRun else { return nil }
+            let snapshot = try await queue.peekAllPendingIds()
+            return DryRunCursor(ids: snapshot)
+        }
 
         workerTask = Task.detached { [weak self] in
             let pipeline = Pipeline(
                 model: model,
                 promptStyle: .sideChannel,
-                ollama: OllamaClient()
+                ollama: OllamaClient(connection: connection)
             )
+
+            let dryRunCursor: DryRunCursor?
+            do {
+                dryRunCursor = try await dryRunCursorTask.value
+            } catch {
+                await MainActor.run { self?.statusMessage = "Snapshot error: \(error)" }
+                return
+            }
 
             while true {
                 // Pause check
@@ -179,23 +267,38 @@ final class ProcessingEngine {
                     }
                 }
 
-                // Claim next
-                let claim: AssetQueue.Claim?
-                do {
-                    claim = try await queue.claimNext()
-                } catch {
-                    await MainActor.run { self?.statusMessage = "Queue error: \(error)" }
-                    return
-                }
-                guard let claim = claim else {
-                    await MainActor.run {
-                        self?.state = .finished
-                        self?.statusMessage = "All photos processed"
+                // Source the next ID: dry-run uses the in-memory cursor (no
+                // queue mutation), real run uses claimNext.
+                let id: String
+                let attempts: Int
+                if let cursor = dryRunCursor {
+                    guard let nextId = await cursor.next() else {
+                        await MainActor.run {
+                            self?.state = .finished
+                            self?.statusMessage = "Dry-run complete (queue not mutated)"
+                        }
+                        return
                     }
-                    return
+                    id = nextId
+                    attempts = 1
+                } else {
+                    let claim: AssetQueue.Claim?
+                    do {
+                        claim = try await queue.claimNext()
+                    } catch {
+                        await MainActor.run { self?.statusMessage = "Queue error: \(error)" }
+                        return
+                    }
+                    guard let c = claim else {
+                        await MainActor.run {
+                            self?.state = .finished
+                            self?.statusMessage = "All photos processed"
+                        }
+                        return
+                    }
+                    id = c.id
+                    attempts = c.attempts
                 }
-
-                let id = claim.id
 
                 await MainActor.run {
                     self?.currentPhotoID = id
@@ -212,7 +315,9 @@ final class ProcessingEngine {
                 do {
                     guard let asset = PhotoLibrary.fetch(id: id) else {
                         let err = PhotoSnailError.imageLoadFailed("PHAsset not found: \(id)")
-                        try? await queue.markFailed(id, error: err)
+                        if !dryRun {
+                            try? await queue.markFailed(id, error: err)
+                        }
                         await MainActor.run { self?.statusMessage = "Asset not found: \(String(id.prefix(8)))" }
                         await self?.refreshStatsAndFailures()
                         continue
@@ -233,7 +338,10 @@ final class ProcessingEngine {
                         }
                     }
 
-                    try? await queue.markDone(id, result: result)
+                    // markDone only in real mode — dry-run leaves the queue untouched.
+                    if !dryRun {
+                        try? await queue.markDone(id, result: result)
+                    }
 
                     await MainActor.run {
                         // Promote current → completed
@@ -244,21 +352,30 @@ final class ProcessingEngine {
                         self?.photosProcessedThisSession += 1
                         self?.updateThroughput()
                     }
-                    await self?.refreshStatsAndFailures()
+                    if !dryRun {
+                        await self?.refreshStatsAndFailures()
+                    }
 
                 } catch let e as PhotoSnailError {
-                    if e.isRetriable && claim.attempts < 3 {
+                    if dryRun {
+                        await MainActor.run { self?.statusMessage = "Skipped \(String(id.prefix(8))): \(e.shortMessage)" }
+                    } else if e.isRetriable && attempts < 3 {
                         try? await queue.recordRetry(id, error: e)
                         await MainActor.run { self?.statusMessage = "Retrying \(String(id.prefix(8)))..." }
-                        try? await Task.sleep(nanoseconds: UInt64([10, 30, 60][claim.attempts - 1]) * 1_000_000_000)
+                        try? await Task.sleep(nanoseconds: UInt64([10, 30, 60][attempts - 1]) * 1_000_000_000)
+                        await self?.refreshStatsAndFailures()
                     } else {
                         try? await queue.markFailed(id, error: e)
+                        await self?.refreshStatsAndFailures()
                     }
-                    await self?.refreshStatsAndFailures()
                 } catch {
-                    let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
-                    try? await queue.markFailed(id, error: wrapped)
-                    await self?.refreshStatsAndFailures()
+                    if dryRun {
+                        await MainActor.run { self?.statusMessage = "Skipped \(String(id.prefix(8))): \(error)" }
+                    } else {
+                        let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
+                        try? await queue.markFailed(id, error: wrapped)
+                        await self?.refreshStatsAndFailures()
+                    }
                 }
             }
         }

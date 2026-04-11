@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var engine = ProcessingEngine()
     @State private var showFailures = false
+    @State private var showSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,6 +49,16 @@ struct ContentView: View {
                 }
                 .disabled(engine.failedCount == 0)
             }
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showSettings = true
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsSheet(engine: engine, isPresented: $showSettings)
         }
         .task {
             await engine.loadInitialStats()

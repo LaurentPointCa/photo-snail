@@ -16,7 +16,7 @@ The user's priorities, in order:
 
 ## Status
 
-Phases A–G complete. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, and failure inspector. Both share the same SQLite queue. Phase H (production polish) is next.
+Phases A–G complete. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, and failure inspector. Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
 
 See `TODO.md` for the phased plan and current progress.
 
@@ -89,6 +89,47 @@ The user lives in QC (French context). A French prompt with brand preservation w
 
 If asked to revisit French, see `project_locale_decision.md` — the prompt template is documented there.
 
+### Configurable Ollama connection + sentinel (added 2026-04-11)
+
+Both apps now read/write `~/Library/Application Support/photo-snail/settings.json` (file mode `0600`):
+
+```json
+{
+  "version": 1,
+  "model": "gemma4:31b",
+  "sentinel": "ai:gemma4-v1",
+  "ollama": { "baseURL": "http://localhost:11434", "apiKey": null, "headers": {} }
+}
+```
+
+Missing file → `Settings.default` (today's hardcoded values). Saved atomically via temp file + rename, with `chmod 0600` BEFORE the rename so the API key is never world-readable on disk.
+
+**API key storage tradeoff**: plain text on disk. Mitigations: (1) `0600` permissions, (2) redacted as `sk-***` in all logs/CLI output via `OllamaConnection.redactedKey`, (3) `PHOTO_SNAIL_OLLAMA_API_KEY` env var overrides at runtime and is **never** persisted (`Settings.withEnvOverrides()` applies it post-load, and `ProcessingEngine.applyConfigChange` strips the env value before saving). Keychain storage was deferred — adding `Security.framework` + TCC prompts wasn't worth the complexity for a single-user local tool. Documented in the GUI Settings sheet.
+
+**Sentinel family rule** (`Sources/PhotoSnailCore/Sentinel.swift`): the sentinel format is `ai:<family>-v<N>` where `<family>` is `model.split(":").first` lowercased and sanitized (non-alphanumerics → `-`, runs collapsed, leading/trailing `-` trimmed). Switching between two tags within the same family (`gemma4:31b` ↔ `gemma4:latest`) does NOT propose a new sentinel. Switching to a different family proposes `ai:<newfamily>-v1` and the user must explicitly accept it (`--sentinel`) or reject it (`--keep-sentinel`).
+
+**CLI gate** (`photo-snail-app`): a family change without `--sentinel` or `--keep-sentinel` exits with code 2 and a multi-line error showing the three resolution options. The gate runs in `mergeSettings` BEFORE the diagnostic flags (`--list-models`, `--ollama-test`), so combining them with a model change still triggers the gate.
+
+**Diagnostic flags** (return early, don't save settings, don't touch the queue):
+- `--list-models` — hits `/api/tags`, prints a table with `*` next to the current model
+- `--ollama-test` — same as `--list-models` but only reports OK/FAIL + count
+
+**Connection flags**: `--ollama-url`, `--ollama-key`, `--ollama-header K=V` (repeatable). Override the on-disk settings for this run AND get persisted on a non-diagnostic invocation. Headers are applied AFTER the `apiKey` Bearer header in `OllamaClient.applyAuth`, so a `--ollama-header Authorization=Basic ...` will override `--ollama-key`. Use this for proxies that don't speak Bearer.
+
+**Known minor bug**: diagnostic commands (`--list-models`, `--ollama-test`) return before the settings-save step, so combining them with config flags (`--model`, `--ollama-url`, etc.) won't persist the config. Workaround: re-run without the diagnostic flag. Not worth fixing unless it bites someone — diagnostics are inherently read-only by intent.
+
+### Dry-run is queue-pure (added 2026-04-11)
+
+`--dry-run` (CLI) and `ProcessingEngine.dryRun` (GUI) both run the full pipeline (Vision + Ollama + parser + tag merge) but **never mutate the queue DB**. No `claimNext`, no `markDone`, no `markFailed`, no `recordRetry` — the row that was at the head of `pending` before the dry-run is still at the head afterwards.
+
+The mechanism: at startup, the runner takes a read-only snapshot of all pending IDs via `AssetQueue.peekAllPendingIds()` and wraps it in a `DryRunCursor` actor. Workers pull IDs from the cursor's atomic `next()` call instead of `claimNext()`. The cursor is the only "list in memory" — once exhausted (or `--limit N` is hit), the dry-run exits and the cursor is discarded.
+
+Errors in dry-run are logged with `[skipped <id>]` and the worker continues to the next ID. There's no retry, no markFailed — those would mutate the queue.
+
+**Why this matters**: before this fix, `--dry-run` would run the pipeline, skip the AppleScript write-back (correctly), but still call `markDone` on the queue. The result was rows flagged as done with descriptions in the queue but no sentinel in Photos.app. The next real run would skip those rows and the user would silently end up with un-tagged photos. The fix is queue-pure: a dry-run on a 7,000-photo queue leaves all 7,000 rows untouched.
+
+If you ever add new mutation calls in the worker loop (`QueueRunner.swift` or `ProcessingEngine.swift`), gate them on `if !dryRun { ... }`. The pattern is established in both files; follow it.
+
 ## Code layout
 
 ```
@@ -103,10 +144,13 @@ photo-snail/
 │   │   │                              PipelineResult, PromptStyle, PhotoSnailError
 │   │   ├── ImageDownsizer.swift       CGImageSource thumbnail JPEG encoder (path + data)
 │   │   ├── VisionAnalyzer.swift       Four Vision requests + EXIF orientation (path + data)
-│   │   ├── OllamaClient.swift         async/await HTTP client, /api/generate (path + data)
+│   │   ├── OllamaClient.swift         async HTTP client, /api/generate + /api/tags listModels(),
+│   │   │                              OllamaConnection (baseURL/apiKey/headers), OllamaModel
 │   │   ├── PromptBuilder.swift        bare() and build(findings:) prompt builders
 │   │   ├── CaptionParser.swift        Tolerant DESCRIPTION/TAGS extractor
 │   │   ├── Pipeline.swift             Orchestration + tag merging + formatDescription
+│   │   ├── Settings.swift             Persistent user settings (JSON, 0600), env-var overrides
+│   │   ├── Sentinel.swift             family(of:) + propose(forModel:currentSentinel:) helpers
 │   │   ├── AssetQueue.swift           Actor-based SQLite queue (Phase E) + markBootstrapped
 │   │   └── SQLite.swift               Thin C wrapper around system sqlite3
 │   ├── photo-snail-cli/main.swift       CLI driver (file-path-based, no PhotoKit)
@@ -126,6 +170,7 @@ photo-snail/
 │       ├── PhotoPreview.swift         CompletedPhotoView (top) + CurrentPhotoView (bottom)
 │       ├── ControlsView.swift         Start / Pause / Resume
 │       ├── FailureListView.swift      Failed assets + error detail + retry
+│       ├── SettingsSheet.swift        Modal: model picker, sentinel choice, Ollama connection
 │       ├── PhotoLibrary.swift         (copied from PhotoSnailApp)
 │       ├── PhotosScripter.swift       (copied from PhotoSnailApp)
 │       └── PhotoLibraryEnumerator.swift (adapted: logging via closure)
@@ -168,14 +213,36 @@ swift build -c release
 # List recent assets (discovery)
 .build/release/photo-snail-app --list 10
 
+# List models from Ollama (with current marked *)
+.build/release/photo-snail-app --list-models
+
+# Probe Ollama with the current connection config
+.build/release/photo-snail-app --ollama-test
+
 # Process entire library (enumerate → queue → pipeline → write-back)
 .build/release/photo-snail-app
 
-# Dry-run: pipeline only, no write-back to Photos.app
+# Dry-run: pipeline only, no Photos.app write-back, no queue mutation.
+# Uses an in-memory snapshot of pending IDs (DryRunCursor) so the queue is
+# bit-for-bit unchanged afterwards. Safe to run on a real queue at any time.
 .build/release/photo-snail-app --dry-run
 
 # Limit to N photos (for testing)
 .build/release/photo-snail-app --limit 5
+
+# Switch model (same family — silent)
+.build/release/photo-snail-app --model gemma4:latest
+
+# Switch model family (REQUIRES --sentinel or --keep-sentinel)
+.build/release/photo-snail-app --model llava:13b --sentinel ai:llava-v1
+.build/release/photo-snail-app --model llava:13b --keep-sentinel
+
+# Remote / proxied Ollama
+.build/release/photo-snail-app --ollama-url https://ollama.my.lan --ollama-key sk-...
+.build/release/photo-snail-app --ollama-header X-API-Key=...
+
+# Avoid persisting the API key to disk
+PHOTO_SNAIL_OLLAMA_API_KEY=sk-... .build/release/photo-snail-app
 
 # Combined flags
 .build/release/photo-snail-app --model gemma4:31b --limit 10 --dry-run
