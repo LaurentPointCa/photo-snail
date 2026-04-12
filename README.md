@@ -52,7 +52,29 @@ The pipeline runs Apple Vision as a *side channel*: its findings are not injecte
   ```
   Smaller / faster models (e.g. `gemma4:latest`) work but produce lower-quality descriptions — see [`CLAUDE.md`](CLAUDE.md) for the comparison.
 
-## Build
+## Install
+
+### 1. Set up a local inference model
+
+Photo Snail needs a vision-capable LLM running locally. The recommended setup:
+
+1. Install [Ollama](https://ollama.com) — download the macOS app from their site
+2. Launch Ollama (it runs in the menu bar)
+3. Pull the recommended model:
+   ```bash
+   ollama pull gemma4:31b
+   ```
+   This downloads ~19 GB. Smaller models like `gemma4:latest` (~9.6 GB) are faster but produce lower-quality descriptions.
+
+### 2. Install Photo Snail
+
+1. Download `PhotoSnail-1.0-arm64.zip` from the [latest release](https://github.com/LaurentPointCa/photo-snail/releases/latest)
+2. Unzip the archive
+3. Drag `PhotoSnail.app` into your `/Applications` folder
+4. **First launch:** the app is not notarized, so macOS will block it. Right-click (or Control-click) the app and select **Open**, then click **Open** in the dialog to approve it. You only need to do this once.
+5. Grant Photos access when prompted
+
+## Build from source
 
 ```bash
 swift build -c release
