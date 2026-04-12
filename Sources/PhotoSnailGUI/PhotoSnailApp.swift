@@ -38,6 +38,11 @@ struct PhotoSnailApp: App {
         ))
 
         credits.append(NSAttributedString(
+            string: "by Laurent Chouinard\n\n",
+            attributes: [.font: bodyFont, .foregroundColor: NSColor.labelColor]
+        ))
+
+        credits.append(NSAttributedString(
             string: "GitHub",
             attributes: [
                 .font: linkFont,
@@ -45,10 +50,8 @@ struct PhotoSnailApp: App {
             ]
         ))
 
-        credits.append(NSAttributedString(string: "\n", attributes: bodyAttrs))
-
         credits.append(NSAttributedString(
-            string: "MIT License",
+            string: " · MIT License",
             attributes: bodyAttrs
         ))
 
