@@ -59,36 +59,33 @@ private struct MultiSelectionSummary: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("\(store.selection.count) photos selected")
-                    .font(.title3.weight(.semibold))
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SurfaceCard(spacing: Spacing.md) {
+                    Text("\(store.selection.count) photos selected")
+                        .font(AppFont.display)
+                        .foregroundStyle(AppColor.textPrimary)
+                    thumbFilmstrip
+                }
 
-                thumbFilmstrip
-
-                Divider()
-
-                statsSection
+                SurfaceCard { statsSection }
 
                 if !commonTags.isEmpty {
-                    Divider()
-                    commonTagsSection
+                    SurfaceCard { commonTagsSection }
                 }
 
                 if !modelBreakdown.isEmpty {
-                    Divider()
-                    modelBreakdownSection
+                    SurfaceCard { modelBreakdownSection }
                 }
 
-                Divider()
-
                 Text("Use the bulk action bar above the grid to re-process, clear, copy tags, or export.")
-                    .font(.caption)
+                    .font(AppFont.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.sm)
 
                 Spacer(minLength: 0)
             }
-            .padding(16)
+            .padding(Spacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -100,17 +97,19 @@ private struct MultiSelectionSummary: View {
         let ids = Array(store.selection.sorted().prefix(12))
         let remaining = store.selection.count - ids.count
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.sm) {
                 ForEach(ids, id: \.self) { id in
-                    ThumbnailCell(id: id, row: store.rows[id], isSelected: true, size: 64)
+                    ThumbnailCell(id: id, row: store.rows[id], isSelected: true, size: 72)
                 }
                 if remaining > 0 {
                     Text("+\(remaining)")
-                        .font(.caption.weight(.semibold))
+                        .font(AppFont.bodyEmphasized)
                         .foregroundStyle(.secondary)
-                        .frame(width: 64, height: 64)
-                        .background(Color.gray.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .frame(width: 72, height: 72)
+                        .background(
+                            RoundedRectangle(cornerRadius: Radius.thumbnail, style: .continuous)
+                                .fill(AppColor.surfaceSunken)
+                        )
                 }
             }
         }
@@ -146,32 +145,39 @@ private struct MultiSelectionSummary: View {
     @ViewBuilder
     private var statsSection: some View {
         let counts = countsByStatus
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Status").font(.caption).foregroundStyle(.secondary)
-            statRow("Tagged", counts.tagged)
-            statRow("Pending", counts.pending)
-            statRow("Failed", counts.failed)
-            statRow("Untouched", counts.untouched)
+        EyebrowLabel("Status")
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            statRow("Tagged", counts.tagged, tint: AppColor.statusDone)
+            statRow("Pending", counts.pending, tint: AppColor.statusPending)
+            statRow("Failed", counts.failed, tint: AppColor.statusFailed)
+            statRow("Untouched", counts.untouched, tint: AppColor.statusUntouched)
         }
 
         let range = dateRange
         if let e = range.earliest, let l = range.latest, e != 0 || l != 0 {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Processed").font(.caption).foregroundStyle(.secondary)
-                Text("\(formatTimestamp(e)) → \(formatTimestamp(l))")
-                    .font(.caption)
-                    .textSelection(.enabled)
-            }
-            .padding(.top, 6)
+            EyebrowLabel("Processed")
+                .padding(.top, Spacing.sm)
+            Text("\(formatTimestamp(e)) → \(formatTimestamp(l))")
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.textPrimary)
+                .textSelection(.enabled)
         }
     }
 
     @ViewBuilder
-    private func statRow(_ label: String, _ count: Int) -> some View {
-        HStack {
-            Text(label).font(.caption)
+    private func statRow(_ label: String, _ count: Int, tint: Color) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Circle()
+                .fill(tint)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(AppFont.label)
+                .foregroundStyle(AppColor.textPrimary)
             Spacer()
-            Text("\(count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+            Text("\(count)")
+                .font(AppFont.body)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -193,13 +199,13 @@ private struct MultiSelectionSummary: View {
 
     @ViewBuilder
     private var commonTagsSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Tags in every selected photo")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(commonTags.joined(separator: ", "))
-                .font(.caption)
-                .textSelection(.enabled)
+        EyebrowLabel("Tags in every selected photo")
+        ChipFlowLayout(spacing: 8, runSpacing: 8) {
+            ForEach(commonTags, id: \.self) { tag in
+                CommonTagChip(tag: tag) {
+                    store.toggleTagFilter(tag)
+                }
+            }
         }
     }
 
@@ -216,15 +222,18 @@ private struct MultiSelectionSummary: View {
 
     @ViewBuilder
     private var modelBreakdownSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Models used")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        EyebrowLabel("Models used")
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             ForEach(modelBreakdown, id: \.0) { pair in
                 HStack {
-                    Text(pair.0).font(.system(.caption, design: .monospaced))
+                    Text(pair.0)
+                        .font(AppFont.monoLabel)
+                        .foregroundStyle(AppColor.textPrimary)
                     Spacer()
-                    Text("\(pair.1)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                    Text("\(pair.1)")
+                        .font(AppFont.body)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -267,21 +276,16 @@ private struct InspectorContent: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: Spacing.md) {
                 heroSection
-                identitySection
-                Divider()
-                descriptionSection
-                Divider()
-                tagsSection
-                Divider()
-                provenanceSection
-                Divider()
-                visionSection
-                Divider()
-                developerSection
+                SurfaceCard { identitySection }
+                SurfaceCard { descriptionSection }
+                SurfaceCard { tagsSection }
+                SurfaceCard { provenanceSection }
+                SurfaceCard { visionSection }
+                SurfaceCard { developerSection }
             }
-            .padding(16)
+            .padding(Spacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .task(id: assetId) {
@@ -304,15 +308,15 @@ private struct InspectorContent: View {
     @ViewBuilder
     private var heroSection: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.gray.opacity(0.12))
-                .aspectRatio(4/3, contentMode: .fit)
+            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                .fill(AppColor.surfaceSunken)
+                .aspectRatio(3/2, contentMode: .fit)
 
             if let img = heroImage {
                 Image(nsImage: img)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             } else if heroLoadFailed {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.largeTitle)
@@ -322,6 +326,11 @@ private struct InspectorContent: View {
                     .controlSize(.small)
             }
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                .strokeBorder(AppColor.borderSubtle, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 4)
     }
 
     // MARK: - Identity section
@@ -364,13 +373,14 @@ private struct InspectorContent: View {
 
     @ViewBuilder
     private func identityRow(_ label: String, value: String, monospaced: Bool = false) -> some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: Spacing.md) {
             Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 80, alignment: .leading)
+                .font(AppFont.label)
+                .foregroundStyle(AppColor.textSecondary)
+                .frame(width: 104, alignment: .leading)
             Text(value)
-                .font(monospaced ? .system(.caption, design: .monospaced) : .caption)
+                .font(monospaced ? AppFont.monoCaption : AppFont.body)
+                .foregroundStyle(AppColor.textPrimary)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -390,17 +400,18 @@ private struct InspectorContent: View {
             descriptionEditor(row: row)
         } else if store.rows[assetId] == nil {
             Text("Untouched — no description yet. Run a batch to generate one.")
-                .font(.caption)
+                .font(AppFont.body)
                 .foregroundStyle(.secondary)
         } else {
             // Row exists but description is empty (pending / failed / cleared)
             Text("No description yet.")
-                .font(.caption)
+                .font(AppFont.body)
                 .foregroundStyle(.secondary)
             Button("Start editing") {
                 beginEditing(with: "")
             }
             .buttonStyle(.link)
+            .font(AppFont.label)
         }
     }
 
@@ -435,13 +446,16 @@ private struct InspectorContent: View {
                 }
             } else {
                 Text(row.description ?? "")
-                    .font(.body)
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textPrimary)
+                    .lineSpacing(2)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button("Edit") {
                     beginEditing(with: row.description ?? "")
                 }
                 .buttonStyle(.link)
+                .font(AppFont.label)
             }
         }
     }
@@ -461,10 +475,10 @@ private struct InspectorContent: View {
 
         if activeTags.isEmpty {
             Text("No tags.")
-                .font(.caption)
+                .font(AppFont.body)
                 .foregroundStyle(.secondary)
         } else {
-            ChipFlowLayout(spacing: 6, runSpacing: 6) {
+            ChipFlowLayout(spacing: 8, runSpacing: 8) {
                 ForEach(activeTags, id: \.self) { tag in
                     inspectorTagChip(tag: tag)
                 }
@@ -486,7 +500,15 @@ private struct InspectorContent: View {
 
     @ViewBuilder
     private var provenanceSection: some View {
-        sectionHeader("Processing", systemImage: "cpu")
+        let tint: Color = {
+            switch store.rows[assetId]?.status {
+            case "done":                    return AppColor.statusDone
+            case "pending", "in_progress":  return AppColor.statusPending
+            case "failed":                  return AppColor.statusFailed
+            default:                        return .accentColor
+            }
+        }()
+        sectionHeader("Processing", systemImage: "cpu", tint: tint)
 
         if let row = store.rows[assetId] {
             VStack(alignment: .leading, spacing: 6) {
@@ -505,8 +527,8 @@ private struct InspectorContent: View {
                 if let total = row.totalMs {
                     identityRow("Total", value: formatMs(total))
                     TimingBar(visionMs: row.visionMs ?? 0, ollamaMs: row.ollamaMs ?? 0, totalMs: total)
-                        .frame(height: 10)
-                        .padding(.top, 2)
+                        .frame(height: 14)
+                        .padding(.top, Spacing.xs)
                 } else if let ollama = row.ollamaMs {
                     identityRow("Ollama", value: formatMs(ollama))
                 }
@@ -523,7 +545,7 @@ private struct InspectorContent: View {
             }
         } else {
             Text("No processing record for this asset.")
-                .font(.caption)
+                .font(AppFont.body)
                 .foregroundStyle(.secondary)
         }
     }
@@ -535,39 +557,41 @@ private struct InspectorContent: View {
         sectionHeader("Vision", systemImage: "eye")
 
         if let findings = decodedVisionFindings {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.md) {
                 if findings.classifications.isEmpty
                     && findings.animals.isEmpty
                     && findings.faces.isEmpty
                     && findings.ocrText.isEmpty {
                     Text("Vision pre-pass ran but found nothing structured.")
-                        .font(.caption)
+                        .font(AppFont.body)
                         .foregroundStyle(.secondary)
                 }
 
                 if !findings.classifications.isEmpty {
-                    Text("Classifications")
-                        .font(.caption).foregroundStyle(.secondary)
-                    ForEach(findings.classifications.prefix(5), id: \.identifier) { label in
-                        HStack(spacing: 6) {
-                            Text(label.identifier)
-                                .font(.caption)
-                                .frame(width: 120, alignment: .leading)
-                                .lineLimit(1)
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(Color.gray.opacity(0.15))
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(Color.accentColor.opacity(0.6))
-                                        .frame(width: geo.size.width * CGFloat(max(0, min(1, label.confidence))))
+                    EyebrowLabel("Classifications")
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(findings.classifications.prefix(5), id: \.identifier) { label in
+                            HStack(spacing: Spacing.sm) {
+                                Text(label.identifier)
+                                    .font(AppFont.label)
+                                    .foregroundStyle(AppColor.textPrimary)
+                                    .frame(width: 140, alignment: .leading)
+                                    .lineLimit(1)
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        Capsule()
+                                            .fill(AppColor.surfaceSunken)
+                                        Capsule()
+                                            .fill(Color.accentColor.opacity(0.85))
+                                            .frame(width: geo.size.width * CGFloat(max(0, min(1, label.confidence))))
+                                    }
                                 }
+                                .frame(height: 10)
+                                Text(String(format: "%.2f", label.confidence))
+                                    .font(AppFont.monoCaption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 40, alignment: .trailing)
                             }
-                            .frame(height: 6)
-                            Text(String(format: "%.2f", label.confidence))
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 36, alignment: .trailing)
                         }
                     }
                 }
@@ -579,21 +603,27 @@ private struct InspectorContent: View {
                     identityRow("Faces", value: "\(findings.faces.count)")
                 }
                 if !findings.ocrText.isEmpty {
-                    Text("OCR")
-                        .font(.caption).foregroundStyle(.secondary)
+                    EyebrowLabel("OCR")
                     Text(findings.ocrText.joined(separator: " · "))
-                        .font(.system(.caption, design: .monospaced))
+                        .font(AppFont.monoCaption)
+                        .foregroundStyle(AppColor.textPrimary)
                         .textSelection(.enabled)
+                        .padding(Spacing.sm)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(AppColor.surfaceSunken)
+                        )
                 }
                 identityRow("Vision time", value: String(format: "%.0f ms", findings.elapsedSeconds * 1000))
             }
         } else if store.rows[assetId]?.status == "done" {
             Text("No Vision data recorded for this row (pre-v1 done row).")
-                .font(.caption)
+                .font(AppFont.body)
                 .foregroundStyle(.secondary)
         } else {
             Text("Vision pre-pass runs when the photo is processed.")
-                .font(.caption)
+                .font(AppFont.body)
                 .foregroundStyle(.secondary)
         }
     }
@@ -621,50 +651,70 @@ private struct InspectorContent: View {
 
                     if let desc = row.description {
                         Text("description payload (what's in Photos.app)")
-                            .font(.caption)
+                            .font(AppFont.caption)
                             .foregroundStyle(.secondary)
-                            .padding(.top, 4)
+                            .padding(.top, Spacing.xs)
                         Text(Pipeline.formatDescription(
                             description: desc,
                             tags: row.tags,
                             sentinel: row.sentinel ?? store.currentSentinel
                         ))
-                        .font(.system(.caption, design: .monospaced))
+                        .font(AppFont.monoCaption)
+                        .foregroundStyle(AppColor.textPrimary)
                         .textSelection(.enabled)
-                        .padding(6)
-                        .background(Color.gray.opacity(0.08))
-                        .cornerRadius(4)
+                        .padding(Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(AppColor.surfaceSunken)
+                        )
                     }
                 }
             } else {
                 Text("No queue row.").font(.caption).foregroundStyle(.secondary)
             }
         } label: {
-            Label("Developer", systemImage: "curlybraces")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "curlybraces")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppColor.textTertiary)
+                    .frame(width: 22, alignment: .center)
+                Text("Developer")
+                    .font(AppFont.sectionTitle)
+                    .foregroundStyle(AppColor.textSecondary)
+            }
         }
     }
 
     @ViewBuilder
     private func devRow(_ k: String, _ v: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(k).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).frame(width: 110, alignment: .leading)
-            Text(v).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+        HStack(alignment: .top, spacing: Spacing.md) {
+            Text(k)
+                .font(AppFont.monoCaption)
+                .foregroundStyle(.secondary)
+                .frame(width: 130, alignment: .leading)
+            Text(v)
+                .font(AppFont.monoCaption)
+                .foregroundStyle(AppColor.textPrimary)
+                .textSelection(.enabled)
         }
     }
 
     // MARK: - Section header helper
 
     @ViewBuilder
-    private func sectionHeader(_ title: String, systemImage: String, trailing: AnyView? = nil) -> some View {
-        HStack(spacing: 6) {
-            Label(title, systemImage: systemImage)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+    private func sectionHeader(_ title: String, systemImage: String, tint: Color = .accentColor, trailing: AnyView? = nil) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 22, alignment: .center)
+            Text(title)
+                .font(AppFont.sectionTitle)
+                .foregroundStyle(AppColor.textPrimary)
             Spacer()
             if let trailing { trailing }
         }
+        .padding(.bottom, Spacing.xs)
     }
 
     // MARK: - Load
@@ -851,6 +901,32 @@ private struct InspectorContent: View {
     }
 }
 
+// MARK: - Common tag chip (multi-selection summary)
+
+/// Lightweight tag pill used by `MultiSelectionSummary.commonTagsSection`.
+/// Tap toggles the tag in the active filter set. Doesn't carry the full
+/// edit/remove machinery of `TagChipView` because the multi-selection
+/// summary is read-only — it's a digest, not an editor.
+private struct CommonTagChip: View {
+    let tag: String
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            Text(tag)
+                .font(AppFont.label)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule().fill(AppColor.tagTint(for: tag).opacity(0.78))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Tag chip
 
 /// Pill-shaped tag label with left-click-to-toggle, right-click context menu,
@@ -868,9 +944,10 @@ private struct TagChipView: View {
     let onRemoveFromPhoto: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             Text(tag)
-                .font(.caption)
+                .font(AppFont.label)
+                .foregroundStyle(.white)
                 .lineLimit(1)
             if canEdit, let onRemoveFromPhoto {
                 Button {
@@ -878,20 +955,20 @@ private struct TagChipView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .imageScale(.small)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.75))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
         .background(
             Capsule()
-                .fill(isActiveFilter ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.15))
+                .fill(AppColor.tagTint(for: tag).opacity(isActiveFilter ? 1.00 : 0.78))
         )
         .overlay(
             Capsule()
-                .stroke(isActiveFilter ? Color.accentColor : Color.clear, lineWidth: 1)
+                .stroke(isActiveFilter ? Color.white.opacity(0.55) : Color.clear, lineWidth: 1)
         )
         .contentShape(Capsule())
         .onTapGesture { onToggle() }

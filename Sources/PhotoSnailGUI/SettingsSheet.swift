@@ -51,51 +51,54 @@ struct SettingsSheet: View {
             // Header
             HStack {
                 Text("Settings")
-                    .font(.title2)
+                    .font(.title)
                     .fontWeight(.semibold)
                 Spacer()
                 Button("Close") { isPresented = false }
                     .keyboardShortcut(.cancelAction)
             }
-            .padding()
+            .padding(Spacing.lg)
 
             Divider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    modelSection
-                    sentinelSection
-                    ollamaConnectionSection
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    SurfaceCard { modelSection }
+                    SurfaceCard { sentinelSection }
+                    SurfaceCard { ollamaConnectionSection }
                 }
-                .padding()
+                .padding(Spacing.lg)
             }
 
             Divider()
 
             // Footer
             HStack {
+                Image(systemName: "info.circle")
+                    .imageScale(.small)
+                    .foregroundStyle(.secondary)
                 Text("Changes apply on next Start")
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Save") {
                     Task { await save() }
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
             }
-            .padding()
+            .padding(Spacing.lg)
         }
-        .frame(width: 540, height: 640)
+        .frame(width: 580, height: 720)
         .onAppear { loadFromEngine() }
     }
 
     // MARK: - Sections
 
     private var modelSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Model")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            settingsSectionHeader("Model", systemImage: "cpu")
 
             if engine.availableModels.isEmpty {
                 if let err = engine.modelsLoadError {
@@ -139,9 +142,8 @@ struct SettingsSheet: View {
     }
 
     private var sentinelSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Sentinel")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            settingsSectionHeader("Sentinel", systemImage: "number")
 
             let proposed = Sentinel.propose(forModel: draftModel, currentSentinel: engine.sentinel)
 
@@ -196,22 +198,21 @@ struct SettingsSheet: View {
     }
 
     private var ollamaConnectionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Ollama Connection")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            settingsSectionHeader("Ollama Connection", systemImage: "network")
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text("Base URL")
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                 TextField("http://localhost:11434", text: $draftBaseURL)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text("API Key")
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                 HStack {
                     Group {
@@ -232,14 +233,14 @@ struct SettingsSheet: View {
                     .buttonStyle(.borderless)
                 }
                 Text("Stored in plain text in ~/Library/Application Support/photo-snail/settings.json (0600). Set PHOTO_SNAIL_OLLAMA_API_KEY in your environment to avoid persisting.")
-                    .font(.caption2)
+                    .font(AppFont.caption)
                     .foregroundStyle(.secondary)
             }
 
             DisclosureGroup("Advanced: custom headers", isExpanded: $showAdvancedHeaders) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text("For proxies that use non-Bearer auth (Basic, X-API-Key, etc.). Headers override the API key field if both set Authorization.")
-                        .font(.caption2)
+                        .font(AppFont.caption)
                         .foregroundStyle(.secondary)
 
                     ForEach($draftHeaders) { $entry in
@@ -301,6 +302,21 @@ struct SettingsSheet: View {
     }
 
     // MARK: - Helpers
+
+    @ViewBuilder
+    private func settingsSectionHeader(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 22, alignment: .center)
+            Text(title)
+                .font(AppFont.sectionTitle)
+                .foregroundStyle(AppColor.textPrimary)
+            Spacer()
+        }
+        .padding(.bottom, Spacing.xs)
+    }
 
     private func loadFromEngine() {
         draftModel = engine.model

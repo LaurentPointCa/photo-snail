@@ -23,7 +23,7 @@ struct LibraryWindow: View {
             } else {
                 NavigationSplitView {
                     LibrarySidebar(store: store)
-                        .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+                        .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
                         .safeAreaInset(edge: .bottom) {
                             // Pinned runner dock — visible whenever the engine
                             // exists (post-load). Matches the priority of "the
@@ -151,24 +151,26 @@ struct LibrarySidebar: View {
                             // downsamples rather than upsamples.
                             .interpolation(.high)
                             .aspectRatio(contentMode: .fit)
-                            .frame(height: 60)
+                            .frame(height: 72)
                     } else {
                         Text("photo snail")
-                            .font(.system(.title3, design: .rounded, weight: .semibold))
+                            .font(.system(.title2, design: .rounded, weight: .semibold))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 6)
+                .padding(.vertical, Spacing.md)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
 
-            Section("Library") {
-                filterRow(.all, label: "All", count: store.totalCount, systemImage: "photo.stack")
-                filterRow(.tagged, label: "Tagged", count: store.taggedCount, systemImage: "checkmark.seal")
-                filterRow(.untouched, label: "Untouched", count: store.untouchedCount, systemImage: "circle.dashed")
-                filterRow(.pending, label: "Pending", count: store.pendingCount, systemImage: "hourglass")
-                filterRow(.failed, label: "Failed", count: store.failedCount, systemImage: "exclamationmark.triangle")
+            Section {
+                filterRow(.all, label: "All", count: store.totalCount, systemImage: "photo.stack", tint: .accentColor)
+                filterRow(.tagged, label: "Tagged", count: store.taggedCount, systemImage: "checkmark.seal.fill", tint: AppColor.statusDone)
+                filterRow(.untouched, label: "Untouched", count: store.untouchedCount, systemImage: "circle.dashed", tint: AppColor.statusUntouched)
+                filterRow(.pending, label: "Pending", count: store.pendingCount, systemImage: "hourglass", tint: AppColor.statusPending)
+                filterRow(.failed, label: "Failed", count: store.failedCount, systemImage: "exclamationmark.triangle.fill", tint: AppColor.statusFailed)
+            } header: {
+                EyebrowLabel("Library")
             }
 
             // Active compound filters — only rendered when there's something
@@ -184,15 +186,15 @@ struct LibrarySidebar: View {
                         store.clearTagFilters()
                     }
                     .buttonStyle(.plain)
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                 } header: {
                     HStack {
-                        Text("Active Filters")
+                        EyebrowLabel("Active Filters")
                         Spacer()
                         Text("\(store.activeTagFilters.count)")
+                            .font(AppFont.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
-                            .monospacedDigit()
                     }
                 }
             }
@@ -200,7 +202,7 @@ struct LibrarySidebar: View {
             // Popular tags in the current display set. Hidden when there's
             // nothing interesting to show — avoids a lonely empty section.
             if !store.popularTags.isEmpty {
-                Section("Popular Tags") {
+                Section {
                     ForEach(store.popularTags) { freq in
                         PopularTagRow(
                             frequency: freq,
@@ -209,6 +211,8 @@ struct LibrarySidebar: View {
                             store.toggleTagFilter(freq.tag)
                         }
                     }
+                } header: {
+                    EyebrowLabel("Popular Tags")
                 }
             }
         }
@@ -217,22 +221,36 @@ struct LibrarySidebar: View {
     }
 
     @ViewBuilder
-    private func filterRow(_ f: LibraryStore.Filter, label: String, count: Int, systemImage: String) -> some View {
+    private func filterRow(_ f: LibraryStore.Filter, label: String, count: Int, systemImage: String, tint: Color) -> some View {
         Button {
             store.setFilter(f)
         } label: {
-            HStack {
-                Label(label, systemImage: systemImage)
+            HStack(spacing: Spacing.md) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(tint)
+                    .frame(width: 22, alignment: .center)
+                Text(label)
+                    .font(AppFont.label)
+                    .foregroundStyle(AppColor.textPrimary)
                 Spacer()
                 Text("\(count)")
+                    .font(AppFont.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .monospacedDigit()
             }
+            .padding(.vertical, Spacing.xs)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .listRowBackground(
-            store.filter == f ? Color.accentColor.opacity(0.18) : Color.clear
+            Group {
+                if store.filter == f {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.22))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                }
+            }
         )
     }
 }
@@ -244,23 +262,32 @@ private struct ActiveFilterRow: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "tag.fill")
-                .imageScale(.small)
-                .foregroundStyle(Color.accentColor)
-            Text(tag)
-                .font(.caption)
-                .lineLimit(1)
-            Spacer()
-            Button {
-                onRemove()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
+        HStack {
+            HStack(spacing: 6) {
+                Image(systemName: "tag.fill")
                     .imageScale(.small)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.9))
+                Text(tag)
+                    .font(AppFont.label)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Button {
+                    onRemove()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .imageScale(.small)
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                Capsule().fill(AppColor.tagTint(for: tag).opacity(0.85))
+            )
+            Spacer(minLength: 0)
         }
+        .padding(.vertical, 2)
     }
 }
 
@@ -274,24 +301,40 @@ private struct PopularTagRow: View {
 
     var body: some View {
         Button(action: onToggle) {
-            HStack {
-                Image(systemName: isActive ? "checkmark.circle.fill" : "number")
-                    .imageScale(.small)
-                    .foregroundStyle(isActive ? Color.accentColor : .secondary)
+            HStack(spacing: Spacing.md) {
+                Circle()
+                    .fill(AppColor.tagTint(for: frequency.tag))
+                    .frame(width: 9, height: 9)
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(isActive ? 0.7 : 0.0), lineWidth: 1)
+                    )
                 Text(frequency.tag)
-                    .font(.caption)
+                    .font(AppFont.label)
                     .lineLimit(1)
+                    .foregroundStyle(isActive ? AppColor.textPrimary : AppColor.textSecondary)
                 Spacer()
                 Text("\(frequency.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                    .font(AppFont.caption.monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.92))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 1)
+                    .background(
+                        Capsule().fill(AppColor.tagTint(for: frequency.tag).opacity(isActive ? 0.95 : 0.55))
+                    )
             }
+            .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .listRowBackground(
-            isActive ? Color.accentColor.opacity(0.12) : Color.clear
+            Group {
+                if isActive {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.14))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                }
+            }
         )
     }
 }
@@ -605,9 +648,9 @@ struct ThumbnailCell: View {
             }
 
             RoundedRectangle(cornerRadius: 8)
-                .stroke(
+                .strokeBorder(
                     isSelected ? Color.accentColor : Color.clear,
-                    lineWidth: 2
+                    lineWidth: 3
                 )
                 .frame(width: size, height: size)
 
@@ -616,15 +659,25 @@ struct ThumbnailCell: View {
         }
         .frame(width: size, height: size)
         .contentShape(Rectangle())
+        // Soft accent halo around the selected cell — gives single-photo
+        // selections enough visual punch to stand out against the dark
+        // grid background. The stroke alone reads as subtle when only one
+        // cell carries it.
+        .shadow(
+            color: isSelected ? Color.accentColor.opacity(0.55) : .clear,
+            radius: isSelected ? 6 : 0,
+            x: 0,
+            y: 0
+        )
         // Subtle lift + soft shadow on hover. Makes the grid feel alive
         // without being distracting; 120 ms ease is short enough that
         // fast mouse sweeps don't leave trailing shadow artifacts.
         .scaleEffect(isHovering ? 1.03 : 1.0)
         .shadow(
-            color: .black.opacity(isHovering ? 0.18 : 0),
-            radius: isHovering ? 5 : 0,
+            color: .black.opacity(isHovering ? 0.32 : 0),
+            radius: isHovering ? 8 : 0,
             x: 0,
-            y: isHovering ? 2 : 0
+            y: isHovering ? 3 : 0
         )
         .animation(.easeOut(duration: 0.12), value: isHovering)
         .onHover { isHovering = $0 }
@@ -708,28 +761,31 @@ struct StatusBadge: View {
             case "done":
                 return AnyView(
                     Circle()
-                        .fill(Color.green)
-                        .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1))
+                        .fill(AppColor.statusDone)
+                        .frame(width: 16, height: 16)
+                        .overlay(Circle().stroke(Color.white.opacity(0.85), lineWidth: 1.5))
+                        .shadow(color: .black.opacity(0.40), radius: 2, x: 0, y: 1)
                 )
             case "pending", "in_progress":
                 return AnyView(
                     Circle()
-                        .strokeBorder(Color.orange, lineWidth: 2)
-                        .background(Circle().fill(Color.black.opacity(0.25)))
-                        .frame(width: 12, height: 12)
+                        .strokeBorder(AppColor.statusPending, lineWidth: 2.5)
+                        .background(Circle().fill(Color.black.opacity(0.30)))
+                        .frame(width: 16, height: 16)
+                        .shadow(color: .black.opacity(0.40), radius: 2, x: 0, y: 1)
                 )
             case "failed":
                 return AnyView(
                     Circle()
-                        .fill(Color.red)
-                        .frame(width: 12, height: 12)
+                        .fill(AppColor.statusFailed)
+                        .frame(width: 16, height: 16)
                         .overlay(
                             Text("!")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(.white)
                         )
-                        .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1))
+                        .overlay(Circle().stroke(Color.white.opacity(0.85), lineWidth: 1.5))
+                        .shadow(color: .black.opacity(0.40), radius: 2, x: 0, y: 1)
                 )
             default:
                 return AnyView(EmptyView())
@@ -757,16 +813,18 @@ struct BulkActionBar: View {
     @State private var showingExportError: String? = nil
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.md) {
             Text("\(store.selection.count) selected")
-                .font(.callout.weight(.medium))
+                .font(AppFont.bodyEmphasized)
+                .monospacedDigit()
+                .foregroundStyle(AppColor.textPrimary)
 
             // Transient status message from the most recent bulk op.
             // Non-intrusive — sits inline in the action bar and fades
             // when the user clicks anything else.
             if let msg = store.bulkStatusMessage {
                 Text(msg)
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -787,7 +845,7 @@ struct BulkActionBar: View {
             Button(role: .destructive) {
                 showingClearConfirm = true
             } label: {
-                Label("Clear description", systemImage: "eraser")
+                Label("Clear", systemImage: "eraser")
             }
             .help("Clear description — remove photo-snail descriptions from Photos.app")
 
@@ -817,12 +875,18 @@ struct BulkActionBar: View {
             }
             .help("Deselect all")
         }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.borderless)
-        .imageScale(.medium)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.bar)
+        .labelStyle(.titleAndIcon)
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .font(AppFont.label)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
+        .background(.regularMaterial)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(AppColor.borderSubtle)
+                .frame(height: 1)
+        }
         .confirmationDialog(
             "Clear descriptions from \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
             isPresented: $showingClearConfirm,
@@ -867,21 +931,19 @@ struct BulkActionBar: View {
 /// to be obvious, this is where the non-obvious bits live.
 struct LegendPopover: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Status badges")
-                    .font(.headline)
-                badgeRow(color: .green, label: "Tagged", description: "Photo has a description in Photos.app.")
-                badgeRow(color: .orange, label: "Pending", description: "Queued for processing. Live ring while in-progress.", ringed: true)
-                badgeRow(color: .red, label: "Failed", description: "Processing failed. Retry via bulk Re-process.")
-                badgeRow(color: .gray.opacity(0.3), label: "Untouched", description: "Not yet enumerated into the queue.")
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                legendHeader("Status badges", systemImage: "circle.hexagongrid.fill")
+                badgeRow(color: AppColor.statusDone, label: "Tagged", description: "Photo has a description in Photos.app.")
+                badgeRow(color: AppColor.statusPending, label: "Pending", description: "Queued for processing. Live ring while in-progress.", ringed: true)
+                badgeRow(color: AppColor.statusFailed, label: "Failed", description: "Processing failed. Retry via bulk Re-process.")
+                badgeRow(color: AppColor.statusUntouched, label: "Untouched", description: "Not yet enumerated into the queue.")
             }
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Keyboard shortcuts")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                legendHeader("Keyboard shortcuts", systemImage: "keyboard")
                 keyRow("⌘F", "Search descriptions + tags")
                 keyRow("←  →", "Previous / next photo")
                 keyRow("Space", "Full-screen preview")
@@ -896,42 +958,69 @@ struct LegendPopover: View {
                 keyRow("⌫", "Clear descriptions for selection")
             }
         }
-        .padding(16)
-        .frame(width: 360)
+        .padding(Spacing.xl)
+        .frame(width: 440)
+    }
+
+    @ViewBuilder
+    private func legendHeader(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 22, alignment: .center)
+            Text(title)
+                .font(AppFont.sectionTitle)
+                .foregroundStyle(AppColor.textPrimary)
+            Spacer()
+        }
+        .padding(.bottom, Spacing.xs)
     }
 
     @ViewBuilder
     private func badgeRow(color: Color, label: String, description: String, ringed: Bool = false) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: Spacing.md) {
             ZStack {
                 if ringed {
-                    Circle().strokeBorder(color, lineWidth: 2)
+                    Circle().strokeBorder(color, lineWidth: 2.5)
                 } else {
                     Circle().fill(color)
                 }
             }
-            .frame(width: 14, height: 14)
+            .frame(width: 20, height: 20)
+            .overlay(Circle().stroke(Color.white.opacity(0.85), lineWidth: ringed ? 0 : 1.5))
             .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(label).font(.callout.weight(.medium))
-                Text(description).font(.caption).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(AppFont.bodyEmphasized)
+                    .foregroundStyle(AppColor.textPrimary)
+                Text(description)
+                    .font(AppFont.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
 
     @ViewBuilder
     private func keyRow(_ key: String, _ action: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: Spacing.md) {
             Text(key)
-                .font(.system(.caption, design: .monospaced))
-                .frame(width: 80, alignment: .leading)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .font(AppFont.monoLabel)
+                .foregroundStyle(AppColor.textPrimary)
+                .frame(width: 96, alignment: .leading)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, 3)
                 .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.secondary.opacity(0.12))
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(AppColor.surfaceSunken)
                 )
-            Text(action).font(.caption)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(AppColor.borderSubtle, lineWidth: 1)
+                )
+            Text(action)
+                .font(AppFont.label)
+                .foregroundStyle(AppColor.textPrimary)
             Spacer()
         }
     }
@@ -1061,9 +1150,7 @@ struct RunnerDock: View {
     @Bindable var store: LibraryStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Divider()
-
+        VStack(alignment: .leading, spacing: Spacing.md) {
             // Last-completed photo card (top). Stays on-screen between
             // photos so the user always has a concrete sense of what the
             // pipeline just did.
@@ -1086,24 +1173,7 @@ struct RunnerDock: View {
 
             // Session stats + progress bar.
             if engine.totalCount > 0 {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("\(engine.doneCount) / \(engine.totalCount)")
-                            .font(.caption.monospacedDigit())
-                        Spacer()
-                        if !engine.etaString.isEmpty && engine.etaString != "--" {
-                            Text("ETA \(engine.etaString)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    ProgressView(
-                        value: Double(engine.doneCount),
-                        total: Double(max(1, engine.totalCount))
-                    )
-                    .progressViewStyle(.linear)
-                    .controlSize(.small)
-                }
+                statsBlock
             }
 
             // Follow-current-processing toggle. Off by default — the user
@@ -1111,20 +1181,64 @@ struct RunnerDock: View {
             // on, LibraryGrid's onChange(engine.currentPhotoID) scrolls
             // the grid to the in-flight photo every advance.
             Toggle(isOn: Bindable(store).followCurrentProcessing) {
-                Text("Follow in grid")
-                    .font(.caption)
+                Text("Follow processing in grid")
+                    .font(AppFont.label)
             }
             .toggleStyle(.switch)
-            .controlSize(.mini)
+            .controlSize(.regular)
             .help("Auto-scroll the grid to the currently-processing photo")
 
             // Primary action — changes label based on engine state.
             primaryButton
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
-        .background(.bar)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.lg)
+        .padding(.bottom, Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColor.surfaceHighlighted)
+        .overlay(alignment: .top) {
+            // Hairline separator instead of a full Divider — reads as
+            // "the runner dock starts here" without the heavy default
+            // List divider tone.
+            Rectangle()
+                .fill(AppColor.borderSubtle)
+                .frame(height: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var statsBlock: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                Text("\(engine.doneCount)")
+                    .font(AppFont.display)
+                    .monospacedDigit()
+                    .foregroundStyle(AppColor.textPrimary)
+                Text("of \(engine.totalCount)")
+                    .font(AppFont.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if !engine.etaString.isEmpty && engine.etaString != "--" {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .imageScale(.small)
+                        Text("ETA \(engine.etaString)")
+                            .font(AppFont.caption)
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+            DockProgressBar(progress: progressFraction)
+                .frame(height: 6)
+                .padding(.top, 2)
+        }
+    }
+
+    private var progressFraction: Double {
+        guard engine.totalCount > 0 else { return 0 }
+        return Double(engine.doneCount) / Double(engine.totalCount)
     }
 
     @ViewBuilder
@@ -1135,15 +1249,17 @@ struct RunnerDock: View {
                 Task { await engine.start() }
             } label: {
                 Label("Start", systemImage: "play.fill")
+                    .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.regular)
+            .controlSize(.large)
         case .enumerating:
-            HStack {
+            HStack(spacing: Spacing.sm) {
                 ProgressView().controlSize(.small)
                 Text(engine.statusMessage)
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Spacer()
@@ -1153,19 +1269,51 @@ struct RunnerDock: View {
                 engine.pause()
             } label: {
                 Label("Pause", systemImage: "pause.fill")
+                    .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
             }
             .buttonStyle(.bordered)
-            .controlSize(.regular)
+            .controlSize(.large)
         case .paused:
             Button {
                 engine.resume()
             } label: {
                 Label("Resume", systemImage: "play.fill")
+                    .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.regular)
+            .controlSize(.large)
+        }
+    }
+}
+
+/// Custom progress bar for the runner dock — chunkier and rounder than
+/// the system `ProgressView(.linear)`, with an accent gradient fill so it
+/// reads as "the focal progress indicator" rather than just a thin rule.
+private struct DockProgressBar: View {
+    let progress: Double  // 0...1
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.10))
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor,
+                                Color.accentColor.opacity(0.80)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(progress))))
+            }
         }
     }
 }
@@ -1190,28 +1338,28 @@ private struct DockPhotoCard: View {
     @State private var dismissTask: Task<Void, Never>? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.5)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            EyebrowLabel(title)
 
-            HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .top, spacing: Spacing.md) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.gray.opacity(0.15))
-                        .frame(width: 56, height: 56)
+                    RoundedRectangle(cornerRadius: Radius.thumbnail)
+                        .fill(AppColor.surfaceSunken)
+                        .frame(width: 84, height: 84)
                     if let cg = thumbnail {
                         Image(decorative: cg, scale: 1)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 56, height: 56)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .frame(width: 84, height: 84)
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.thumbnail))
                     }
+                    RoundedRectangle(cornerRadius: Radius.thumbnail)
+                        .strokeBorder(AppColor.borderSubtle, lineWidth: 1)
+                        .frame(width: 84, height: 84)
                     if isLive {
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.accentColor.opacity(0.8), lineWidth: 2)
-                            .frame(width: 56, height: 56)
+                        RoundedRectangle(cornerRadius: Radius.thumbnail)
+                            .stroke(Color.accentColor.opacity(0.85), lineWidth: 3)
+                            .frame(width: 84, height: 84)
                             .scaleEffect(1 + 0.06 * pulsePhase)
                             .opacity(1 - 0.4 * pulsePhase)
                     }
@@ -1249,9 +1397,9 @@ private struct DockPhotoCard: View {
                 }
 
                 Text(caption.isEmpty ? "—" : caption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textPrimary)
+                    .lineLimit(3)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
