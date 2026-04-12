@@ -334,3 +334,177 @@ The full decision history and findings are in `~/.claude/projects/-Users-laurent
 - Build: `./bundle-gui.sh` → `open .build/release/PhotoSnail.app`. CLI (`photo-snail-app`) preserved as-is, shares the same SQLite queue.
 
 **Active roadmap complete as of Phase G.** Phase H deferred 2026-04-11 — see "Potential future improvements". Mid-batch quality check at 535/7,632 done, 0 failed: avg description ~196 chars, tag counts 7–14, zero duplicates, no weak-output cluster. The Phase F.1 bootstrap asset row (`64EAA6CF-…`) was reset to `pending` on 2026-04-11 so it's processed by the pipeline like any other asset when the batch resumes (the Photos.app write-back will replace the spike's test description).
+
+---
+
+## Phase I — Visual rehaul (in progress, branch `ui-rework-2026-04-11`)
+
+_Started 2026-04-11. Visual rework only — no functional changes. All bindings, keyboard handling, engine behavior, and queue logic stay byte-identical._
+
+### User-reported issues
+- Popular Tags section in the sidebar is unreadable
+- Runner dock ("progress tab") at the bottom of the sidebar is too small
+- Fonts are too tiny throughout the app
+- Everything is gray and boring — no visual hierarchy or color
+- Dark mode is the priority
+
+### Audit (baseline screenshot at /tmp/photosnail-baseline.png)
+
+**Typography**
+- `LibraryInspector` uses `.font(.caption)` (12pt) for every identityRow label/value (LibraryInspector.swift:367-376), Vision section, Provenance section, Description fallback text, "No tags" placeholder, and section headers (`.caption.weight(.semibold)` line 663)
+- `RunnerDock` uses `.font(.system(size: 10, weight: .semibold))` for "LAST COMPLETED" / "PROCESSING" labels (LibraryWindow.swift:1195) — 10pt unreadable
+- `LibrarySidebar` Popular Tags rows use `.font(.caption)` for both name and count (LibraryWindow.swift:281,287)
+- `BulkActionBar` status message `.font(.caption)` (LibraryWindow.swift:769)
+- `LegendPopover` keyboard shortcut keys at `.system(.caption, design: .monospaced)` (LibraryWindow.swift:925-933)
+- `SettingsSheet` API key warning at `.font(.caption2)` — 11pt (SettingsSheet.swift:235)
+
+**Color & depth**
+- Inspector sections separated by `Divider()` only — no card surfaces, no visual grouping
+- Tag chip background `Color.secondary.opacity(0.15)` — invisible against the inspector background
+- Status badge dots are 12×12 — barely register at typical viewing distance
+- Accent color used only on the selected filter row and active tag chips; nowhere else
+- Hero placeholder, dock thumbnails, identity row, developer payload all use `Color.gray.opacity(0.12)` — one tone, no semantic meaning
+- Runner dock uses `.background(.bar)`, the lightest possible material — no visual edge separating it from the sidebar list above
+
+**Spacing & density**
+- LibraryInspector: `spacing: 18` between sections, `spacing: 6` for identityRows, padding 16 — cramped
+- Runner dock: `spacing: 8` for everything (last-completed card, current card, stats, toggle, button) all piled together
+- DockPhotoCard thumbnails 56×56 — too small to make out the photo
+- Sidebar min/ideal width 220/260 — too narrow for tag rows; the section title "Popular Tags" wraps next to the count
+
+**Specific layout issues**
+- Inspector identity row label `.frame(width: 80, alignment: .leading)` — too narrow for "Dimensions"
+- BulkActionBar uses `.labelStyle(.iconOnly)` for everything, hiding what each icon does — relies entirely on tooltips
+- TimingBar is 10pt tall — barely visible
+
+### Design system (new file: `Sources/PhotoSnailGUI/DesignSystem.swift`)
+
+Pure tokens, no view code. Imported by every other GUI view.
+
+**Typography ramp** (extension on `Font`)
+- `eyebrow` — 11pt semibold uppercase, tracked +0.5
+- `caption` — 12pt regular (default body for "least important")
+- `label` — 13pt medium (form labels, identity row keys)
+- `body` — 14pt regular (default for values + descriptions)
+- `bodyEmphasized` — 14pt semibold
+- `sectionTitle` — 16pt semibold (inspector section headers)
+- `display` — 22pt semibold (sidebar brand, multi-selection count, big stats)
+
+**Color tokens** (extension on `Color`, dark-mode optimized; light mode falls back to system equivalents)
+- `surfaceElevated` — slightly lighter than window for cards
+- `surfaceSunken` — slightly darker for placeholders / sunken thumbnails
+- `borderSubtle` — `white.opacity(0.08)` for card edges
+- `textPrimary` / `textSecondary` / `textTertiary`
+- `statusDone` — vibrant green (replaces `Color.green` for badges + section icons)
+- `statusPending` — warm amber
+- `statusFailed` — coral red
+- `statusUntouched` — soft gray
+- `tagTint(for:)` — deterministic hash → one of ~8 muted hues, used to color tag chip backgrounds for visual variety
+
+**Spacing scale** (`enum Spacing`): xs=4, sm=8, md=12, lg=16, xl=24, xxl=32
+
+**Corner radii** (`enum Radius`): chip=8, card=14, thumbnail=10, hero=14
+
+**Surface** view modifier — rounded card with elevated background, 1pt subtle border, configurable padding. Used to wrap every inspector section.
+
+### Per-view changes
+
+#### `LibrarySidebar` (LibraryWindow.swift:123)
+- Width: min 220 → **260**, ideal 260 → **300**, max 320 → **360**
+- Wordmark: frame height 60 → **72**, add bottom padding `lg`
+- **Filter rows**: bump from default Label font to `.label`; row height taller; add a colored leading dot per filter (Tagged=`statusDone`, Pending=`statusPending`, Failed=`statusFailed`, Untouched=`statusUntouched`, All=accent); active row gets a tinted Surface background instead of flat `accentColor.opacity(0.18)`
+- **Active Filters section**: tag pills as proper colored chips with × removal button on the chip itself, not at the row trailing edge
+- **Popular Tags section**: header in `.eyebrow` style with proper tracking; row name from `.caption` → **`.label`**; count rendered as a small rounded pill (`tagTint` background) instead of plain text; row vertical padding bumped to give them air; hover tint
+- Section headers (List default) use `.eyebrow`
+
+#### `RunnerDock` (LibraryWindow.swift:1059) — the user-flagged "progress tab"
+- Wrap in a **Surface** card with `.thickMaterial` background (visible separation from the sidebar list), top divider replaced with a 1pt accent-gradient line
+- "LAST COMPLETED" / "PROCESSING" labels: 10pt → **`.eyebrow` (11pt)** with proper tracking
+- Thumbnails: 56×56 → **84×84**, corner radius 6 → **10**, subtle inner border
+- Caption text: `.caption` → **`.body` (14pt)**, 2-line max with truncation
+- **Stats row**: done count in **`.display` (22pt)** as the focal number, "/ total" in `.caption` next to it, ETA on its own line below (currently inline) in `.caption`; progress bar height bumped to 6pt with rounded ends and accent gradient fill
+- Follow toggle: `.controlSize(.mini)` → **`.regular`**; label `.caption` → `.label`
+- Primary button: keep `.borderedProminent` but bump padding for presence; LIVE pulsing ring 2pt → **3pt** with accent gradient
+
+#### `LibraryGrid` toolbar / `BulkActionBar` (LibraryWindow.swift:753)
+- Selection count: `.callout` → **`.bodyEmphasized`**
+- Status message: `.caption` → `.label`
+- `.labelStyle(.iconOnly)` → **`.titleAndIcon`** so users see "Re-process" / "Clear" / "Copy tags" / "Export JSON" as text labels (the bar has plenty of room)
+- Buttons: `.borderless` → **`.bordered`** with `.controlSize(.regular)`
+- Bar background: `.bar` → **`.regularMaterial`** with bottom border
+- Vertical padding 8 → **12**
+
+#### `ThumbnailCell` (LibraryWindow.swift:583)
+- Selection border: 2pt → **3pt**, color picks up accent
+- Status badge: 12×12 → **16×16** with better stroke contrast
+- Hover lift stays at 1.03 (it's already nice); shadow opacity 0.18 → **0.28**
+
+#### `LibraryInspector` (LibraryInspector.swift)
+- Wrap **every** section in a `Surface` card with internal padding `lg`, spacing between cards `md`
+- `sectionHeader` (line 660): icon scales up; title `.caption.weight(.semibold)` → **`.sectionTitle` (16pt semibold)**; icon picks up section-appropriate color (Identity=accent, Description=accent, Tags=accent, Processing=`statusDone` if done else `statusPending`, Vision=accent, Developer=`textTertiary`)
+- **`heroSection`** (line 304): aspect ratio 4/3 → **3/2** for more visual presence; corner radius 10 → 14; add a soft drop shadow; placeholder uses `surfaceSunken`
+- **`identitySection`** (line 329): label width 80 → **104**; label `.caption` → **`.label`**; value `.caption` → **`.body`**; spacing 6 → 10
+- **`descriptionSection`** (line 381): body text already at `.body` — keep, but ensure 1.4 line height; "Edit"/"Revert" buttons get consistent style
+- **`tagsSection`** (line 451): chips bigger and tinted — `tag` text `.caption` → **`.label`**, horizontal padding 8 → **12**, vertical 4 → **6**, capsule background uses `tagTint(for: tag)` so tags have visual variety
+- **`provenanceSection`** (line 487): same upgraded identityRow; TimingBar height 10 → **16** with a small legend (vision/llm/other) underneath
+- **`visionSection`** (line 533): classification confidence bars 6pt → **10pt**, label width 120 → 140
+- **`developerSection`** (line 603): kept monospaced but bumped from system 12pt caption to system 13pt; "description payload" code block uses `surfaceSunken` background
+
+#### `MultiSelectionSummary` (LibraryInspector.swift:57)
+- Same Surface treatment per section
+- "X photos selected" `.title3` → **`.display` (22pt)** as the focal point
+- Filmstrip thumbnails 64 → **72**, spacing 6 → 8
+- Stat rows use the upgraded identityRow style
+
+#### `SettingsSheet` (SettingsSheet.swift)
+- Frame 540×640 → **580×720**
+- Section headers (`.headline`) get matching icons (model=`cpu`, sentinel=`number`, ollama=`network`)
+- Form fields wrapped in Surface cards with consistent spacing
+- API key warning `.caption2` → **`.caption`** so it can actually be read
+- Test connection result gets a colored card background (green or red)
+
+#### `LegendPopover` (LibraryWindow.swift:868)
+- Width 360 → **420**, padding 16 → **20**
+- Status badge previews 14×14 → **20×20**
+- Keyboard "kbd" pills get gradient + stronger border, font 11pt → **12pt** monospaced; key column width 80 → **96**
+- Section headers `.headline` → **`.sectionTitle`** to match inspector
+
+### Implementation order (commit-by-commit)
+
+Each commit: build → `bundle-gui.sh` → relaunch → screenshot → diff against plan → commit if good. The user reviews the screenshot before I move to the next commit.
+
+1. **DesignSystem.swift** — pure tokens, no view edits. Verify build.
+2. **LibrarySidebar + filter rows** — unblocks the user-flagged "tags menus unreadable".
+3. **RunnerDock** — unblocks the user-flagged "progress tab too small".
+4. **LibraryInspector** — single biggest impact, biggest commit.
+5. **MultiSelectionSummary** — matches inspector treatment.
+6. **BulkActionBar + ThumbnailCell** — grid polish.
+7. **SettingsSheet + LegendPopover** — modal polish.
+8. **QA pass** — anything that looks off in cumulative screenshots.
+
+### Hard constraints (do NOT change)
+- Any `@Bindable` / `@State` / `@Observable` binding
+- `handleKeyPress` and every keyboard shortcut
+- Any `ProcessingEngine` / `LibraryStore` / `AssetQueue` / `PhotoLibrary` call
+- `NavigationSplitView` three-column structure
+- Any file outside `Sources/PhotoSnailGUI/` (no engine touch, no core touch)
+- The semantic meaning of any label, button, or icon — typography/color/spacing only
+
+### Verification approach
+- After each commit: launch app, screenshot the affected pane, send to user with a 1-line diff summary
+- After commit 8: full-app screenshot vs the baseline at `/tmp/photosnail-baseline.png`
+- Build cleanliness: `swift build -c release` exit 0 with no new warnings
+
+### Tasks
+- [x] Branch `ui-rework-2026-04-11` created
+- [x] Baseline screenshot captured (`/tmp/photosnail-baseline.png`)
+- [x] Audit + plan written
+- [ ] User approval of plan
+- [ ] Commit 1: DesignSystem.swift
+- [ ] Commit 2: LibrarySidebar
+- [ ] Commit 3: RunnerDock
+- [ ] Commit 4: LibraryInspector
+- [ ] Commit 5: MultiSelectionSummary
+- [ ] Commit 6: BulkActionBar + ThumbnailCell
+- [ ] Commit 7: SettingsSheet + LegendPopover
+- [ ] Commit 8: QA pass
