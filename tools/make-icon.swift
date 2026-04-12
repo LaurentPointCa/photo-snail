@@ -41,34 +41,11 @@ private func loadSource() -> CGImage {
     return image
 }
 
-/// Sample the top-left pixel of the source to get the background colour
-/// (the cream paper tone). This lets us extend the rectangular source
-/// into a square canvas for the icon without hardcoding a constant.
-private func sampleBGColor(_ image: CGImage) -> CGColor {
-    let cs = CGColorSpaceCreateDeviceRGB()
-    var px: [UInt8] = [0, 0, 0, 0]
-    let ctx = CGContext(
-        data: &px,
-        width: 1, height: 1,
-        bitsPerComponent: 8, bytesPerRow: 4,
-        space: cs,
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-    )!
-    // Draw the source so its top-left pixel lands in the 1×1 context.
-    // CG's y axis grows up, so "top-left of the image" means drawing the
-    // image with its top row aligned with the 1×1 ctx top row.
-    ctx.interpolationQuality = .none
-    ctx.draw(
-        image,
-        in: CGRect(x: 0, y: 1 - CGFloat(image.height), width: CGFloat(image.width), height: CGFloat(image.height))
-    )
-    return CGColor(
-        red:   CGFloat(px[0]) / 255,
-        green: CGFloat(px[1]) / 255,
-        blue:  CGFloat(px[2]) / 255,
-        alpha: 1
-    )
-}
+/// Dark background for the app icon squircle. Matches the app's
+/// surfaceHighlighted tone so the Dock icon feels like part of the same
+/// design language. The source logo now has a transparent background, so
+/// the old "sample top-left pixel" approach no longer applies.
+private let iconBGColor = CGColor(red: 0.16, green: 0.16, blue: 0.18, alpha: 1.0)
 
 // MARK: - Icon composition
 
@@ -78,7 +55,8 @@ private func sampleBGColor(_ image: CGImage) -> CGColor {
 /// place it on a square canvas filled with the source's own cream
 /// background, scaled to fit ~94% of the canvas width/height so it has
 /// a small border. High-quality interpolation keeps the text smooth.
-private func drawIcon(size: Int, source: CGImage, bg: CGColor) -> CGImage {
+private func drawIcon(size: Int, source: CGImage) -> CGImage {
+    let bg = iconBGColor
     let w = size, h = size
     let cs = CGColorSpaceCreateDeviceRGB()
     let ctx = CGContext(
@@ -109,11 +87,11 @@ private func drawIcon(size: Int, source: CGImage, bg: CGColor) -> CGImage {
     ctx.saveGState()
     ctx.addPath(bgPath)
     ctx.clip()
-    ctx.interpolationQuality = .high
+    ctx.interpolationQuality = .none
 
     let srcW = CGFloat(source.width)
     let srcH = CGFloat(source.height)
-    let fit = CGFloat(w) * 0.92
+    let fit = CGFloat(w) * 0.88
     let scale = min(fit / srcW, fit / srcH)
     let drawW = srcW * scale
     let drawH = srcH * scale
@@ -148,7 +126,7 @@ private func drawWordmark(source: CGImage) -> CGImage {
         space: cs,
         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     )!
-    ctx.interpolationQuality = .high
+    ctx.interpolationQuality = .none
     ctx.draw(source, in: CGRect(x: 0, y: 0, width: CGFloat(targetW), height: CGFloat(targetH)))
     return ctx.makeImage()!
 }
@@ -179,7 +157,6 @@ private let iconsetSpec: [(name: String, size: Int)] = [
 ]
 
 let source = loadSource()
-let bg = sampleBGColor(source)
 let fm = FileManager.default
 
 // Iconset
@@ -187,7 +164,7 @@ let iconsetURL = URL(fileURLWithPath: ICONSET_DIR, isDirectory: true)
 try? fm.createDirectory(at: iconsetURL, withIntermediateDirectories: true)
 for (name, size) in iconsetSpec {
     let url = iconsetURL.appendingPathComponent(name)
-    let img = drawIcon(size: size, source: source, bg: bg)
+    let img = drawIcon(size: size, source: source)
     do {
         try writePNG(img, to: url)
         print("wrote \(url.path) — \(size) px")

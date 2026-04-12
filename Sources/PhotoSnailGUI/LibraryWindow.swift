@@ -149,7 +149,7 @@ struct LibrarySidebar: View {
                             // is generated at ~800 px wide, well above
                             // the display size, so SwiftUI always
                             // downsamples rather than upsamples.
-                            .interpolation(.high)
+                            .interpolation(.none)
                             .aspectRatio(contentMode: .fit)
                             .frame(height: 72)
                     } else {
