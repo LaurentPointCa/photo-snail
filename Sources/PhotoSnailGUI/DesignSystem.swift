@@ -178,6 +178,40 @@ extension View {
     }
 }
 
+// MARK: - SurfaceCard container
+
+/// Container view that groups its children inside an elevated card with
+/// rounded corners, hairline border, and internal padding. Children are
+/// stacked vertically with consistent spacing — call sites just list the
+/// section header + content inside the closure and SurfaceCard handles
+/// the layout. Use this in place of the `.surfaceCard()` view modifier
+/// when the wrapped content is a `@ViewBuilder` producing multiple
+/// top-level views (the modifier wraps a single view; this wraps a tuple
+/// inside its own VStack).
+struct SurfaceCard<Content: View>: View {
+    var padding: CGFloat = Spacing.lg
+    var spacing: CGFloat = Spacing.sm
+    var background: Color = AppColor.surfaceElevated
+    var radius: CGFloat = Radius.card
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            content()
+        }
+        .padding(padding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(background)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(AppColor.borderSubtle, lineWidth: 1)
+        )
+    }
+}
+
 // MARK: - Reusable text components
 
 /// Small uppercase tracked label for section eyebrows ("LAST COMPLETED",
