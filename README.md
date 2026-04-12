@@ -4,9 +4,7 @@
 
 Photo Snail runs a vision-language model on your machine, generates a 2–3 sentence description plus 5–15 tags for each photo, and writes the result back to the asset's `description` field in Photos.app. iCloud syncs the description to your other devices, so the new metadata becomes searchable in Photos and Spotlight everywhere.
 
-![Photo Snail — main window](docs/screenshot-main.png)
-
-![Photo Snail — annotated](docs/screenshot-annotated.png)
+![Photo Snail](docs/screenshot-annotated.png)
 
 ## Why "Snail"?
 
