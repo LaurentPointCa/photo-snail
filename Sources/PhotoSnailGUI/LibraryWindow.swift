@@ -921,21 +921,19 @@ struct BulkActionBar: View {
 /// to be obvious, this is where the non-obvious bits live.
 struct LegendPopover: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Status badges")
-                    .font(.headline)
-                badgeRow(color: .green, label: "Tagged", description: "Photo has a description in Photos.app.")
-                badgeRow(color: .orange, label: "Pending", description: "Queued for processing. Live ring while in-progress.", ringed: true)
-                badgeRow(color: .red, label: "Failed", description: "Processing failed. Retry via bulk Re-process.")
-                badgeRow(color: .gray.opacity(0.3), label: "Untouched", description: "Not yet enumerated into the queue.")
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                legendHeader("Status badges", systemImage: "circle.hexagongrid.fill")
+                badgeRow(color: AppColor.statusDone, label: "Tagged", description: "Photo has a description in Photos.app.")
+                badgeRow(color: AppColor.statusPending, label: "Pending", description: "Queued for processing. Live ring while in-progress.", ringed: true)
+                badgeRow(color: AppColor.statusFailed, label: "Failed", description: "Processing failed. Retry via bulk Re-process.")
+                badgeRow(color: AppColor.statusUntouched, label: "Untouched", description: "Not yet enumerated into the queue.")
             }
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Keyboard shortcuts")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                legendHeader("Keyboard shortcuts", systemImage: "keyboard")
                 keyRow("⌘F", "Search descriptions + tags")
                 keyRow("←  →", "Previous / next photo")
                 keyRow("Space", "Full-screen preview")
@@ -950,42 +948,69 @@ struct LegendPopover: View {
                 keyRow("⌫", "Clear descriptions for selection")
             }
         }
-        .padding(16)
-        .frame(width: 360)
+        .padding(Spacing.xl)
+        .frame(width: 440)
+    }
+
+    @ViewBuilder
+    private func legendHeader(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 22, alignment: .center)
+            Text(title)
+                .font(AppFont.sectionTitle)
+                .foregroundStyle(AppColor.textPrimary)
+            Spacer()
+        }
+        .padding(.bottom, Spacing.xs)
     }
 
     @ViewBuilder
     private func badgeRow(color: Color, label: String, description: String, ringed: Bool = false) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: Spacing.md) {
             ZStack {
                 if ringed {
-                    Circle().strokeBorder(color, lineWidth: 2)
+                    Circle().strokeBorder(color, lineWidth: 2.5)
                 } else {
                     Circle().fill(color)
                 }
             }
-            .frame(width: 14, height: 14)
+            .frame(width: 20, height: 20)
+            .overlay(Circle().stroke(Color.white.opacity(0.85), lineWidth: ringed ? 0 : 1.5))
             .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(label).font(.callout.weight(.medium))
-                Text(description).font(.caption).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(AppFont.bodyEmphasized)
+                    .foregroundStyle(AppColor.textPrimary)
+                Text(description)
+                    .font(AppFont.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
 
     @ViewBuilder
     private func keyRow(_ key: String, _ action: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: Spacing.md) {
             Text(key)
-                .font(.system(.caption, design: .monospaced))
-                .frame(width: 80, alignment: .leading)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .font(AppFont.monoLabel)
+                .foregroundStyle(AppColor.textPrimary)
+                .frame(width: 96, alignment: .leading)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, 3)
                 .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.secondary.opacity(0.12))
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(AppColor.surfaceSunken)
                 )
-            Text(action).font(.caption)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(AppColor.borderSubtle, lineWidth: 1)
+                )
+            Text(action)
+                .font(AppFont.label)
+                .foregroundStyle(AppColor.textPrimary)
             Spacer()
         }
     }
