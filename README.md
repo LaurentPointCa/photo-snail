@@ -4,6 +4,10 @@
 
 Photo Snail runs a vision-language model on your machine, generates a 2–3 sentence description plus 5–15 tags for each photo, and writes the result back to the asset's `description` field in Photos.app. iCloud syncs the description to your other devices, so the new metadata becomes searchable in Photos and Spotlight everywhere.
 
+![Photo Snail — main window](docs/screenshot-main.png)
+
+![Photo Snail — annotated](docs/screenshot-annotated.png)
+
 ## Why "Snail"?
 
 It's slow on purpose. ~65 seconds per photo on Apple Silicon. A 10,000-photo library takes about a week of background processing. The trade-off is quality: descriptions are accurate, specific, and actually useful — not the generic "outdoor scene with people" you get from off-the-shelf classifiers. Run it overnight, run it for a week, run it while you sleep. Your photos aren't going anywhere.
@@ -176,7 +180,7 @@ Verify yourself: `ollama` runs locally, the binary makes no other outbound conne
 
 ## Project status
 
-Phases A–G complete:
+Phases A–J complete:
 
 - A. Project plan
 - B. Hybrid pipeline scaffold
@@ -185,8 +189,11 @@ Phases A–G complete:
 - E. SQLite queue + resilience
 - F. PhotoKit integration + AppleScript write-back
 - G. SwiftUI GUI
+- H. Deferred (mid-batch quality review showed no weak-output cluster to rescue)
+- I. Visual rehaul — 3-column library browser, inspector, design system
+- J. UI polish — bug fixes, UX improvements, log window, About box
 
-Phase H (production polish) was deferred after a mid-batch quality review showed no weak-output cluster to rescue. The CLI and GUI are in production use against the author's full library. See [`TODO.md`](TODO.md) for the phased plan, the parked items under "Potential future improvements", and the running progress notes.
+The CLI and GUI are in production use against the author's full library. See [`TODO.md`](TODO.md) for the phased plan and the parked items under "Potential future improvements".
 
 ## Sample images
 
