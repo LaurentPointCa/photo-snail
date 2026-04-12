@@ -650,7 +650,7 @@ struct ThumbnailCell: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(
                     isSelected ? Color.accentColor : Color.clear,
-                    lineWidth: 2
+                    lineWidth: 3
                 )
                 .frame(width: size, height: size)
 
@@ -664,10 +664,10 @@ struct ThumbnailCell: View {
         // fast mouse sweeps don't leave trailing shadow artifacts.
         .scaleEffect(isHovering ? 1.03 : 1.0)
         .shadow(
-            color: .black.opacity(isHovering ? 0.18 : 0),
-            radius: isHovering ? 5 : 0,
+            color: .black.opacity(isHovering ? 0.32 : 0),
+            radius: isHovering ? 8 : 0,
             x: 0,
-            y: isHovering ? 2 : 0
+            y: isHovering ? 3 : 0
         )
         .animation(.easeOut(duration: 0.12), value: isHovering)
         .onHover { isHovering = $0 }
@@ -751,28 +751,31 @@ struct StatusBadge: View {
             case "done":
                 return AnyView(
                     Circle()
-                        .fill(Color.green)
-                        .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1))
+                        .fill(AppColor.statusDone)
+                        .frame(width: 16, height: 16)
+                        .overlay(Circle().stroke(Color.white.opacity(0.85), lineWidth: 1.5))
+                        .shadow(color: .black.opacity(0.40), radius: 2, x: 0, y: 1)
                 )
             case "pending", "in_progress":
                 return AnyView(
                     Circle()
-                        .strokeBorder(Color.orange, lineWidth: 2)
-                        .background(Circle().fill(Color.black.opacity(0.25)))
-                        .frame(width: 12, height: 12)
+                        .strokeBorder(AppColor.statusPending, lineWidth: 2.5)
+                        .background(Circle().fill(Color.black.opacity(0.30)))
+                        .frame(width: 16, height: 16)
+                        .shadow(color: .black.opacity(0.40), radius: 2, x: 0, y: 1)
                 )
             case "failed":
                 return AnyView(
                     Circle()
-                        .fill(Color.red)
-                        .frame(width: 12, height: 12)
+                        .fill(AppColor.statusFailed)
+                        .frame(width: 16, height: 16)
                         .overlay(
                             Text("!")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(.white)
                         )
-                        .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1))
+                        .overlay(Circle().stroke(Color.white.opacity(0.85), lineWidth: 1.5))
+                        .shadow(color: .black.opacity(0.40), radius: 2, x: 0, y: 1)
                 )
             default:
                 return AnyView(EmptyView())
@@ -800,16 +803,18 @@ struct BulkActionBar: View {
     @State private var showingExportError: String? = nil
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.md) {
             Text("\(store.selection.count) selected")
-                .font(.callout.weight(.medium))
+                .font(AppFont.bodyEmphasized)
+                .monospacedDigit()
+                .foregroundStyle(AppColor.textPrimary)
 
             // Transient status message from the most recent bulk op.
             // Non-intrusive — sits inline in the action bar and fades
             // when the user clicks anything else.
             if let msg = store.bulkStatusMessage {
                 Text(msg)
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -830,7 +835,7 @@ struct BulkActionBar: View {
             Button(role: .destructive) {
                 showingClearConfirm = true
             } label: {
-                Label("Clear description", systemImage: "eraser")
+                Label("Clear", systemImage: "eraser")
             }
             .help("Clear description — remove photo-snail descriptions from Photos.app")
 
@@ -860,12 +865,18 @@ struct BulkActionBar: View {
             }
             .help("Deselect all")
         }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.borderless)
-        .imageScale(.medium)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.bar)
+        .labelStyle(.titleAndIcon)
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .font(AppFont.label)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
+        .background(.regularMaterial)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(AppColor.borderSubtle)
+                .frame(height: 1)
+        }
         .confirmationDialog(
             "Clear descriptions from \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
             isPresented: $showingClearConfirm,
