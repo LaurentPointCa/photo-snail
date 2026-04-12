@@ -59,36 +59,33 @@ private struct MultiSelectionSummary: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("\(store.selection.count) photos selected")
-                    .font(.title3.weight(.semibold))
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SurfaceCard(spacing: Spacing.md) {
+                    Text("\(store.selection.count) photos selected")
+                        .font(AppFont.display)
+                        .foregroundStyle(AppColor.textPrimary)
+                    thumbFilmstrip
+                }
 
-                thumbFilmstrip
-
-                Divider()
-
-                statsSection
+                SurfaceCard { statsSection }
 
                 if !commonTags.isEmpty {
-                    Divider()
-                    commonTagsSection
+                    SurfaceCard { commonTagsSection }
                 }
 
                 if !modelBreakdown.isEmpty {
-                    Divider()
-                    modelBreakdownSection
+                    SurfaceCard { modelBreakdownSection }
                 }
 
-                Divider()
-
                 Text("Use the bulk action bar above the grid to re-process, clear, copy tags, or export.")
-                    .font(.caption)
+                    .font(AppFont.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.sm)
 
                 Spacer(minLength: 0)
             }
-            .padding(16)
+            .padding(Spacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -100,17 +97,19 @@ private struct MultiSelectionSummary: View {
         let ids = Array(store.selection.sorted().prefix(12))
         let remaining = store.selection.count - ids.count
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.sm) {
                 ForEach(ids, id: \.self) { id in
-                    ThumbnailCell(id: id, row: store.rows[id], isSelected: true, size: 64)
+                    ThumbnailCell(id: id, row: store.rows[id], isSelected: true, size: 72)
                 }
                 if remaining > 0 {
                     Text("+\(remaining)")
-                        .font(.caption.weight(.semibold))
+                        .font(AppFont.bodyEmphasized)
                         .foregroundStyle(.secondary)
-                        .frame(width: 64, height: 64)
-                        .background(Color.gray.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .frame(width: 72, height: 72)
+                        .background(
+                            RoundedRectangle(cornerRadius: Radius.thumbnail, style: .continuous)
+                                .fill(AppColor.surfaceSunken)
+                        )
                 }
             }
         }
@@ -146,32 +145,39 @@ private struct MultiSelectionSummary: View {
     @ViewBuilder
     private var statsSection: some View {
         let counts = countsByStatus
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Status").font(.caption).foregroundStyle(.secondary)
-            statRow("Tagged", counts.tagged)
-            statRow("Pending", counts.pending)
-            statRow("Failed", counts.failed)
-            statRow("Untouched", counts.untouched)
+        EyebrowLabel("Status")
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            statRow("Tagged", counts.tagged, tint: AppColor.statusDone)
+            statRow("Pending", counts.pending, tint: AppColor.statusPending)
+            statRow("Failed", counts.failed, tint: AppColor.statusFailed)
+            statRow("Untouched", counts.untouched, tint: AppColor.statusUntouched)
         }
 
         let range = dateRange
         if let e = range.earliest, let l = range.latest, e != 0 || l != 0 {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Processed").font(.caption).foregroundStyle(.secondary)
-                Text("\(formatTimestamp(e)) → \(formatTimestamp(l))")
-                    .font(.caption)
-                    .textSelection(.enabled)
-            }
-            .padding(.top, 6)
+            EyebrowLabel("Processed")
+                .padding(.top, Spacing.sm)
+            Text("\(formatTimestamp(e)) → \(formatTimestamp(l))")
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.textPrimary)
+                .textSelection(.enabled)
         }
     }
 
     @ViewBuilder
-    private func statRow(_ label: String, _ count: Int) -> some View {
-        HStack {
-            Text(label).font(.caption)
+    private func statRow(_ label: String, _ count: Int, tint: Color) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Circle()
+                .fill(tint)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(AppFont.label)
+                .foregroundStyle(AppColor.textPrimary)
             Spacer()
-            Text("\(count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+            Text("\(count)")
+                .font(AppFont.body)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -193,13 +199,13 @@ private struct MultiSelectionSummary: View {
 
     @ViewBuilder
     private var commonTagsSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Tags in every selected photo")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(commonTags.joined(separator: ", "))
-                .font(.caption)
-                .textSelection(.enabled)
+        EyebrowLabel("Tags in every selected photo")
+        ChipFlowLayout(spacing: 8, runSpacing: 8) {
+            ForEach(commonTags, id: \.self) { tag in
+                CommonTagChip(tag: tag) {
+                    store.toggleTagFilter(tag)
+                }
+            }
         }
     }
 
@@ -216,15 +222,18 @@ private struct MultiSelectionSummary: View {
 
     @ViewBuilder
     private var modelBreakdownSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Models used")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        EyebrowLabel("Models used")
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             ForEach(modelBreakdown, id: \.0) { pair in
                 HStack {
-                    Text(pair.0).font(.system(.caption, design: .monospaced))
+                    Text(pair.0)
+                        .font(AppFont.monoLabel)
+                        .foregroundStyle(AppColor.textPrimary)
                     Spacer()
-                    Text("\(pair.1)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                    Text("\(pair.1)")
+                        .font(AppFont.body)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -889,6 +898,32 @@ private struct InspectorContent: View {
             return String(format: "%.2f s", Double(ms) / 1000.0)
         }
         return "\(ms) ms"
+    }
+}
+
+// MARK: - Common tag chip (multi-selection summary)
+
+/// Lightweight tag pill used by `MultiSelectionSummary.commonTagsSection`.
+/// Tap toggles the tag in the active filter set. Doesn't carry the full
+/// edit/remove machinery of `TagChipView` because the multi-selection
+/// summary is read-only — it's a digest, not an editor.
+private struct CommonTagChip: View {
+    let tag: String
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            Text(tag)
+                .font(AppFont.label)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule().fill(AppColor.tagTint(for: tag).opacity(0.78))
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 
