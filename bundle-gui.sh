@@ -32,7 +32,11 @@ if [[ -f "Resources/LogoWordmark.png" ]]; then
   cp "Resources/LogoWordmark.png" "${APP_DIR}/Contents/Resources/LogoWordmark.png"
 else
   echo "warning: Resources/LogoWordmark.png is missing — sidebar header will fall back to text."
-  echo "         Regenerate with:  swift tools/make-icon.swift"
+fi
+
+# Light-mode variant of the sidebar wordmark (dark text for light backgrounds).
+if [[ -f "Resources/LogoWordmarkLight.png" ]]; then
+  cp "Resources/LogoWordmarkLight.png" "${APP_DIR}/Contents/Resources/LogoWordmarkLight.png"
 fi
 
 cat > "${APP_DIR}/Contents/Info.plist" << 'PLIST'
@@ -65,6 +69,8 @@ cat > "${APP_DIR}/Contents/Info.plist" << 'PLIST'
     <string>PhotoSnail writes AI-generated descriptions and tags back to your Photos library metadata.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>PhotoSnail drives Photos.app via AppleScript to write descriptions that sync via iCloud.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>MIT License</string>
 </dict>
 </plist>
 PLIST

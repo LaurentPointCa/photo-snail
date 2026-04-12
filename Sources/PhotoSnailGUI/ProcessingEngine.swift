@@ -48,6 +48,8 @@ final class ProcessingEngine {
         let attempts: Int
     }
 
+    private let log = LogStore.shared
+
     // MARK: - Config (driven by Settings on disk)
 
     var model: String = Settings.default.model
@@ -158,16 +160,19 @@ final class ProcessingEngine {
         guard state == .idle || state == .finished else { return }
         state = .enumerating
         statusMessage = "Requesting Photos access..."
+        log.append(.info, "Requesting Photos access")
 
         let authStatus = await PhotoLibrary.requestAuth()
         guard authStatus == .authorized else {
             statusMessage = "Photos access denied (\(PhotoLibrary.authStatusLabel(authStatus)))"
+            log.append(.error, "Photos access denied: \(PhotoLibrary.authStatusLabel(authStatus))")
             state = .idle
             return
         }
 
         do {
             statusMessage = "Enumerating library..."
+            log.append(.info, "Enumerating library...")
             _ = try await PhotoLibraryEnumerator.fetchUnprocessedIdentifiers(
                 queue: queue,
                 sentinel: sentinel,
@@ -180,6 +185,7 @@ final class ProcessingEngine {
 
             if pendingCount == 0 {
                 statusMessage = "All photos processed"
+                log.append(.success, "All photos already processed")
                 state = .finished
                 return
             }
@@ -188,10 +194,12 @@ final class ProcessingEngine {
             sessionStartTime = Date()
             photosProcessedThisSession = 0
             statusMessage = "Processing..."
+            log.append(.info, "Processing started — \(pendingCount) pending, \(doneCount) done, \(failedCount) failed")
 
             launchWorker()
         } catch {
             statusMessage = "Error: \(error)"
+            log.append(.error, "Start failed: \(error)")
             state = .idle
         }
     }
@@ -199,12 +207,14 @@ final class ProcessingEngine {
     func pause() {
         isPausedFlag = true
         statusMessage = "Pausing after current photo..."
+        log.append(.info, "Pause requested")
     }
 
     func resume() {
         isPausedFlag = false
         state = .running
         statusMessage = "Resuming..."
+        log.append(.info, "Resumed")
         pauseContinuation?.resume()
         pauseContinuation = nil
     }
@@ -257,10 +267,17 @@ final class ProcessingEngine {
             )
 
             let dryRunCursor: DryRunCursor?
+            let log = await LogStore.shared
             do {
                 dryRunCursor = try await dryRunCursorTask.value
+                if dryRunCursor != nil {
+                    await MainActor.run { log.append(.info, "Dry-run: snapshot taken") }
+                }
             } catch {
-                await MainActor.run { self?.statusMessage = "Snapshot error: \(error)" }
+                await MainActor.run {
+                    self?.statusMessage = "Snapshot error: \(error)"
+                    log.append(.error, "Snapshot error: \(error)")
+                }
                 return
             }
 
@@ -287,6 +304,7 @@ final class ProcessingEngine {
                         await MainActor.run {
                             self?.state = .finished
                             self?.statusMessage = "Dry-run complete (queue not mutated)"
+                            log.append(.success, "Dry-run complete — queue not mutated")
                         }
                         return
                     }
@@ -297,13 +315,17 @@ final class ProcessingEngine {
                     do {
                         claim = try await queue.claimNext()
                     } catch {
-                        await MainActor.run { self?.statusMessage = "Queue error: \(error)" }
+                        await MainActor.run {
+                            self?.statusMessage = "Queue error: \(error)"
+                            log.append(.error, "Queue error: \(error)")
+                        }
                         return
                     }
                     guard let c = claim else {
                         await MainActor.run {
                             self?.state = .finished
                             self?.statusMessage = "All photos processed"
+                            log.append(.success, "All photos processed")
                         }
                         return
                     }
@@ -314,6 +336,7 @@ final class ProcessingEngine {
                 await MainActor.run {
                     self?.currentPhotoID = id
                     self?.statusMessage = "Processing \(String(id.prefix(8)))..."
+                    log.append(.info, "Processing \(String(id.prefix(8)))…", assetId: id)
                 }
 
                 // Load thumbnail for preview
@@ -329,13 +352,20 @@ final class ProcessingEngine {
                         if !dryRun {
                             try? await queue.markFailed(id, error: err)
                         }
-                        await MainActor.run { self?.statusMessage = "Asset not found: \(String(id.prefix(8)))" }
+                        await MainActor.run {
+                            self?.statusMessage = "Asset not found: \(String(id.prefix(8)))"
+                            log.append(.error, "Asset not found: \(String(id.prefix(8)))", assetId: id)
+                        }
                         await self?.refreshStatsAndFailures()
                         continue
                     }
 
                     let (imageData, _) = try await PhotoLibrary.requestImageData(for: asset)
                     let result = try await pipeline.process(imageData: imageData, identifier: id)
+                    let elapsed = String(format: "%.1f", result.totalElapsedSeconds)
+                    await MainActor.run {
+                        log.append(.info, "Pipeline complete for \(String(id.prefix(8))) (\(elapsed)s)", assetId: id)
+                    }
 
                     if !dryRun {
                         let payload = Pipeline.formatDescription(
@@ -347,6 +377,9 @@ final class ProcessingEngine {
                         _ = try await MainActor.run {
                             try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
                         }
+                        await MainActor.run {
+                            log.append(.info, "Write-back complete for \(String(id.prefix(8)))", assetId: id)
+                        }
                     }
 
                     // markDone only in real mode — dry-run leaves the queue untouched.
@@ -355,9 +388,6 @@ final class ProcessingEngine {
                     }
 
                     await MainActor.run {
-                        // Promote current → completed. The id is captured
-                        // alongside the thumbnail so the runner-dock hover
-                        // popover has something to fetch a larger version from.
                         self?.completedPhotoID = self?.currentPhotoID
                         self?.completedThumbnail = self?.currentThumbnail
                         self?.completedDescription = result.caption.description
@@ -365,6 +395,7 @@ final class ProcessingEngine {
                         self?.currentThumbnail = nil
                         self?.photosProcessedThisSession += 1
                         self?.updateThroughput()
+                        log.append(.success, "Done: \(String(id.prefix(8))) — \(result.mergedTags.count) tags", assetId: id)
                     }
                     if !dryRun {
                         await self?.refreshStatsAndFailures()
@@ -372,22 +403,37 @@ final class ProcessingEngine {
 
                 } catch let e as PhotoSnailError {
                     if dryRun {
-                        await MainActor.run { self?.statusMessage = "Skipped \(String(id.prefix(8))): \(e.shortMessage)" }
+                        await MainActor.run {
+                            self?.statusMessage = "Skipped \(String(id.prefix(8))): \(e.shortMessage)"
+                            log.append(.warning, "Dry-run skipped \(String(id.prefix(8))): \(e.shortMessage)", assetId: id)
+                        }
                     } else if e.isRetriable && attempts < 3 {
                         try? await queue.recordRetry(id, error: e)
-                        await MainActor.run { self?.statusMessage = "Retrying \(String(id.prefix(8)))..." }
+                        await MainActor.run {
+                            self?.statusMessage = "Retrying \(String(id.prefix(8)))..."
+                            log.append(.warning, "Retrying \(String(id.prefix(8))) (attempt \(attempts)): \(e.shortMessage)", assetId: id)
+                        }
                         try? await Task.sleep(nanoseconds: UInt64([10, 30, 60][attempts - 1]) * 1_000_000_000)
                         await self?.refreshStatsAndFailures()
                     } else {
                         try? await queue.markFailed(id, error: e)
+                        await MainActor.run {
+                            log.append(.error, "Failed: \(String(id.prefix(8))) — \(e.shortMessage)", assetId: id)
+                        }
                         await self?.refreshStatsAndFailures()
                     }
                 } catch {
                     if dryRun {
-                        await MainActor.run { self?.statusMessage = "Skipped \(String(id.prefix(8))): \(error)" }
+                        await MainActor.run {
+                            self?.statusMessage = "Skipped \(String(id.prefix(8))): \(error)"
+                            log.append(.warning, "Dry-run skipped \(String(id.prefix(8))): \(error)", assetId: id)
+                        }
                     } else {
                         let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
                         try? await queue.markFailed(id, error: wrapped)
+                        await MainActor.run {
+                            log.append(.error, "Failed: \(String(id.prefix(8))) — \(error)", assetId: id)
+                        }
                         await self?.refreshStatsAndFailures()
                     }
                 }
