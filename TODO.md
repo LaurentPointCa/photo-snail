@@ -551,3 +551,24 @@ Eight commits, all on `ui-rework-2026-04-11`. Build clean, no new warnings intro
 - 8 build cycles, all clean
 - Screenshots captured at every commit and compared visually against the previous state
 - Final screenshot at `/tmp/photosnail-final.png` vs baseline at `/tmp/photosnail-baseline.png`
+
+---
+
+## Phase J — UI polish pass (queued 2026-04-12)
+
+_Bugs, UX tweaks, and one new feature (log window) identified during live testing after the Phase I redesign + logo update._
+
+### Bugs
+- [ ] **"Follow processing in grid" toggle doesn't work** — toggle renders and persists but the grid doesn't scroll to the current photo when a batch is running. Investigate: `LibraryGrid`'s `.onChange(of: store.engine?.currentPhotoID)` may not be firing, or `store.followCurrentProcessing` isn't being read correctly after the Phase I changes.
+- [ ] **Untouched filter shows broken/empty gallery** — selecting "Untouched" in the sidebar when untouched count is 0 should show the "Everything is enumerated" `ContentUnavailableView`, but something is off. Investigate the empty-state logic in `LibraryGrid.gridBody`.
+- [ ] **Logo rendering artifact** — the new transparent-background pixel snail has a visual issue ("broken a bit"). Investigate at the sidebar scale — might be aliasing from nearest-neighbor downscale at non-integer ratio (source 1170×389 → ~72pt sidebar height = 144 device px, ratio 389/144 ≈ 2.7). May need to re-export the wordmark at a clean integer multiple of the display target.
+
+### UX fixes
+- [ ] **BulkActionBar pushes the grid down** — the bar appears/disappears on selection, causing the entire grid to jump. Fix: reserve the bar's height permanently (show it always, disable buttons when nothing is selected), OR use an overlay/floating bar that doesn't participate in the VStack layout.
+- [ ] **BulkActionBar overflows the panel boundary** — the top row of buttons visually bleeds past the column edge. Investigate: possibly the `.padding(.horizontal, Spacing.lg)` isn't accounting for the NavigationSplitView content column insets. May need to clip or inset differently.
+- [ ] **DockPhotoCard hover-to-peek dismiss is too fast** — the processing card's hover preview (popover) disappears too quickly when the mouse leaves the thumbnail. Increase the dismiss delay from 120ms (`120_000_000` nanoseconds) to ~300-400ms so the user has time to glance at the preview without it vanishing mid-saccade.
+- [ ] **Move "Copy tags" from BulkActionBar to inspector** — the bulk bar's "Copy tags" is rarely useful there. Move it to the inspector's Tags section as a small copy icon button. While at it, add a matching copy icon button to the Description section so the user can copy the description text to the clipboard with one click.
+
+### New feature: Log window
+- [ ] **Add a "Logs" toolbar button** — opens a secondary window showing a scrollable log of processing activity. Content: database state changes (queue inserts, status transitions, markDone/markFailed), pipeline events (start processing asset X, Vision pre-pass done, Ollama response received, write-back complete), and errors. This gives the user visibility into what the batch is doing without needing to watch the Terminal.
+- [ ] **Add structured logging to the engine** — `ProcessingEngine` and `AssetQueue` need to emit log entries (timestamp + level + message) to an observable log store that the log window subscribes to. Keep it simple: an `@Observable` array of log entries with a max capacity (e.g. 10,000 lines, ring buffer). No file-based logging unless the user asks for it later.
