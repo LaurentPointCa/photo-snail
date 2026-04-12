@@ -177,6 +177,11 @@ final class LibraryStore {
     /// `nil` before `load()` completes or if queue open failed.
     private(set) var engine: ProcessingEngine? = nil
 
+    /// Mirror of `engine?.currentPhotoID`, synced via a polling task so that
+    /// `LibraryGrid`'s `.onChange` doesn't rely on optional-chaining through
+    /// a potentially-nil `engine` (which can miss observation registration).
+    var engineCurrentPhotoID: String? = nil
+
     // MARK: - View preferences (persisted)
 
     /// Thumbnail size used by the grid. Mirrored to UserDefaults so it
@@ -326,6 +331,7 @@ final class LibraryStore {
         //     into two SQLite connections with divergent caches.
         let engine = ProcessingEngine(queue: q)
         self.engine = engine
+        engine.onCurrentPhotoChanged = { [weak self] id in self?.engineCurrentPhotoID = id }
         await engine.loadInitialStats()
 
         // 2. Subscribe BEFORE fetching the snapshot so events that arrive
@@ -499,6 +505,7 @@ final class LibraryStore {
     /// first item. Called by the grid's ← key handler.
     func moveSelectionPrev() {
         guard !displayOrder.isEmpty else { return }
+        scrollOnSelectionChange = true
         if let current = singleSelection,
            let idx = displayOrder.firstIndex(of: current),
            idx > 0 {
@@ -513,6 +520,7 @@ final class LibraryStore {
     /// arrow). See `moveSelectionPrev` for semantics.
     func moveSelectionNext() {
         guard !displayOrder.isEmpty else { return }
+        scrollOnSelectionChange = true
         if let current = singleSelection,
            let idx = displayOrder.firstIndex(of: current),
            idx < displayOrder.count - 1 {
@@ -523,6 +531,13 @@ final class LibraryStore {
     }
 
     // MARK: - Keyboard-driven hints
+
+    /// Set `true` by arrow-key navigation (`moveSelectionPrev`/`Next`) so
+    /// the grid auto-scrolls to center the newly selected cell. Left
+    /// `false` for mouse clicks — the clicked cell is already visible, so
+    /// scrolling to center it is disorienting. The grid's `.onChange` of
+    /// `singleSelection` reads and resets this flag.
+    var scrollOnSelectionChange: Bool = false
 
     /// Flipped to `true` when the user presses `Space` over the grid, read
     /// by `LibraryGrid` to present a full-screen preview sheet for the

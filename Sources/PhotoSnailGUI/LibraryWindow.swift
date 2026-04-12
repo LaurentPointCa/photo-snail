@@ -149,7 +149,7 @@ struct LibrarySidebar: View {
                             // is generated at ~800 px wide, well above
                             // the display size, so SwiftUI always
                             // downsamples rather than upsamples.
-                            .interpolation(.none)
+                            .interpolation(.high)
                             .aspectRatio(contentMode: .fit)
                             .frame(height: 72)
                     } else {
@@ -358,13 +358,10 @@ struct LibraryGrid: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Bulk action bar — only appears when something is selected.
-            // Hosted outside the ScrollView so it stays pinned when the
-            // grid scrolls.
-            if !store.selection.isEmpty {
-                BulkActionBar(store: store)
-                Divider()
-            }
+            // Bulk action bar — always present so the grid doesn't
+            // reflow when the selection changes. Buttons are disabled
+            // when nothing is selected.
+            BulkActionBar(store: store)
             gridBody
         }
         .navigationTitle(navigationTitleText)
@@ -518,6 +515,7 @@ struct LibraryGrid: View {
                 systemImage: emptyStateIcon,
                 description: Text(emptyStateDescription)
             )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -556,17 +554,17 @@ struct LibraryGrid: View {
                 // photo near the middle of the viewport so arrow-key
                 // navigation feels continuous even on long scroll lists.
                 .onChange(of: store.singleSelection) { _, new in
-                    if let id = new {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            proxy.scrollTo(id, anchor: .center)
-                        }
+                    guard store.scrollOnSelectionChange, let id = new else { return }
+                    store.scrollOnSelectionChange = false
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        proxy.scrollTo(id, anchor: .center)
                     }
                 }
                 // Follow-current-processing: when the toggle in the runner
                 // dock is on, every engine advance scrolls the grid to the
                 // photo the worker is currently on. Firing via onChange of
                 // the engine's currentPhotoID means no extra polling.
-                .onChange(of: store.engine?.currentPhotoID) { _, new in
+                .onChange(of: store.engineCurrentPhotoID) { _, new in
                     guard store.followCurrentProcessing, let id = new else { return }
                     withAnimation(.easeInOut(duration: 0.25)) {
                         proxy.scrollTo(id, anchor: .center)
@@ -812,16 +810,16 @@ struct BulkActionBar: View {
     @State private var showingClearConfirm = false
     @State private var showingExportError: String? = nil
 
+    private var hasSelection: Bool { !store.selection.isEmpty }
+
     var body: some View {
         HStack(spacing: Spacing.md) {
-            Text("\(store.selection.count) selected")
+            Text(hasSelection ? "\(store.selection.count) selected" : "No selection")
                 .font(AppFont.bodyEmphasized)
                 .monospacedDigit()
-                .foregroundStyle(AppColor.textPrimary)
+                .foregroundStyle(hasSelection ? AppColor.textPrimary : AppColor.textSecondary)
 
             // Transient status message from the most recent bulk op.
-            // Non-intrusive — sits inline in the action bar and fades
-            // when the user clicks anything else.
             if let msg = store.bulkStatusMessage {
                 Text(msg)
                     .font(AppFont.label)
@@ -832,38 +830,29 @@ struct BulkActionBar: View {
 
             Spacer()
 
-            // Re-process — fast, no confirmation needed. Just a SQL-level
-            // push back to pending; the actual run happens in the runner.
             Button {
                 Task { await store.requeueSelection() }
             } label: {
                 Label("Re-process", systemImage: "arrow.clockwise")
             }
             .help("Re-process — push these photos back into the pending queue")
+            .disabled(!hasSelection)
 
-            // Clear description — destructive, gated on confirmation.
             Button(role: .destructive) {
                 showingClearConfirm = true
             } label: {
                 Label("Clear", systemImage: "eraser")
             }
             .help("Clear description — remove photo-snail descriptions from Photos.app")
+            .disabled(!hasSelection)
 
-            // Copy tags — instant, no confirmation.
-            Button {
-                store.copySelectionTagsToPasteboard()
-            } label: {
-                Label("Copy tags", systemImage: "doc.on.clipboard")
-            }
-            .help("Copy tags — union of all selected tags to the clipboard")
-
-            // Export JSON — opens an NSSavePanel.
             Button {
                 runExport()
             } label: {
-                Label("Export JSON", systemImage: "square.and.arrow.up")
+                Label("Export", systemImage: "square.and.arrow.up")
             }
             .help("Export JSON — save every selected row to a file")
+            .disabled(!hasSelection)
 
             Divider()
                 .frame(height: 16)
@@ -874,13 +863,14 @@ struct BulkActionBar: View {
                 Label("Deselect", systemImage: "xmark.circle")
             }
             .help("Deselect all")
+            .disabled(!hasSelection)
         }
         .labelStyle(.titleAndIcon)
         .buttonStyle(.bordered)
-        .controlSize(.regular)
+        .controlSize(.small)
         .font(AppFont.label)
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.md)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
         .background(.regularMaterial)
         .overlay(alignment: .bottom) {
             Rectangle()
@@ -1379,7 +1369,7 @@ private struct DockPhotoCard: View {
 
     @State private var pulsePhase: Double = 0
     @State private var isHovering: Bool = false
-    @State private var dismissTask: Task<Void, Never>? = nil
+    @State private var hoverTask: Task<Void, Never>? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -1413,14 +1403,21 @@ private struct DockPhotoCard: View {
                 // wide, close to other controls, and changes size when a
                 // new photo arrives.
                 .onHover { hovering in
-                    dismissTask?.cancel()
+                    hoverTask?.cancel()
                     if hovering {
-                        isHovering = true
+                        // Delay before showing the popover so casual
+                        // mouse-overs don't trigger it.
+                        hoverTask = Task {
+                            try? await Task.sleep(nanoseconds: 300_000_000)
+                            if !Task.isCancelled {
+                                isHovering = true
+                            }
+                        }
                     } else {
                         // Small delay lets the mouse travel from the card
                         // edge to the popover area without triggering a
                         // dismiss-then-re-show flicker.
-                        dismissTask = Task {
+                        hoverTask = Task {
                             try? await Task.sleep(nanoseconds: 120_000_000)
                             if !Task.isCancelled {
                                 isHovering = false

@@ -271,6 +271,10 @@ private struct InspectorContent: View {
     @State private var asset: PHAsset? = nil
     @State private var albums: [String] = []
 
+    // Copy-to-clipboard confirmation flash
+    @State private var descriptionCopied: Bool = false
+    @State private var tagsCopied: Bool = false
+
     // Collapsible section state (session-local, not persisted)
     @State private var isDeveloperOpen: Bool = false
 
@@ -393,7 +397,7 @@ private struct InspectorContent: View {
         sectionHeader(
             "Description",
             systemImage: "text.alignleft",
-            trailing: isDescriptionDirty ? AnyView(Circle().fill(Color.accentColor).frame(width: 7, height: 7)) : nil
+            trailing: descriptionHeaderTrailing
         )
 
         if let row = store.rows[assetId], row.description != nil || isEditing {
@@ -460,18 +464,37 @@ private struct InspectorContent: View {
         }
     }
 
+    private var descriptionHeaderTrailing: AnyView? {
+        if isDescriptionDirty {
+            return AnyView(Circle().fill(Color.accentColor).frame(width: 7, height: 7))
+        }
+        guard let desc = store.rows[assetId]?.description, !desc.isEmpty, !isEditing else { return nil }
+        return AnyView(
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(desc, forType: .string)
+                withAnimation { descriptionCopied = true }
+                Task {
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    withAnimation { descriptionCopied = false }
+                }
+            } label: {
+                Image(systemName: descriptionCopied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 11))
+                    .foregroundStyle(descriptionCopied ? .green : .secondary)
+            }
+            .buttonStyle(.plain)
+            .help(descriptionCopied ? "Copied!" : "Copy description to clipboard")
+        )
+    }
+
     // MARK: - Tags section
 
     @ViewBuilder
     private var tagsSection: some View {
         let activeTags = isEditing ? draftTags : (store.rows[assetId]?.tags ?? [])
 
-        sectionHeader("Tags", systemImage: "tag", trailing: activeTags.isEmpty ? nil : AnyView(
-            Text("\(activeTags.count)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-        ))
+        sectionHeader("Tags", systemImage: "tag", trailing: tagsHeaderTrailing(tags: activeTags))
 
         if activeTags.isEmpty {
             Text("No tags.")
@@ -494,6 +517,36 @@ private struct InspectorContent: View {
                     .disabled(newTagText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
+    }
+
+    private func tagsHeaderTrailing(tags: [String]) -> AnyView? {
+        guard !tags.isEmpty else { return nil }
+        return AnyView(
+            HStack(spacing: Spacing.sm) {
+                Text("\(tags.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                if !isEditing {
+                    Button {
+                        let joined = tags.sorted().joined(separator: ", ")
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(joined, forType: .string)
+                        withAnimation { tagsCopied = true }
+                        Task {
+                            try? await Task.sleep(nanoseconds: 1_500_000_000)
+                            withAnimation { tagsCopied = false }
+                        }
+                    } label: {
+                        Image(systemName: tagsCopied ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 11))
+                            .foregroundStyle(tagsCopied ? .green : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(tagsCopied ? "Copied!" : "Copy tags to clipboard")
+                }
+            }
+        )
     }
 
     // MARK: - Processing provenance

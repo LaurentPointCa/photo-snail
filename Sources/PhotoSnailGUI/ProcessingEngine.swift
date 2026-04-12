@@ -18,8 +18,14 @@ final class ProcessingEngine {
     var pendingCount: Int = 0
     var failedCount: Int = 0
 
+    /// Called on the MainActor when `currentPhotoID` changes so the store
+    /// can mirror the value without optional-chaining through `engine?`.
+    var onCurrentPhotoChanged: ((String?) -> Void)? = nil
+
     // Current photo being processed (bottom half)
-    var currentPhotoID: String? = nil
+    var currentPhotoID: String? = nil {
+        didSet { onCurrentPhotoChanged?(currentPhotoID) }
+    }
     var currentThumbnail: CGImage? = nil
 
     // Last completed photo (top half)
