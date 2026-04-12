@@ -1149,50 +1149,94 @@ struct RunnerDock: View {
     @Bindable var engine: ProcessingEngine
     @Bindable var store: LibraryStore
 
+    /// User preference for whether the dock is collapsed to its compact
+    /// form (stats + ETA + primary button only) or expanded to its full
+    /// form (cards + stats + follow toggle + primary button). Persisted
+    /// per-user via @AppStorage so a long-running batch session doesn't
+    /// re-expand on every relaunch.
+    @AppStorage("photo-snail.runnerDockCollapsed") private var isCollapsed: Bool = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            // Last-completed photo card (top). Stays on-screen between
-            // photos so the user always has a concrete sense of what the
-            // pipeline just did.
-            DockPhotoCard(
-                title: "Last completed",
-                thumbnail: engine.completedThumbnail,
-                caption: engine.completedDescription,
-                assetId: engine.completedPhotoID
-            )
+            // Compact header row: just the collapse/expand chevron, pinned
+            // to the top-right. Always visible so the user can flip the
+            // dock from compact to expanded without hunting for a control.
+            HStack {
+                if isCollapsed {
+                    EyebrowLabel(engine.state == .running ? "Running" : "Batch")
+                }
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        isCollapsed.toggle()
+                    }
+                } label: {
+                    Image(systemName: isCollapsed ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(AppColor.surfaceSunken)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .strokeBorder(AppColor.borderSubtle, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .help(isCollapsed ? "Expand runner panel" : "Collapse runner panel")
+            }
 
-            // Current photo card (bottom). Shows a pulsing accent ring
-            // while the worker is running to match the Phase 0 mockup.
-            DockPhotoCard(
-                title: engine.state == .running ? "Processing" : "Idle",
-                thumbnail: engine.currentThumbnail,
-                caption: engine.statusMessage,
-                isLive: engine.state == .running,
-                assetId: engine.currentPhotoID
-            )
+            if !isCollapsed {
+                // Last-completed photo card (top). Stays on-screen between
+                // photos so the user always has a concrete sense of what the
+                // pipeline just did.
+                DockPhotoCard(
+                    title: "Last completed",
+                    thumbnail: engine.completedThumbnail,
+                    caption: engine.completedDescription,
+                    assetId: engine.completedPhotoID
+                )
 
-            // Session stats + progress bar.
+                // Current photo card (bottom). Shows a pulsing accent ring
+                // while the worker is running to match the Phase 0 mockup.
+                DockPhotoCard(
+                    title: engine.state == .running ? "Processing" : "Idle",
+                    thumbnail: engine.currentThumbnail,
+                    caption: engine.statusMessage,
+                    isLive: engine.state == .running,
+                    assetId: engine.currentPhotoID
+                )
+            }
+
+            // Session stats + progress bar — always visible. The whole
+            // point of the collapsed mode is to keep this small block plus
+            // the primary button, freeing the rest of the sidebar for
+            // popular tags during a long-running batch.
             if engine.totalCount > 0 {
                 statsBlock
             }
 
-            // Follow-current-processing toggle. Off by default — the user
-            // is usually browsing somewhere else while a batch runs. When
-            // on, LibraryGrid's onChange(engine.currentPhotoID) scrolls
-            // the grid to the in-flight photo every advance.
-            Toggle(isOn: Bindable(store).followCurrentProcessing) {
-                Text("Follow processing in grid")
-                    .font(AppFont.label)
+            if !isCollapsed {
+                // Follow-current-processing toggle. Off by default — the user
+                // is usually browsing somewhere else while a batch runs. When
+                // on, LibraryGrid's onChange(engine.currentPhotoID) scrolls
+                // the grid to the in-flight photo every advance.
+                Toggle(isOn: Bindable(store).followCurrentProcessing) {
+                    Text("Follow processing in grid")
+                        .font(AppFont.label)
+                }
+                .toggleStyle(.switch)
+                .controlSize(.regular)
+                .help("Auto-scroll the grid to the currently-processing photo")
             }
-            .toggleStyle(.switch)
-            .controlSize(.regular)
-            .help("Auto-scroll the grid to the currently-processing photo")
 
-            // Primary action — changes label based on engine state.
+            // Primary action — always visible.
             primaryButton
         }
         .padding(.horizontal, Spacing.lg)
-        .padding(.top, Spacing.lg)
+        .padding(.top, Spacing.md)
         .padding(.bottom, Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColor.surfaceHighlighted)
