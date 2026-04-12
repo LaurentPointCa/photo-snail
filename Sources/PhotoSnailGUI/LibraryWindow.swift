@@ -648,7 +648,7 @@ struct ThumbnailCell: View {
             }
 
             RoundedRectangle(cornerRadius: 8)
-                .stroke(
+                .strokeBorder(
                     isSelected ? Color.accentColor : Color.clear,
                     lineWidth: 3
                 )
@@ -659,6 +659,16 @@ struct ThumbnailCell: View {
         }
         .frame(width: size, height: size)
         .contentShape(Rectangle())
+        // Soft accent halo around the selected cell — gives single-photo
+        // selections enough visual punch to stand out against the dark
+        // grid background. The stroke alone reads as subtle when only one
+        // cell carries it.
+        .shadow(
+            color: isSelected ? Color.accentColor.opacity(0.55) : .clear,
+            radius: isSelected ? 6 : 0,
+            x: 0,
+            y: 0
+        )
         // Subtle lift + soft shadow on hover. Makes the grid feel alive
         // without being distracting; 120 ms ease is short enough that
         // fast mouse sweeps don't leave trailing shadow artifacts.

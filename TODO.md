@@ -499,12 +499,55 @@ Each commit: build → `bundle-gui.sh` → relaunch → screenshot → diff agai
 - [x] Branch `ui-rework-2026-04-11` created
 - [x] Baseline screenshot captured (`/tmp/photosnail-baseline.png`)
 - [x] Audit + plan written
-- [ ] User approval of plan
-- [ ] Commit 1: DesignSystem.swift
-- [ ] Commit 2: LibrarySidebar
-- [ ] Commit 3: RunnerDock
-- [ ] Commit 4: LibraryInspector
-- [ ] Commit 5: MultiSelectionSummary
-- [ ] Commit 6: BulkActionBar + ThumbnailCell
-- [ ] Commit 7: SettingsSheet + LegendPopover
-- [ ] Commit 8: QA pass
+- [x] User approval of plan (chip color variety: yes; bulk bar text labels: yes)
+- [x] Commit 1: DesignSystem.swift
+- [x] Commit 2: LibrarySidebar
+- [x] Commit 3: RunnerDock
+- [x] Commit 4: LibraryInspector
+- [x] Commit 5: MultiSelectionSummary
+- [x] Commit 6: BulkActionBar + ThumbnailCell
+- [x] Commit 7: SettingsSheet + LegendPopover
+- [x] Commit 8: QA pass — selection halo for thumbnail cells
+
+### Phase I review
+
+Eight commits, all on `ui-rework-2026-04-11`. Build clean, no new warnings introduced (the two pre-existing Sendable warnings in `ProcessingEngine.swift:372,381` were left untouched per scope).
+
+**Files touched**:
+- `Sources/PhotoSnailGUI/DesignSystem.swift` (new, 220 lines)
+- `Sources/PhotoSnailGUI/LibraryWindow.swift` (modified)
+- `Sources/PhotoSnailGUI/LibraryInspector.swift` (modified)
+- `Sources/PhotoSnailGUI/SettingsSheet.swift` (modified)
+- `TODO.md` (this section)
+
+**Files NOT touched** (by design):
+- `ProcessingEngine.swift`, `LibraryStore.swift`, `PhotoSnailApp.swift`, `PhotoLibrary.swift`, `PhotosScripter.swift`, `PhotoLibraryEnumerator.swift`
+- Any file under `Sources/PhotoSnailCore/` or `Sources/PhotoSnailApp/`
+- `bundle-gui.sh`, `Info.plist`, `Package.swift`, `CLAUDE.md`
+
+**Functionality preserved** (verified by inspection):
+- All `@State`/`@Bindable`/`@Observable` bindings intact
+- `handleKeyPress` keyboard handler unchanged
+- `ProcessingEngine` API surface unchanged
+- `LibraryStore` API surface unchanged
+- `NavigationSplitView` three-column structure unchanged
+- All button actions, toggle bindings, picker bindings intact
+- All confirmation dialogs and sheets still present and bound
+
+**Visual changes summary**:
+- Typography: every `.font(.caption)` (12pt) for primary content replaced with `AppFont.label` (13pt med) or `AppFont.body` (14pt). Section headers `.caption.weight(.semibold)` → `AppFont.sectionTitle` (16pt semibold). Eyebrows `.system(size: 10)` → `AppFont.eyebrow` (11pt) via `EyebrowLabel`. Display numbers (multi-selection count, runner stats) `.title3` → `AppFont.display` (22pt).
+- Color: status colors now used semantically across the app — sidebar filter row icons, multi-selection stat dots, inspector Processing section header, status badges. Tag chips switched from a single near-invisible gray opacity to per-tag `AppColor.tagTint(for:)` deterministic palette of 8 muted hues.
+- Surfaces: inspector sections wrap in `SurfaceCard` containers (elevated background, hairline border, internal padding) instead of being separated by `Divider()` lines. Runner dock gets `surfaceHighlighted` background. Settings sheet sections also get the SurfaceCard treatment.
+- Density: spacing scale (`Spacing.xs/sm/md/lg/xl/xxl`) replaces ad-hoc `4/6/8/10/12/16/18` values. Sidebar width min/ideal 220/260 → 260/300. Thumbnails in runner dock 56×56 → 84×84. Status badges 12×12 → 16×16. Inspector hero aspect 4/3 → 3/2 with drop shadow.
+- Affordances: BulkActionBar switched from icon-only to title+icon (Re-process / Clear / Copy tags / Export JSON / Deselect all visible). Selection halo (3pt stroke + accent shadow) makes single-photo selections clearly visible. Custom `DockProgressBar` replaces thin default `ProgressView(.linear)` with a chunky accent gradient capsule.
+
+**User-flagged issues addressed**:
+- ✅ "Tags menus is unreadable" → Popular Tags rows use `AppFont.label` (13pt) with colored leading dots and tagTint count pills; Active Filters become full colored capsule chips.
+- ✅ "Progress tab is too small" → Runner dock entirely rebuilt: bigger thumbs, focal display number, larger button, larger toggle, elevated card surface, hairline top border.
+- ✅ "Lots of fonts are too tiny" → Type ramp eliminates `.caption` for primary content everywhere it appears.
+- ✅ "Everything is just gray and boring" → Status colors used throughout, deterministic tag tint palette, drop shadows on hero and badges, surface elevation on cards, accent halo on selection.
+
+**Verification**:
+- 8 build cycles, all clean
+- Screenshots captured at every commit and compared visually against the previous state
+- Final screenshot at `/tmp/photosnail-final.png` vs baseline at `/tmp/photosnail-baseline.png`
