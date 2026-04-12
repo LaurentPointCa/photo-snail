@@ -1104,9 +1104,7 @@ struct RunnerDock: View {
     @Bindable var store: LibraryStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Divider()
-
+        VStack(alignment: .leading, spacing: Spacing.md) {
             // Last-completed photo card (top). Stays on-screen between
             // photos so the user always has a concrete sense of what the
             // pipeline just did.
@@ -1129,24 +1127,7 @@ struct RunnerDock: View {
 
             // Session stats + progress bar.
             if engine.totalCount > 0 {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("\(engine.doneCount) / \(engine.totalCount)")
-                            .font(.caption.monospacedDigit())
-                        Spacer()
-                        if !engine.etaString.isEmpty && engine.etaString != "--" {
-                            Text("ETA \(engine.etaString)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    ProgressView(
-                        value: Double(engine.doneCount),
-                        total: Double(max(1, engine.totalCount))
-                    )
-                    .progressViewStyle(.linear)
-                    .controlSize(.small)
-                }
+                statsBlock
             }
 
             // Follow-current-processing toggle. Off by default — the user
@@ -1154,20 +1135,64 @@ struct RunnerDock: View {
             // on, LibraryGrid's onChange(engine.currentPhotoID) scrolls
             // the grid to the in-flight photo every advance.
             Toggle(isOn: Bindable(store).followCurrentProcessing) {
-                Text("Follow in grid")
-                    .font(.caption)
+                Text("Follow processing in grid")
+                    .font(AppFont.label)
             }
             .toggleStyle(.switch)
-            .controlSize(.mini)
+            .controlSize(.regular)
             .help("Auto-scroll the grid to the currently-processing photo")
 
             // Primary action — changes label based on engine state.
             primaryButton
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
-        .background(.bar)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.lg)
+        .padding(.bottom, Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColor.surfaceHighlighted)
+        .overlay(alignment: .top) {
+            // Hairline separator instead of a full Divider — reads as
+            // "the runner dock starts here" without the heavy default
+            // List divider tone.
+            Rectangle()
+                .fill(AppColor.borderSubtle)
+                .frame(height: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var statsBlock: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                Text("\(engine.doneCount)")
+                    .font(AppFont.display)
+                    .monospacedDigit()
+                    .foregroundStyle(AppColor.textPrimary)
+                Text("of \(engine.totalCount)")
+                    .font(AppFont.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if !engine.etaString.isEmpty && engine.etaString != "--" {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .imageScale(.small)
+                        Text("ETA \(engine.etaString)")
+                            .font(AppFont.caption)
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+            DockProgressBar(progress: progressFraction)
+                .frame(height: 6)
+                .padding(.top, 2)
+        }
+    }
+
+    private var progressFraction: Double {
+        guard engine.totalCount > 0 else { return 0 }
+        return Double(engine.doneCount) / Double(engine.totalCount)
     }
 
     @ViewBuilder
@@ -1178,15 +1203,17 @@ struct RunnerDock: View {
                 Task { await engine.start() }
             } label: {
                 Label("Start", systemImage: "play.fill")
+                    .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.regular)
+            .controlSize(.large)
         case .enumerating:
-            HStack {
+            HStack(spacing: Spacing.sm) {
                 ProgressView().controlSize(.small)
                 Text(engine.statusMessage)
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Spacer()
@@ -1196,19 +1223,51 @@ struct RunnerDock: View {
                 engine.pause()
             } label: {
                 Label("Pause", systemImage: "pause.fill")
+                    .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
             }
             .buttonStyle(.bordered)
-            .controlSize(.regular)
+            .controlSize(.large)
         case .paused:
             Button {
                 engine.resume()
             } label: {
                 Label("Resume", systemImage: "play.fill")
+                    .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.regular)
+            .controlSize(.large)
+        }
+    }
+}
+
+/// Custom progress bar for the runner dock — chunkier and rounder than
+/// the system `ProgressView(.linear)`, with an accent gradient fill so it
+/// reads as "the focal progress indicator" rather than just a thin rule.
+private struct DockProgressBar: View {
+    let progress: Double  // 0...1
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.10))
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor,
+                                Color.accentColor.opacity(0.80)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(progress))))
+            }
         }
     }
 }
@@ -1233,28 +1292,28 @@ private struct DockPhotoCard: View {
     @State private var dismissTask: Task<Void, Never>? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.5)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            EyebrowLabel(title)
 
-            HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .top, spacing: Spacing.md) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.gray.opacity(0.15))
-                        .frame(width: 56, height: 56)
+                    RoundedRectangle(cornerRadius: Radius.thumbnail)
+                        .fill(AppColor.surfaceSunken)
+                        .frame(width: 84, height: 84)
                     if let cg = thumbnail {
                         Image(decorative: cg, scale: 1)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 56, height: 56)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .frame(width: 84, height: 84)
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.thumbnail))
                     }
+                    RoundedRectangle(cornerRadius: Radius.thumbnail)
+                        .strokeBorder(AppColor.borderSubtle, lineWidth: 1)
+                        .frame(width: 84, height: 84)
                     if isLive {
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.accentColor.opacity(0.8), lineWidth: 2)
-                            .frame(width: 56, height: 56)
+                        RoundedRectangle(cornerRadius: Radius.thumbnail)
+                            .stroke(Color.accentColor.opacity(0.85), lineWidth: 3)
+                            .frame(width: 84, height: 84)
                             .scaleEffect(1 + 0.06 * pulsePhase)
                             .opacity(1 - 0.4 * pulsePhase)
                     }
@@ -1292,9 +1351,9 @@ private struct DockPhotoCard: View {
                 }
 
                 Text(caption.isEmpty ? "—" : caption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textPrimary)
+                    .lineLimit(3)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
