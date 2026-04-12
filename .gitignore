@@ -30,3 +30,8 @@ xcuserdata/
 sample/*
 !sample/.gitkeep
 !sample/README.md
+
+# Icon build intermediates — the committed artifact is Resources/AppIcon.icns,
+# which is produced by running tools/make-icon.swift + iconutil. The
+# .iconset directory is a build intermediate.
+Resources/AppIcon.iconset/
