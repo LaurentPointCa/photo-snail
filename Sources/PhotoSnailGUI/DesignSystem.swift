@@ -185,6 +185,11 @@ extension View {
 /// the call site is just `EyebrowLabel("Last Completed")`.
 struct EyebrowLabel: View {
     let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
     var body: some View {
         Text(text.uppercased())
             .font(AppFont.eyebrow)

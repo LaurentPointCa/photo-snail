@@ -23,7 +23,7 @@ struct LibraryWindow: View {
             } else {
                 NavigationSplitView {
                     LibrarySidebar(store: store)
-                        .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+                        .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
                         .safeAreaInset(edge: .bottom) {
                             // Pinned runner dock — visible whenever the engine
                             // exists (post-load). Matches the priority of "the
@@ -151,24 +151,26 @@ struct LibrarySidebar: View {
                             // downsamples rather than upsamples.
                             .interpolation(.high)
                             .aspectRatio(contentMode: .fit)
-                            .frame(height: 60)
+                            .frame(height: 72)
                     } else {
                         Text("photo snail")
-                            .font(.system(.title3, design: .rounded, weight: .semibold))
+                            .font(.system(.title2, design: .rounded, weight: .semibold))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 6)
+                .padding(.vertical, Spacing.md)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
 
-            Section("Library") {
-                filterRow(.all, label: "All", count: store.totalCount, systemImage: "photo.stack")
-                filterRow(.tagged, label: "Tagged", count: store.taggedCount, systemImage: "checkmark.seal")
-                filterRow(.untouched, label: "Untouched", count: store.untouchedCount, systemImage: "circle.dashed")
-                filterRow(.pending, label: "Pending", count: store.pendingCount, systemImage: "hourglass")
-                filterRow(.failed, label: "Failed", count: store.failedCount, systemImage: "exclamationmark.triangle")
+            Section {
+                filterRow(.all, label: "All", count: store.totalCount, systemImage: "photo.stack", tint: .accentColor)
+                filterRow(.tagged, label: "Tagged", count: store.taggedCount, systemImage: "checkmark.seal.fill", tint: AppColor.statusDone)
+                filterRow(.untouched, label: "Untouched", count: store.untouchedCount, systemImage: "circle.dashed", tint: AppColor.statusUntouched)
+                filterRow(.pending, label: "Pending", count: store.pendingCount, systemImage: "hourglass", tint: AppColor.statusPending)
+                filterRow(.failed, label: "Failed", count: store.failedCount, systemImage: "exclamationmark.triangle.fill", tint: AppColor.statusFailed)
+            } header: {
+                EyebrowLabel("Library")
             }
 
             // Active compound filters — only rendered when there's something
@@ -184,15 +186,15 @@ struct LibrarySidebar: View {
                         store.clearTagFilters()
                     }
                     .buttonStyle(.plain)
-                    .font(.caption)
+                    .font(AppFont.label)
                     .foregroundStyle(.secondary)
                 } header: {
                     HStack {
-                        Text("Active Filters")
+                        EyebrowLabel("Active Filters")
                         Spacer()
                         Text("\(store.activeTagFilters.count)")
+                            .font(AppFont.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
-                            .monospacedDigit()
                     }
                 }
             }
@@ -200,7 +202,7 @@ struct LibrarySidebar: View {
             // Popular tags in the current display set. Hidden when there's
             // nothing interesting to show — avoids a lonely empty section.
             if !store.popularTags.isEmpty {
-                Section("Popular Tags") {
+                Section {
                     ForEach(store.popularTags) { freq in
                         PopularTagRow(
                             frequency: freq,
@@ -209,6 +211,8 @@ struct LibrarySidebar: View {
                             store.toggleTagFilter(freq.tag)
                         }
                     }
+                } header: {
+                    EyebrowLabel("Popular Tags")
                 }
             }
         }
@@ -217,22 +221,36 @@ struct LibrarySidebar: View {
     }
 
     @ViewBuilder
-    private func filterRow(_ f: LibraryStore.Filter, label: String, count: Int, systemImage: String) -> some View {
+    private func filterRow(_ f: LibraryStore.Filter, label: String, count: Int, systemImage: String, tint: Color) -> some View {
         Button {
             store.setFilter(f)
         } label: {
-            HStack {
-                Label(label, systemImage: systemImage)
+            HStack(spacing: Spacing.md) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(tint)
+                    .frame(width: 22, alignment: .center)
+                Text(label)
+                    .font(AppFont.label)
+                    .foregroundStyle(AppColor.textPrimary)
                 Spacer()
                 Text("\(count)")
+                    .font(AppFont.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .monospacedDigit()
             }
+            .padding(.vertical, Spacing.xs)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .listRowBackground(
-            store.filter == f ? Color.accentColor.opacity(0.18) : Color.clear
+            Group {
+                if store.filter == f {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.22))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                }
+            }
         )
     }
 }
@@ -244,23 +262,32 @@ private struct ActiveFilterRow: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "tag.fill")
-                .imageScale(.small)
-                .foregroundStyle(Color.accentColor)
-            Text(tag)
-                .font(.caption)
-                .lineLimit(1)
-            Spacer()
-            Button {
-                onRemove()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
+        HStack {
+            HStack(spacing: 6) {
+                Image(systemName: "tag.fill")
                     .imageScale(.small)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.9))
+                Text(tag)
+                    .font(AppFont.label)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Button {
+                    onRemove()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .imageScale(.small)
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                Capsule().fill(AppColor.tagTint(for: tag).opacity(0.85))
+            )
+            Spacer(minLength: 0)
         }
+        .padding(.vertical, 2)
     }
 }
 
@@ -274,24 +301,40 @@ private struct PopularTagRow: View {
 
     var body: some View {
         Button(action: onToggle) {
-            HStack {
-                Image(systemName: isActive ? "checkmark.circle.fill" : "number")
-                    .imageScale(.small)
-                    .foregroundStyle(isActive ? Color.accentColor : .secondary)
+            HStack(spacing: Spacing.md) {
+                Circle()
+                    .fill(AppColor.tagTint(for: frequency.tag))
+                    .frame(width: 9, height: 9)
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(isActive ? 0.7 : 0.0), lineWidth: 1)
+                    )
                 Text(frequency.tag)
-                    .font(.caption)
+                    .font(AppFont.label)
                     .lineLimit(1)
+                    .foregroundStyle(isActive ? AppColor.textPrimary : AppColor.textSecondary)
                 Spacer()
                 Text("\(frequency.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                    .font(AppFont.caption.monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.92))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 1)
+                    .background(
+                        Capsule().fill(AppColor.tagTint(for: frequency.tag).opacity(isActive ? 0.95 : 0.55))
+                    )
             }
+            .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .listRowBackground(
-            isActive ? Color.accentColor.opacity(0.12) : Color.clear
+            Group {
+                if isActive {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.14))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                }
+            }
         )
     }
 }
