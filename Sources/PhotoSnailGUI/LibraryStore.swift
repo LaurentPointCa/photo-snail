@@ -51,12 +51,12 @@ final class LibraryStore {
 
         var id: String { rawValue }
 
-        var label: String {
+        @MainActor var label: String {
             switch self {
-            case .dateCreatedDesc:   return "Date created (newest)"
-            case .dateCreatedAsc:    return "Date created (oldest)"
-            case .dateProcessedDesc: return "Date processed (newest)"
-            case .dateProcessedAsc:  return "Date processed (oldest)"
+            case .dateCreatedDesc:   return Localizer.shared.t("sort.date_created_desc")
+            case .dateCreatedAsc:    return Localizer.shared.t("sort.date_created_asc")
+            case .dateProcessedDesc: return Localizer.shared.t("sort.date_processed_desc")
+            case .dateProcessedAsc:  return Localizer.shared.t("sort.date_processed_asc")
             }
         }
 
@@ -77,11 +77,11 @@ final class LibraryStore {
 
         var id: Int { rawValue }
         var points: CGFloat { CGFloat(rawValue) }
-        var label: String {
+        @MainActor var label: String {
             switch self {
-            case .small: return "Small"
-            case .medium: return "Medium"
-            case .large: return "Large"
+            case .small: return Localizer.shared.t("thumbnail.small")
+            case .medium: return Localizer.shared.t("thumbnail.medium")
+            case .large: return Localizer.shared.t("thumbnail.large")
             }
         }
     }

@@ -194,6 +194,53 @@ public final class OllamaClient {
         }
     }
 
+    // MARK: - Text-only generation (no image)
+
+    /// Result from a text-only Ollama generation (translation, summarization, etc.).
+    public struct TextResult: Sendable {
+        public let model: String
+        public let response: String
+        public let elapsedSeconds: Double
+    }
+
+    /// Send a text-only prompt to Ollama (no image). Used for translation of
+    /// existing descriptions where the input is text, not an image.
+    public func generateText(model: String, prompt: String) async throws -> TextResult {
+        let body: [String: Any] = [
+            "model": model,
+            "prompt": prompt,
+            "stream": false,
+            "think": false,
+        ]
+        let payload = try JSONSerialization.data(withJSONObject: body)
+
+        var req = URLRequest(url: baseURL.appendingPathComponent("api/generate"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applyAuth(to: &req)
+        req.httpBody = payload
+
+        let t0 = Date()
+        let (data, response) = try await session.data(for: req)
+        let elapsed = Date().timeIntervalSince(t0)
+
+        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            let respBody = String(data: data, encoding: .utf8) ?? "<binary>"
+            throw PhotoSnailError.ollamaRequestFailed("HTTP \(http.statusCode): \(respBody)")
+        }
+
+        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw PhotoSnailError.ollamaResponseParseFailed("not a JSON object")
+        }
+        guard let raw = obj["response"] as? String else {
+            throw PhotoSnailError.ollamaResponseParseFailed("missing 'response' field")
+        }
+
+        return TextResult(model: model, response: raw, elapsedSeconds: elapsed)
+    }
+
+    // MARK: - Shared image Ollama HTTP call
+
     private func sendToOllama(model: String, prompt: String, imageData: Data,
                               pixelW: Int, pixelH: Int) async throws -> CaptionResult {
         let b64 = imageData.base64EncodedString()

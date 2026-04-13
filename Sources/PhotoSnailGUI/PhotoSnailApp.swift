@@ -10,8 +10,25 @@ struct PhotoSnailApp: App {
         .defaultSize(width: 1400, height: 900)
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("About Photo Snail") {
+                Button(Localizer.shared.t("button.about")) {
                     showAbout()
+                }
+            }
+            CommandGroup(after: .appSettings) {
+                Menu("Language") {
+                    ForEach(Localizer.Language.allCases) { lang in
+                        Button {
+                            Localizer.shared.pendingLanguageChange = lang
+                        } label: {
+                            HStack {
+                                Text(lang.nativeName)
+                                if Localizer.shared.language == lang {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -33,17 +50,17 @@ struct PhotoSnailApp: App {
         ]
 
         credits.append(NSAttributedString(
-            string: "Local-first photo tagging tool for macOS.\nGenerates descriptions and tags for your Photos library using Apple Vision and a local LLM, fully on-device.\n\n",
+            string: Localizer.shared.t("about.description") + "\n\n",
             attributes: bodyAttrs
         ))
 
         credits.append(NSAttributedString(
-            string: "by Laurent Chouinard\n\n",
+            string: Localizer.shared.t("about.author") + "\n\n",
             attributes: [.font: bodyFont, .foregroundColor: NSColor.labelColor]
         ))
 
         credits.append(NSAttributedString(
-            string: "GitHub",
+            string: Localizer.shared.t("about.github"),
             attributes: [
                 .font: linkFont,
                 .link: URL(string: "https://github.com/LaurentPointCa/photo-snail")!,
@@ -51,7 +68,7 @@ struct PhotoSnailApp: App {
         ))
 
         credits.append(NSAttributedString(
-            string: " · MIT License",
+            string: " · \(Localizer.shared.t("about.license"))",
             attributes: bodyAttrs
         ))
 

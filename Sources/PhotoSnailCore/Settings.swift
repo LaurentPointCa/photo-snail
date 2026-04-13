@@ -14,15 +14,24 @@ public struct Settings: Codable, Sendable {
     public var model: String
     public var sentinel: String
     public var ollama: OllamaConnection
+    public var customPrompt: String?
+    public var appLanguage: String?
+    public var promptLanguage: String?
 
     public init(version: Int = 1,
                 model: String = "gemma4:31b",
                 sentinel: String = "ai:gemma4-v1",
-                ollama: OllamaConnection = .default) {
+                ollama: OllamaConnection = .default,
+                customPrompt: String? = nil,
+                appLanguage: String? = nil,
+                promptLanguage: String? = nil) {
         self.version = version
         self.model = model
         self.sentinel = sentinel
         self.ollama = ollama
+        self.customPrompt = customPrompt
+        self.appLanguage = appLanguage
+        self.promptLanguage = promptLanguage
     }
 
     public static let `default` = Settings()

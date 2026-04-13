@@ -55,6 +55,8 @@ final class ProcessingEngine {
     var model: String = Settings.default.model
     var sentinel: String = Settings.default.sentinel
     var connection: OllamaConnection = .default
+    var customPrompt: String? = nil
+    var promptLanguage: String? = nil
     var dryRun: Bool = false
 
     /// Models discovered from Ollama at startup. Empty until `refreshAvailableModels()`
@@ -68,7 +70,8 @@ final class ProcessingEngine {
     /// so worker mutations fan out to the store's row cache via the
     /// change stream. The store owns the queue's lifetime; we just hold
     /// a reference to it for our own reads/writes.
-    private let queue: AssetQueue
+    /// Exposed read-only for the settings sheet's requeue dialog.
+    let queue: AssetQueue
     private var workerTask: Task<Void, Never>?
     private var isPausedFlag = false
     private var pauseContinuation: CheckedContinuation<Void, Never>?
@@ -94,6 +97,8 @@ final class ProcessingEngine {
         self.model = runtime.model
         self.sentinel = runtime.sentinel
         self.connection = runtime.ollama
+        self.customPrompt = runtime.customPrompt
+        self.promptLanguage = runtime.promptLanguage
 
         // 2. Queue stats. The queue was passed in at init — we just read.
         do {
@@ -129,10 +134,13 @@ final class ProcessingEngine {
     /// Persists to settings.json. Caller is responsible for asking the user
     /// about sentinel choice on a family change BEFORE calling this.
     /// Changes take effect on the next `start()` — does NOT interrupt a running batch.
-    func applyConfigChange(model: String, sentinel: String, connection: OllamaConnection) async {
+    func applyConfigChange(model: String, sentinel: String, connection: OllamaConnection,
+                           customPrompt: String? = nil, promptLanguage: String? = nil) async {
         self.model = model
         self.sentinel = sentinel
         self.connection = connection
+        self.customPrompt = customPrompt
+        self.promptLanguage = promptLanguage
 
         // Persist (without env-var overrides — those are runtime-only).
         // Build a Settings from current state, but strip the env-var key if present
@@ -142,7 +150,8 @@ final class ProcessingEngine {
         if let envKey = envKey, !envKey.isEmpty, persisted.apiKey == envKey {
             persisted.apiKey = nil
         }
-        let s = Settings(model: model, sentinel: sentinel, ollama: persisted)
+        let s = Settings(model: model, sentinel: sentinel, ollama: persisted,
+                         customPrompt: customPrompt, promptLanguage: promptLanguage)
         do {
             try s.save()
             statusMessage = "Settings saved"
@@ -249,6 +258,8 @@ final class ProcessingEngine {
         let model = self.model
         let sentinel = self.sentinel
         let connection = self.connection
+        let customPrompt = self.customPrompt
+        let promptLanguage = self.promptLanguage
         let dryRun = self.dryRun
 
         // Dry-run uses an in-memory cursor over a snapshot of pending IDs so the
@@ -260,10 +271,12 @@ final class ProcessingEngine {
         }
 
         workerTask = Task.detached { [weak self] in
+            let ollamaClient = OllamaClient(connection: connection)
             let pipeline = Pipeline(
                 model: model,
                 promptStyle: .sideChannel,
-                ollama: OllamaClient(connection: connection)
+                ollama: ollamaClient,
+                customPrompt: customPrompt
             )
 
             let dryRunCursor: DryRunCursor?
@@ -299,6 +312,7 @@ final class ProcessingEngine {
                 // queue mutation), real run uses claimNext.
                 let id: String
                 let attempts: Int
+                let taskType: String
                 if let cursor = dryRunCursor {
                     guard let nextId = await cursor.next() else {
                         await MainActor.run {
@@ -310,6 +324,7 @@ final class ProcessingEngine {
                     }
                     id = nextId
                     attempts = 1
+                    taskType = "caption"
                 } else {
                     let claim: AssetQueue.Claim?
                     do {
@@ -331,12 +346,14 @@ final class ProcessingEngine {
                     }
                     id = c.id
                     attempts = c.attempts
+                    taskType = c.taskType
                 }
 
                 await MainActor.run {
                     self?.currentPhotoID = id
-                    self?.statusMessage = "Processing \(String(id.prefix(8)))..."
-                    log.append(.info, "Processing \(String(id.prefix(8)))…", assetId: id)
+                    let verb = taskType == "translate" ? "Translating" : "Processing"
+                    self?.statusMessage = "\(verb) \(String(id.prefix(8)))..."
+                    log.append(.info, "\(verb) \(String(id.prefix(8)))…", assetId: id)
                 }
 
                 // Load thumbnail for preview
@@ -345,7 +362,76 @@ final class ProcessingEngine {
                     await MainActor.run { self?.currentThumbnail = thumb }
                 }
 
-                // Process
+                // Translation branch: text-only Ollama call, no image/Vision
+                if taskType == "translate" && !dryRun {
+                    do {
+                        let row = try await queue.fetchRow(id: id)
+                        guard let origDesc = row?.originalDescription, !origDesc.isEmpty else {
+                            let err = PhotoSnailError.imageLoadFailed("No original description to translate: \(id)")
+                            try? await queue.markFailed(id, error: err)
+                            await self?.refreshStatsAndFailures()
+                            continue
+                        }
+                        let origTags = row?.originalTags.isEmpty == false ? row!.originalTags : row?.tags ?? []
+                        let langName = Localizer.languageName(for: promptLanguage ?? "en")
+                        let translationPrompt = """
+                            Translate the following photo description and tags to \(langName). \
+                            Keep the same format exactly. Do not add or remove content, just translate.
+                            DESCRIPTION: <translated description>
+                            TAGS: <translated tag1>, <translated tag2>, ...
+
+                            Original:
+                            DESCRIPTION: \(origDesc)
+                            TAGS: \(origTags.joined(separator: ", "))
+                            """
+                        let t0 = Date()
+                        let textResult = try await ollamaClient.generateText(model: model, prompt: translationPrompt)
+                        let ollamaMs = Int64(Date().timeIntervalSince(t0) * 1000)
+                        let parsed = CaptionParser.parse(textResult.response)
+
+                        let payload = Pipeline.formatDescription(
+                            description: parsed.description,
+                            tags: parsed.tags,
+                            sentinel: sentinel
+                        )
+                        let uuid = PhotoLibrary.uuidPrefix(id)
+                        _ = try await MainActor.run {
+                            try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
+                        }
+
+                        try? await queue.markTranslationDone(
+                            id, description: parsed.description, tags: parsed.tags,
+                            sentinel: sentinel, model: model, ollamaMs: ollamaMs
+                        )
+
+                        await MainActor.run {
+                            self?.completedPhotoID = self?.currentPhotoID
+                            self?.completedThumbnail = self?.currentThumbnail
+                            self?.completedDescription = parsed.description
+                            self?.completedTags = parsed.tags
+                            self?.currentThumbnail = nil
+                            self?.photosProcessedThisSession += 1
+                            self?.updateThroughput()
+                            log.append(.success, "Translated: \(String(id.prefix(8)))", assetId: id)
+                        }
+                        await self?.refreshStatsAndFailures()
+                    } catch let e as PhotoSnailError {
+                        if e.isRetriable && attempts < 3 {
+                            try? await queue.recordRetry(id, error: e)
+                            try? await Task.sleep(nanoseconds: UInt64([10, 30, 60][attempts - 1]) * 1_000_000_000)
+                        } else {
+                            try? await queue.markFailed(id, error: e)
+                        }
+                        await self?.refreshStatsAndFailures()
+                    } catch {
+                        let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
+                        try? await queue.markFailed(id, error: wrapped)
+                        await self?.refreshStatsAndFailures()
+                    }
+                    continue
+                }
+
+                // Caption process (standard image pipeline)
                 do {
                     guard let asset = PhotoLibrary.fetch(id: id) else {
                         let err = PhotoSnailError.imageLoadFailed("PHAsset not found: \(id)")

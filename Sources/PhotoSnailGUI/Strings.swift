@@ -1,0 +1,1841 @@
+import Foundation
+
+/// Localization string catalog for Photo Snail.
+///
+/// English and French are complete. Other languages have full translations for
+/// common UI terms.
+enum Strings {
+    static let translations: [Localizer.Language: [String: String]] = [
+        .en: en,
+        .fr: fr,
+        .es: es,
+        .de: de,
+        .pt: pt,
+        .ja: ja,
+        .zhHans: zhHans,
+        .ko: ko,
+    ]
+
+    static let promptTemplates: [Localizer.Language: String] = [
+        .en: """
+            Describe this image in 2-3 sentences. Then list 5-10 short tags (lowercase, comma-separated) that capture its content. Format strictly as:
+            DESCRIPTION: <text>
+            TAGS: <tag1>, <tag2>, ...
+            """,
+        .fr: """
+            D\u{00E9}crivez cette image en 2-3 phrases. Puis listez 5-10 \u{00E9}tiquettes courtes (minuscules, s\u{00E9}par\u{00E9}es par des virgules) qui capturent son contenu. Formatez strictement comme suit:
+            DESCRIPTION: <texte>
+            TAGS: <\u{00E9}tiquette1>, <\u{00E9}tiquette2>, ...
+            """,
+        .es: """
+            Describe esta imagen en 2-3 oraciones. Luego lista 5-10 etiquetas cortas (min\u{00FA}sculas, separadas por comas) que capturen su contenido. Formatea estrictamente como:
+            DESCRIPTION: <texto>
+            TAGS: <etiqueta1>, <etiqueta2>, ...
+            """,
+        .de: """
+            Beschreibe dieses Bild in 2-3 S\u{00E4}tzen. Dann liste 5-10 kurze Tags (Kleinbuchstaben, kommagetrennt) auf, die den Inhalt erfassen. Formatiere strikt als:
+            DESCRIPTION: <Text>
+            TAGS: <Tag1>, <Tag2>, ...
+            """,
+        .pt: """
+            Descreva esta imagem em 2-3 frases. Em seguida, liste 5-10 tags curtas (min\u{00FA}sculas, separadas por v\u{00ED}rgulas) que capturem seu conte\u{00FA}do. Formate estritamente como:
+            DESCRIPTION: <texto>
+            TAGS: <tag1>, <tag2>, ...
+            """,
+        .ja: """
+            \u{3053}\u{306E}\u{753B}\u{50CF}\u{3092}2\u{301C}3\u{6587}\u{3067}\u{8AAC}\u{660E}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}\u{6B21}\u{306B}\u{3001}\u{5185}\u{5BB9}\u{3092}\u{6355}\u{3048}\u{308B}5\u{301C}10\u{500B}\u{306E}\u{77ED}\u{3044}\u{30BF}\u{30B0}\u{FF08}\u{5C0F}\u{6587}\u{5B57}\u{3001}\u{30AB}\u{30DE}\u{533A}\u{5207}\u{308A}\u{FF09}\u{3092}\u{30EA}\u{30B9}\u{30C8}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}\u{4EE5}\u{4E0B}\u{306E}\u{5F62}\u{5F0F}\u{3067}\u{53B3}\u{5BC6}\u{306B}\u{30D5}\u{30A9}\u{30FC}\u{30DE}\u{30C3}\u{30C8}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{FF1A}
+            DESCRIPTION: <\u{30C6}\u{30AD}\u{30B9}\u{30C8}>
+            TAGS: <\u{30BF}\u{30B0}1>, <\u{30BF}\u{30B0}2>, ...
+            """,
+        .zhHans: """
+            \u{7528}2-3\u{53E5}\u{8BDD}\u{63CF}\u{8FF0}\u{8FD9}\u{5F20}\u{56FE}\u{7247}\u{3002}\u{7136}\u{540E}\u{5217}\u{51FA}5-10\u{4E2A}\u{7B80}\u{77ED}\u{7684}\u{6807}\u{7B7E}\u{FF08}\u{5C0F}\u{5199}\u{FF0C}\u{9017}\u{53F7}\u{5206}\u{9694}\u{FF09}\u{6765}\u{6355}\u{6349}\u{5176}\u{5185}\u{5BB9}\u{3002}\u{4E25}\u{683C}\u{6309}\u{7167}\u{4EE5}\u{4E0B}\u{683C}\u{5F0F}\u{FF1A}
+            DESCRIPTION: <\u{6587}\u{672C}>
+            TAGS: <\u{6807}\u{7B7E}1>, <\u{6807}\u{7B7E}2>, ...
+            """,
+        .ko: """
+            \u{C774} \u{C774}\u{BBF8}\u{C9C0}\u{B97C} 2-3\u{BB38}\u{C7A5}\u{C73C}\u{B85C} \u{C124}\u{BA85}\u{D558}\u{C138}\u{C694}. \u{ADF8}\u{B7F0} \u{B2E4}\u{C74C} \u{B0B4}\u{C6A9}\u{C744} \u{D3EC}\u{CC29}\u{D558}\u{B294} 5-10\u{AC1C}\u{C758} \u{C9E7}\u{C740} \u{D0DC}\u{ADF8}\u{FF08}\u{C18C}\u{BB38}\u{C790}, \u{C27C}\u{D45C}\u{B85C} \u{AD6C}\u{BD84}\u{FF09}\u{B97C} \u{B098}\u{C5F4}\u{D558}\u{C138}\u{C694}. \u{B2E4}\u{C74C} \u{D615}\u{C2DD}\u{C744} \u{C5C4}\u{ACA9}\u{D788} \u{B530}\u{B974}\u{C138}\u{C694}:
+            DESCRIPTION: <\u{D14D}\u{C2A4}\u{D2B8}>
+            TAGS: <\u{D0DC}\u{ADF8}1>, <\u{D0DC}\u{ADF8}2>, ...
+            """,
+    ]
+
+    // MARK: - English
+
+    private static let en: [String: String] = [
+        // Buttons
+        "button.close": "Close",
+        "button.save": "Save",
+        "button.cancel": "Cancel",
+        "button.skip": "Skip",
+        "button.clear": "Clear",
+        "button.add": "Add",
+        "button.revert": "Revert",
+        "button.deselect": "Deselect",
+        "button.export": "Export",
+        "button.reprocess": "Re-process",
+        "button.start_editing": "Start editing",
+        "button.reset_to_default": "Reset to default",
+        "button.refresh_model_list": "Refresh model list",
+        "button.test_connection": "Test connection",
+        "button.add_header": "Add header",
+        "button.requeue_selected": "Re-queue selected",
+        "button.clear_descriptions": "Clear descriptions",
+        "button.about": "About Photo Snail",
+
+        // Section headers
+        "section.library": "Library",
+        "section.model": "Model",
+        "section.prompt": "Prompt",
+        "section.sentinel": "Sentinel",
+        "section.ollama_connection": "Ollama Connection",
+        "section.identity": "Identity",
+        "section.description": "Description",
+        "section.tags": "Tags",
+        "section.processing": "Processing",
+        "section.vision": "Vision",
+        "section.developer": "Developer",
+        "section.active_filters": "Active Filters",
+        "section.popular_tags": "Popular Tags",
+
+        // Filters
+        "filter.all": "All",
+        "filter.tagged": "Tagged",
+        "filter.untouched": "Untouched",
+        "filter.pending": "Pending",
+        "filter.failed": "Failed",
+
+        // Sort orders
+        "sort.date_created_desc": "Date created (newest)",
+        "sort.date_created_asc": "Date created (oldest)",
+        "sort.date_processed_desc": "Date processed (newest)",
+        "sort.date_processed_asc": "Date processed (oldest)",
+
+        // Thumbnail sizes
+        "thumbnail.small": "Small",
+        "thumbnail.medium": "Medium",
+        "thumbnail.large": "Large",
+
+        // Toolbar
+        "toolbar.sort": "Sort",
+        "toolbar.sort_help": "Sort order",
+        "toolbar.thumbnail_size": "Thumbnail size",
+        "toolbar.thumbnail_size_help": "Thumbnail size",
+        "toolbar.legend": "Legend",
+        "toolbar.legend_help": "Keyboard shortcuts + status badge legend",
+        "toolbar.logs": "Logs",
+        "toolbar.logs_help": "Processing log",
+        "toolbar.settings": "Settings",
+        "toolbar.settings_help": "Model, sentinel, Ollama connection",
+
+        // Settings sheet
+        "settings.title": "Settings",
+        "settings.changes_apply": "Changes apply on next Start",
+        "settings.loading_models": "Loading models from Ollama...",
+        "settings.model_placeholder": "Model name (e.g. gemma4:31b)",
+        "settings.model_not_in_ollama": "(current, not in Ollama)",
+        "settings.sentinel_unchanged": "Same model family -- sentinel unchanged.",
+        "settings.sentinel_family_changed": "This model is a different family from the current sentinel. Pick one:",
+        "settings.keep_current": "Keep current:",
+        "settings.use_new": "Use new:",
+        "settings.custom": "Custom...",
+        "settings.sentinel_placeholder": "ai:family-v1",
+        "settings.base_url": "Base URL",
+        "settings.base_url_placeholder": "http://localhost:11434",
+        "settings.api_key": "API Key",
+        "settings.api_key_placeholder": "Bearer token (optional)",
+        "settings.api_key_help": "Stored in plain text in ~/Library/Application Support/photo-snail/settings.json (0600). Set PHOTO_SNAIL_OLLAMA_API_KEY in your environment to avoid persisting.",
+        "settings.advanced_headers": "Advanced: custom headers",
+        "settings.advanced_headers_help": "For proxies that use non-Bearer auth (Basic, X-API-Key, etc.). Headers override the API key field if both set Authorization.",
+        "settings.header_name": "Header name",
+        "settings.header_value": "Value",
+        "settings.prompt_changed": "Prompt changed -- the sentinel version will be bumped on save so new results are distinguishable from old ones.",
+        "settings.test_ok": "OK",
+        "settings.invalid_url": "Invalid base URL",
+        "settings.invalid_url_save": "Invalid base URL -- not saved",
+
+        // Requeue dialog
+        "dialog.requeue_title": "Re-process previous photos?",
+        "dialog.requeue_description": "The sentinel was bumped. Select which previously-processed sentinel groups you'd like to re-queue for processing with the new settings.",
+        "dialog.no_previous_sentinels": "No previous sentinels found in the queue.",
+
+        // Confirmation dialogs
+        "dialog.clear_title": "Clear descriptions?",
+        "dialog.clear_message": "This removes the photo-snail-written description from Photos.app and resets each queue row to pending. Original photos are not modified. This cannot be undone.",
+        "dialog.reprocess_title": "Re-process?",
+        "dialog.reprocess_message": "Queued photos will be processed on the next Start.",
+
+        // Empty states
+        "empty.nothing_tagged": "Nothing tagged yet",
+        "empty.everything_enumerated": "Everything is enumerated",
+        "empty.no_pending": "No pending work",
+        "empty.no_failures": "No failures",
+        "empty.no_images": "No images were found in your Photos library.",
+        "empty.run_batch": "Run a batch to start generating descriptions.",
+        "empty.every_photo_queued": "Every photo has a queue row. Nothing to discover.",
+        "empty.no_pending_alt": "The queue has no pending work to process.",
+        "empty.no_failed_assets": "No asset has ended in the failed state.",
+
+        // Status messages
+        "status.ready": "Ready",
+        "status.loading_library": "Loading library...",
+        "status.no_selection": "No selection",
+        "status.running": "Running",
+        "status.batch": "Batch",
+        "status.preview_unavailable": "Preview unavailable",
+
+        // Inspector
+        "inspector.no_selection": "No selection",
+        "inspector.select_photo": "Select a photo in the grid to inspect it.",
+        "inspector.title": "Inspector",
+        "inspector.use_bulk_bar": "Use the bulk action bar above the grid to re-process, clear, copy tags, or export.",
+        "inspector.untouched_no_desc": "Untouched -- no description yet. Run a batch to generate one.",
+        "inspector.no_description": "No description yet.",
+        "inspector.no_tags": "No tags.",
+        "inspector.add_tag": "Add tag...",
+        "inspector.copied": "Copied!",
+        "inspector.copy_desc_help": "Copy description to clipboard",
+        "inspector.copy_tags_help": "Copy tags to clipboard",
+        "inspector.no_processing_record": "No processing record for this asset.",
+        "inspector.no_vision_data": "No Vision data recorded for this row (pre-v1 done row).",
+        "inspector.vision_runs_later": "Vision pre-pass runs when the photo is processed.",
+        "inspector.vision_nothing": "Vision pre-pass ran but found nothing structured.",
+        "inspector.no_queue_row": "No queue row.",
+        "inspector.pre_v1": "-- (pre-v1 / unrecorded)",
+        "inspector.common_tags": "Tags in every selected photo",
+        "inspector.models_used": "Models used",
+        "inspector.photos_selected": "photos selected",
+
+        // Labels
+        "label.file": "File",
+        "label.created": "Created",
+        "label.modified": "Modified",
+        "label.dimensions": "Dimensions",
+        "label.type": "Type",
+        "label.favorite": "Favorite",
+        "label.location": "Location",
+        "label.albums": "Albums",
+        "label.asset_id": "Asset ID",
+        "label.status": "Status",
+        "label.model": "Model",
+        "label.sentinel": "Sentinel",
+        "label.ran_at": "Ran at",
+        "label.total": "Total",
+        "label.ollama": "Ollama",
+        "label.attempts": "Attempts",
+        "label.edited_at": "Edited at",
+        "label.error": "Error",
+        "label.classifications": "Classifications",
+        "label.animals": "Animals",
+        "label.faces": "Faces",
+        "label.ocr": "OCR",
+        "label.vision_time": "Vision time",
+        "label.last_completed": "Last completed",
+        "label.expand_runner": "Expand runner panel",
+        "label.collapse_runner": "Collapse runner panel",
+        "label.yes": "Yes",
+        "label.no": "No",
+        "label.description_payload": "description payload (what's in Photos.app)",
+
+        // Buttons (additional)
+        "button.edit": "Edit",
+
+        // Log window
+        "log.detailed": "Detailed logs",
+        "log.detailed_help": "Show all log entries including pipeline steps",
+        "log.clear_help": "Clear all log entries",
+
+        // Legend
+        "legend.status_badges": "Status badges",
+        "legend.tagged": "Photo has a description in Photos.app.",
+        "legend.pending": "Queued for processing. Live ring while in-progress.",
+        "legend.failed": "Processing failed. Retry via bulk Re-process.",
+        "legend.untouched": "Not yet enumerated into the queue.",
+        "legend.keyboard_shortcuts": "Keyboard shortcuts",
+        "legend.search": "Search descriptions + tags",
+        "legend.prev_next": "Previous / next photo",
+        "legend.preview": "Full-screen preview",
+        "legend.edit": "Edit description",
+        "legend.save_edit": "Save edit",
+        "legend.select_all": "Select all visible",
+        "legend.thumbs": "Small / medium / large thumbs",
+        "legend.toggle_sel": "Toggle selection",
+        "legend.range_sel": "Range-select",
+        "legend.escape": "Clear selection / close preview",
+        "legend.reprocess_sel": "Re-process selection",
+        "legend.clear_sel": "Clear descriptions for selection",
+
+        // Bulk actions help
+        "bulk.reprocess_help": "Re-process -- push these photos back into the pending queue",
+        "bulk.clear_help": "Clear description -- remove photo-snail descriptions from Photos.app",
+        "bulk.export_help": "Export JSON -- save every selected row to a file",
+        "bulk.deselect_help": "Deselect all",
+
+        // About
+        "about.description": "Local-first photo tagging tool for macOS.\nGenerates descriptions and tags for your Photos library using Apple Vision and a local LLM, fully on-device.",
+        "about.author": "by Laurent Chouinard",
+        "about.license": "MIT License",
+        "about.github": "GitHub",
+
+        // Language change flow
+        "lang.confirm_title": "Change app language?",
+        "lang.confirm_change": "Change",
+        "lang.prompt_title": "Change AI prompt language too?",
+        "lang.prompt_message": "This will update the prompt to generate descriptions in the new language and bump the sentinel version.",
+        "lang.translate_title": "Translate existing descriptions?",
+        "lang.translate_message": "This will queue all previously-processed photos for translation to the new language using the AI model. Translation is text-only and much faster than re-processing.",
+        "lang.translate": "Translate",
+    ]
+
+    // MARK: - French
+
+    private static let fr: [String: String] = [
+        // Buttons
+        "button.close": "Fermer",
+        "button.save": "Enregistrer",
+        "button.cancel": "Annuler",
+        "button.skip": "Ignorer",
+        "button.clear": "Effacer",
+        "button.add": "Ajouter",
+        "button.revert": "R\u{00E9}tablir",
+        "button.deselect": "D\u{00E9}s\u{00E9}lectionner",
+        "button.export": "Exporter",
+        "button.reprocess": "Retraiter",
+        "button.start_editing": "Modifier",
+        "button.reset_to_default": "R\u{00E9}initialiser",
+        "button.refresh_model_list": "Actualiser la liste",
+        "button.test_connection": "Tester la connexion",
+        "button.add_header": "Ajouter un en-t\u{00EA}te",
+        "button.requeue_selected": "Remettre en file",
+        "button.clear_descriptions": "Effacer les descriptions",
+        "button.about": "\u{00C0} propos de Photo Snail",
+
+        // Section headers
+        "section.library": "Biblioth\u{00E8}que",
+        "section.model": "Mod\u{00E8}le",
+        "section.prompt": "Invite",
+        "section.sentinel": "Sentinelle",
+        "section.ollama_connection": "Connexion Ollama",
+        "section.identity": "Identit\u{00E9}",
+        "section.description": "Description",
+        "section.tags": "\u{00C9}tiquettes",
+        "section.processing": "Traitement",
+        "section.vision": "Vision",
+        "section.developer": "D\u{00E9}veloppeur",
+        "section.active_filters": "Filtres actifs",
+        "section.popular_tags": "\u{00C9}tiquettes populaires",
+
+        // Filters
+        "filter.all": "Tout",
+        "filter.tagged": "\u{00C9}tiquet\u{00E9}",
+        "filter.untouched": "Non trait\u{00E9}",
+        "filter.pending": "En attente",
+        "filter.failed": "\u{00C9}chou\u{00E9}",
+
+        // Sort orders
+        "sort.date_created_desc": "Date de cr\u{00E9}ation (r\u{00E9}cent)",
+        "sort.date_created_asc": "Date de cr\u{00E9}ation (ancien)",
+        "sort.date_processed_desc": "Date de traitement (r\u{00E9}cent)",
+        "sort.date_processed_asc": "Date de traitement (ancien)",
+
+        // Thumbnail sizes
+        "thumbnail.small": "Petit",
+        "thumbnail.medium": "Moyen",
+        "thumbnail.large": "Grand",
+
+        // Toolbar
+        "toolbar.sort": "Tri",
+        "toolbar.sort_help": "Ordre de tri",
+        "toolbar.thumbnail_size": "Taille des vignettes",
+        "toolbar.thumbnail_size_help": "Taille des vignettes",
+        "toolbar.legend": "L\u{00E9}gende",
+        "toolbar.legend_help": "Raccourcis clavier + l\u{00E9}gende des badges",
+        "toolbar.logs": "Journaux",
+        "toolbar.logs_help": "Journal de traitement",
+        "toolbar.settings": "R\u{00E9}glages",
+        "toolbar.settings_help": "Mod\u{00E8}le, sentinelle, connexion Ollama",
+
+        // Settings sheet
+        "settings.title": "R\u{00E9}glages",
+        "settings.changes_apply": "Les changements s\u{2019}appliquent au prochain d\u{00E9}marrage",
+        "settings.loading_models": "Chargement des mod\u{00E8}les depuis Ollama\u{2026}",
+        "settings.model_placeholder": "Nom du mod\u{00E8}le (ex. gemma4:31b)",
+        "settings.model_not_in_ollama": "(actuel, absent d\u{2019}Ollama)",
+        "settings.sentinel_unchanged": "M\u{00EA}me famille de mod\u{00E8}le \u{2014} sentinelle inchang\u{00E9}e.",
+        "settings.sentinel_family_changed": "Ce mod\u{00E8}le appartient \u{00E0} une famille diff\u{00E9}rente. Choisissez :",
+        "settings.keep_current": "Garder l\u{2019}actuelle :",
+        "settings.use_new": "Utiliser la nouvelle :",
+        "settings.custom": "Personnalis\u{00E9}e\u{2026}",
+        "settings.sentinel_placeholder": "ai:famille-v1",
+        "settings.base_url": "URL de base",
+        "settings.base_url_placeholder": "http://localhost:11434",
+        "settings.api_key": "Cl\u{00E9} API",
+        "settings.api_key_placeholder": "Jeton Bearer (optionnel)",
+        "settings.api_key_help": "Stock\u{00E9}e en texte clair dans ~/Library/Application Support/photo-snail/settings.json (0600). D\u{00E9}finissez PHOTO_SNAIL_OLLAMA_API_KEY dans votre environnement pour \u{00E9}viter la persistance.",
+        "settings.advanced_headers": "Avanc\u{00E9} : en-t\u{00EA}tes personnalis\u{00E9}s",
+        "settings.advanced_headers_help": "Pour les proxys utilisant une auth non-Bearer (Basic, X-API-Key, etc.). Les en-t\u{00EA}tes priment sur la cl\u{00E9} API si les deux d\u{00E9}finissent Authorization.",
+        "settings.header_name": "Nom de l\u{2019}en-t\u{00EA}te",
+        "settings.header_value": "Valeur",
+        "settings.prompt_changed": "Invite modifi\u{00E9}e \u{2014} la version de la sentinelle sera incr\u{00E9}ment\u{00E9}e \u{00E0} l\u{2019}enregistrement pour distinguer les nouveaux r\u{00E9}sultats.",
+        "settings.test_ok": "OK",
+        "settings.invalid_url": "URL de base invalide",
+        "settings.invalid_url_save": "URL de base invalide \u{2014} non enregistr\u{00E9}e",
+
+        // Requeue dialog
+        "dialog.requeue_title": "Retraiter les photos pr\u{00E9}c\u{00E9}dentes ?",
+        "dialog.requeue_description": "La sentinelle a \u{00E9}t\u{00E9} incr\u{00E9}ment\u{00E9}e. S\u{00E9}lectionnez les groupes de sentinelles d\u{00E9}j\u{00E0} trait\u{00E9}s que vous souhaitez remettre en file.",
+        "dialog.no_previous_sentinels": "Aucune sentinelle pr\u{00E9}c\u{00E9}dente trouv\u{00E9}e dans la file.",
+
+        // Confirmation dialogs
+        "dialog.clear_title": "Effacer les descriptions ?",
+        "dialog.clear_message": "Ceci supprime la description \u{00E9}crite par photo-snail de Photos.app et r\u{00E9}initialise chaque rang\u{00E9}e \u{00E0} \u{00AB} en attente \u{00BB}. Les photos originales ne sont pas modifi\u{00E9}es. Cette action est irr\u{00E9}versible.",
+        "dialog.reprocess_title": "Retraiter ?",
+        "dialog.reprocess_message": "Les photos en file seront trait\u{00E9}es au prochain d\u{00E9}marrage.",
+
+        // Empty states
+        "empty.nothing_tagged": "Rien d\u{2019}\u{00E9}tiquet\u{00E9} pour l\u{2019}instant",
+        "empty.everything_enumerated": "Tout est \u{00E9}num\u{00E9}r\u{00E9}",
+        "empty.no_pending": "Aucun travail en attente",
+        "empty.no_failures": "Aucun \u{00E9}chec",
+        "empty.no_images": "Aucune image trouv\u{00E9}e dans votre biblioth\u{00E8}que Photos.",
+        "empty.run_batch": "Lancez un lot pour g\u{00E9}n\u{00E9}rer des descriptions.",
+        "empty.every_photo_queued": "Chaque photo a une entr\u{00E9}e dans la file. Rien \u{00E0} d\u{00E9}couvrir.",
+        "empty.no_pending_alt": "La file n\u{2019}a aucun travail en attente.",
+        "empty.no_failed_assets": "Aucune ressource n\u{2019}est en \u{00E9}tat d\u{2019}\u{00E9}chec.",
+
+        // Status messages
+        "status.ready": "Pr\u{00EA}t",
+        "status.loading_library": "Chargement de la biblioth\u{00E8}que\u{2026}",
+        "status.no_selection": "Aucune s\u{00E9}lection",
+        "status.running": "En cours",
+        "status.batch": "Lot",
+        "status.preview_unavailable": "Aper\u{00E7}u non disponible",
+
+        // Inspector
+        "inspector.no_selection": "Aucune s\u{00E9}lection",
+        "inspector.select_photo": "S\u{00E9}lectionnez une photo dans la grille pour l\u{2019}inspecter.",
+        "inspector.title": "Inspecteur",
+        "inspector.use_bulk_bar": "Utilisez la barre d\u{2019}actions group\u{00E9}es au-dessus de la grille pour retraiter, effacer, copier les \u{00E9}tiquettes ou exporter.",
+        "inspector.untouched_no_desc": "Non trait\u{00E9} \u{2014} pas encore de description. Lancez un lot pour en g\u{00E9}n\u{00E9}rer une.",
+        "inspector.no_description": "Pas encore de description.",
+        "inspector.no_tags": "Aucune \u{00E9}tiquette.",
+        "inspector.add_tag": "Ajouter une \u{00E9}tiquette\u{2026}",
+        "inspector.copied": "Copi\u{00E9} !",
+        "inspector.copy_desc_help": "Copier la description dans le presse-papiers",
+        "inspector.copy_tags_help": "Copier les \u{00E9}tiquettes dans le presse-papiers",
+        "inspector.no_processing_record": "Aucun enregistrement de traitement pour cette ressource.",
+        "inspector.no_vision_data": "Aucune donn\u{00E9}e Vision enregistr\u{00E9}e pour cette rang\u{00E9}e (rang\u{00E9}e termin\u{00E9}e pr\u{00E9}-v1).",
+        "inspector.vision_runs_later": "La pr\u{00E9}-passe Vision s\u{2019}ex\u{00E9}cute lors du traitement de la photo.",
+        "inspector.vision_nothing": "La pr\u{00E9}-passe Vision n\u{2019}a rien trouv\u{00E9} de structur\u{00E9}.",
+        "inspector.no_queue_row": "Aucune entr\u{00E9}e dans la file.",
+        "inspector.pre_v1": "\u{2014} (pr\u{00E9}-v1 / non enregistr\u{00E9})",
+        "inspector.common_tags": "\u{00C9}tiquettes communes \u{00E0} toutes les photos",
+        "inspector.models_used": "Mod\u{00E8}les utilis\u{00E9}s",
+        "inspector.photos_selected": "photos s\u{00E9}lectionn\u{00E9}es",
+
+        // Labels
+        "label.file": "Fichier",
+        "label.created": "Cr\u{00E9}\u{00E9}",
+        "label.modified": "Modifi\u{00E9}",
+        "label.dimensions": "Dimensions",
+        "label.type": "Type",
+        "label.favorite": "Favori",
+        "label.location": "Lieu",
+        "label.albums": "Albums",
+        "label.asset_id": "ID de la ressource",
+        "label.status": "Statut",
+        "label.model": "Mod\u{00E8}le",
+        "label.sentinel": "Sentinelle",
+        "label.ran_at": "Ex\u{00E9}cut\u{00E9} le",
+        "label.total": "Total",
+        "label.ollama": "Ollama",
+        "label.attempts": "Tentatives",
+        "label.edited_at": "Modifi\u{00E9} le",
+        "label.error": "Erreur",
+        "label.classifications": "Classifications",
+        "label.animals": "Animaux",
+        "label.faces": "Visages",
+        "label.ocr": "OCR",
+        "label.vision_time": "Temps Vision",
+        "label.last_completed": "Dernier termin\u{00E9}",
+        "label.expand_runner": "D\u{00E9}plier le panneau d\u{2019}ex\u{00E9}cution",
+        "label.collapse_runner": "Replier le panneau d\u{2019}ex\u{00E9}cution",
+        "label.yes": "Oui",
+        "label.no": "Non",
+        "label.description_payload": "contenu de la description (ce qui est dans Photos.app)",
+
+        // Buttons (additional)
+        "button.edit": "Modifier",
+
+        // Log window
+        "log.detailed": "Journaux d\u{00E9}taill\u{00E9}s",
+        "log.detailed_help": "Afficher toutes les entr\u{00E9}es y compris les \u{00E9}tapes du pipeline",
+        "log.clear_help": "Effacer toutes les entr\u{00E9}es du journal",
+
+        // Legend
+        "legend.status_badges": "Badges de statut",
+        "legend.tagged": "La photo a une description dans Photos.app.",
+        "legend.pending": "En file de traitement. Anneau anim\u{00E9} pendant le traitement.",
+        "legend.failed": "Le traitement a \u{00E9}chou\u{00E9}. R\u{00E9}essayez via Retraiter en lot.",
+        "legend.untouched": "Pas encore \u{00E9}num\u{00E9}r\u{00E9} dans la file.",
+        "legend.keyboard_shortcuts": "Raccourcis clavier",
+        "legend.search": "Rechercher descriptions + \u{00E9}tiquettes",
+        "legend.prev_next": "Photo pr\u{00E9}c\u{00E9}dente / suivante",
+        "legend.preview": "Aper\u{00E7}u plein \u{00E9}cran",
+        "legend.edit": "Modifier la description",
+        "legend.save_edit": "Enregistrer la modification",
+        "legend.select_all": "S\u{00E9}lectionner tout le visible",
+        "legend.thumbs": "Vignettes petites / moyennes / grandes",
+        "legend.toggle_sel": "Basculer la s\u{00E9}lection",
+        "legend.range_sel": "S\u{00E9}lection par plage",
+        "legend.escape": "Effacer la s\u{00E9}lection / fermer l\u{2019}aper\u{00E7}u",
+        "legend.reprocess_sel": "Retraiter la s\u{00E9}lection",
+        "legend.clear_sel": "Effacer les descriptions de la s\u{00E9}lection",
+
+        // Bulk actions help
+        "bulk.reprocess_help": "Retraiter \u{2014} remettre ces photos dans la file d\u{2019}attente",
+        "bulk.clear_help": "Effacer la description \u{2014} supprimer les descriptions photo-snail de Photos.app",
+        "bulk.export_help": "Exporter JSON \u{2014} enregistrer chaque rang\u{00E9}e s\u{00E9}lectionn\u{00E9}e dans un fichier",
+        "bulk.deselect_help": "Tout d\u{00E9}s\u{00E9}lectionner",
+
+        // About
+        "about.description": "Outil d\u{2019}\u{00E9}tiquetage photo local pour macOS.\nG\u{00E9}n\u{00E8}re des descriptions et des \u{00E9}tiquettes pour votre biblioth\u{00E8}que Photos avec Apple Vision et un LLM local, enti\u{00E8}rement sur l\u{2019}appareil.",
+        "about.author": "par Laurent Chouinard",
+        "about.license": "Licence MIT",
+        "about.github": "GitHub",
+
+        // Language change flow
+        "lang.confirm_title": "Changer la langue de l\u{2019}application ?",
+        "lang.confirm_change": "Changer",
+        "lang.prompt_title": "Changer aussi la langue de l\u{2019}invite IA ?",
+        "lang.prompt_message": "Ceci mettra \u{00E0} jour l\u{2019}invite pour g\u{00E9}n\u{00E9}rer les descriptions dans la nouvelle langue et incr\u{00E9}mentera la version de la sentinelle.",
+        "lang.translate_title": "Traduire les descriptions existantes ?",
+        "lang.translate_message": "Ceci mettra en file toutes les photos d\u{00E9}j\u{00E0} trait\u{00E9}es pour traduction dans la nouvelle langue via le mod\u{00E8}le IA. La traduction est textuelle et beaucoup plus rapide que le retraitement.",
+        "lang.translate": "Traduire",
+    ]
+
+    // MARK: - Spanish
+
+    private static let es: [String: String] = [
+        // Buttons
+        "button.close": "Cerrar",
+        "button.save": "Guardar",
+        "button.cancel": "Cancelar",
+        "button.skip": "Omitir",
+        "button.clear": "Borrar",
+        "button.add": "A\u{00F1}adir",
+        "button.revert": "Revertir",
+        "button.deselect": "Deseleccionar",
+        "button.export": "Exportar",
+        "button.reprocess": "Reprocesar",
+        "button.start_editing": "Editar",
+        "button.reset_to_default": "Restablecer",
+        "button.refresh_model_list": "Actualizar lista",
+        "button.test_connection": "Probar conexi\u{00F3}n",
+        "button.add_header": "A\u{00F1}adir encabezado",
+        "button.requeue_selected": "Reencolar selecci\u{00F3}n",
+        "button.clear_descriptions": "Borrar descripciones",
+        "button.about": "Acerca de Photo Snail",
+
+        // Section headers
+        "section.library": "Biblioteca",
+        "section.model": "Modelo",
+        "section.prompt": "Prompt",
+        "section.sentinel": "Centinela",
+        "section.ollama_connection": "Conexi\u{00F3}n Ollama",
+        "section.identity": "Identidad",
+        "section.description": "Descripci\u{00F3}n",
+        "section.tags": "Etiquetas",
+        "section.processing": "Procesamiento",
+        "section.vision": "Vision",
+        "section.developer": "Desarrollador",
+        "section.active_filters": "Filtros activos",
+        "section.popular_tags": "Etiquetas populares",
+
+        // Filters
+        "filter.all": "Todo",
+        "filter.tagged": "Etiquetado",
+        "filter.untouched": "Sin tratar",
+        "filter.pending": "Pendiente",
+        "filter.failed": "Fallido",
+
+        // Sort orders
+        "sort.date_created_desc": "Fecha de creaci\u{00F3}n (m\u{00E1}s reciente)",
+        "sort.date_created_asc": "Fecha de creaci\u{00F3}n (m\u{00E1}s antiguo)",
+        "sort.date_processed_desc": "Fecha de proceso (m\u{00E1}s reciente)",
+        "sort.date_processed_asc": "Fecha de proceso (m\u{00E1}s antiguo)",
+
+        // Thumbnail sizes
+        "thumbnail.small": "Peque\u{00F1}o",
+        "thumbnail.medium": "Mediano",
+        "thumbnail.large": "Grande",
+
+        // Toolbar
+        "toolbar.sort": "Ordenar",
+        "toolbar.sort_help": "Orden",
+        "toolbar.thumbnail_size": "Tama\u{00F1}o de miniaturas",
+        "toolbar.thumbnail_size_help": "Tama\u{00F1}o de miniaturas",
+        "toolbar.legend": "Leyenda",
+        "toolbar.legend_help": "Atajos de teclado + leyenda de badges",
+        "toolbar.logs": "Registros",
+        "toolbar.logs_help": "Registro de procesamiento",
+        "toolbar.settings": "Ajustes",
+        "toolbar.settings_help": "Modelo, centinela, conexi\u{00F3}n Ollama",
+
+        // Settings sheet
+        "settings.title": "Ajustes",
+        "settings.changes_apply": "Los cambios se aplican en el pr\u{00F3}ximo inicio",
+        "settings.loading_models": "Cargando modelos desde Ollama\u{2026}",
+        "settings.model_placeholder": "Nombre del modelo (ej. gemma4:31b)",
+        "settings.model_not_in_ollama": "(actual, no en Ollama)",
+        "settings.sentinel_unchanged": "Misma familia de modelo \u{2014} centinela sin cambios.",
+        "settings.sentinel_family_changed": "Este modelo es de una familia diferente. Elija una opci\u{00F3}n:",
+        "settings.keep_current": "Mantener actual:",
+        "settings.use_new": "Usar nueva:",
+        "settings.custom": "Personalizada\u{2026}",
+        "settings.sentinel_placeholder": "ai:familia-v1",
+        "settings.base_url": "URL base",
+        "settings.base_url_placeholder": "http://localhost:11434",
+        "settings.api_key": "Clave API",
+        "settings.api_key_placeholder": "Token Bearer (opcional)",
+        "settings.api_key_help": "Almacenada en texto plano en ~/Library/Application Support/photo-snail/settings.json (0600). Defina PHOTO_SNAIL_OLLAMA_API_KEY en su entorno para no persistirla.",
+        "settings.advanced_headers": "Avanzado: encabezados personalizados",
+        "settings.advanced_headers_help": "Para proxies con auth no-Bearer (Basic, X-API-Key, etc.). Los encabezados anulan la clave API si ambos definen Authorization.",
+        "settings.header_name": "Nombre del encabezado",
+        "settings.header_value": "Valor",
+        "settings.prompt_changed": "Prompt modificado \u{2014} la versi\u{00F3}n del centinela se incrementar\u{00E1} al guardar para distinguir resultados nuevos de antiguos.",
+        "settings.test_ok": "OK",
+        "settings.invalid_url": "URL base inv\u{00E1}lida",
+        "settings.invalid_url_save": "URL base inv\u{00E1}lida \u{2014} no guardada",
+
+        // Requeue dialog
+        "dialog.requeue_title": "\u{00BF}Reprocesar fotos anteriores?",
+        "dialog.requeue_description": "La centinela fue incrementada. Seleccione qu\u{00E9} grupos de centinelas ya procesados desea reencolar.",
+        "dialog.no_previous_sentinels": "No se encontraron centinelas anteriores en la cola.",
+
+        // Confirmation dialogs
+        "dialog.clear_title": "\u{00BF}Borrar descripciones?",
+        "dialog.clear_message": "Esto elimina la descripci\u{00F3}n escrita por photo-snail de Photos.app y restablece cada fila a pendiente. Las fotos originales no se modifican. No se puede deshacer.",
+        "dialog.reprocess_title": "\u{00BF}Reprocesar?",
+        "dialog.reprocess_message": "Las fotos en cola ser\u{00E1}n procesadas en el pr\u{00F3}ximo inicio.",
+
+        // Empty states
+        "empty.nothing_tagged": "Nada etiquetado a\u{00FA}n",
+        "empty.everything_enumerated": "Todo est\u{00E1} enumerado",
+        "empty.no_pending": "Sin trabajo pendiente",
+        "empty.no_failures": "Sin fallos",
+        "empty.no_images": "No se encontraron im\u{00E1}genes en su biblioteca de Photos.",
+        "empty.run_batch": "Ejecute un lote para generar descripciones.",
+        "empty.every_photo_queued": "Cada foto tiene una fila en la cola. Nada por descubrir.",
+        "empty.no_pending_alt": "La cola no tiene trabajo pendiente.",
+        "empty.no_failed_assets": "Ning\u{00FA}n recurso ha terminado en estado fallido.",
+
+        // Status messages
+        "status.ready": "Listo",
+        "status.loading_library": "Cargando biblioteca\u{2026}",
+        "status.no_selection": "Sin selecci\u{00F3}n",
+        "status.running": "En ejecuci\u{00F3}n",
+        "status.batch": "Lote",
+        "status.preview_unavailable": "Vista previa no disponible",
+
+        // Inspector
+        "inspector.no_selection": "Sin selecci\u{00F3}n",
+        "inspector.select_photo": "Seleccione una foto en la cuadr\u{00ED}cula para inspeccionarla.",
+        "inspector.title": "Inspector",
+        "inspector.use_bulk_bar": "Use la barra de acciones masivas sobre la cuadr\u{00ED}cula para reprocesar, borrar, copiar etiquetas o exportar.",
+        "inspector.untouched_no_desc": "Sin tratar \u{2014} a\u{00FA}n sin descripci\u{00F3}n. Ejecute un lote para generar una.",
+        "inspector.no_description": "A\u{00FA}n sin descripci\u{00F3}n.",
+        "inspector.no_tags": "Sin etiquetas.",
+        "inspector.add_tag": "A\u{00F1}adir etiqueta\u{2026}",
+        "inspector.copied": "\u{00A1}Copiado!",
+        "inspector.copy_desc_help": "Copiar descripci\u{00F3}n al portapapeles",
+        "inspector.copy_tags_help": "Copiar etiquetas al portapapeles",
+        "inspector.no_processing_record": "Sin registro de procesamiento para este recurso.",
+        "inspector.no_vision_data": "Sin datos Vision registrados para esta fila (fila terminada pre-v1).",
+        "inspector.vision_runs_later": "La pre-pasada Vision se ejecuta al procesar la foto.",
+        "inspector.vision_nothing": "La pre-pasada Vision se ejecut\u{00F3} pero no encontr\u{00F3} nada estructurado.",
+        "inspector.no_queue_row": "Sin fila en la cola.",
+        "inspector.pre_v1": "\u{2014} (pre-v1 / sin registro)",
+
+        // Labels
+        "label.file": "Archivo",
+        "label.created": "Creado",
+        "label.modified": "Modificado",
+        "label.dimensions": "Dimensiones",
+        "label.type": "Tipo",
+        "label.favorite": "Favorito",
+        "label.location": "Ubicaci\u{00F3}n",
+        "label.albums": "\u{00C1}lbumes",
+        "label.asset_id": "ID del recurso",
+        "label.status": "Estado",
+        "label.model": "Modelo",
+        "label.sentinel": "Centinela",
+        "label.ran_at": "Ejecutado el",
+        "label.total": "Total",
+        "label.ollama": "Ollama",
+        "label.attempts": "Intentos",
+        "label.edited_at": "Editado el",
+        "label.error": "Error",
+        "label.classifications": "Clasificaciones",
+        "label.animals": "Animales",
+        "label.faces": "Rostros",
+        "label.ocr": "OCR",
+        "label.vision_time": "Tiempo Vision",
+        "label.last_completed": "\u{00DA}ltimo completado",
+        "label.expand_runner": "Expandir panel de ejecuci\u{00F3}n",
+        "label.collapse_runner": "Contraer panel de ejecuci\u{00F3}n",
+        "label.yes": "S\u{00ED}",
+        "label.no": "No",
+        "label.description_payload": "contenido de la descripci\u{00F3}n (lo que est\u{00E1} en Photos.app)",
+
+        // Log window
+        "log.detailed": "Registros detallados",
+        "log.detailed_help": "Mostrar todas las entradas incluyendo pasos del pipeline",
+        "log.clear_help": "Borrar todas las entradas del registro",
+
+        // Legend
+        "legend.status_badges": "Badges de estado",
+        "legend.tagged": "La foto tiene una descripci\u{00F3}n en Photos.app.",
+        "legend.pending": "En cola para procesamiento. Anillo animado durante el proceso.",
+        "legend.failed": "El procesamiento fall\u{00F3}. Reintente con Reprocesar en lote.",
+        "legend.untouched": "A\u{00FA}n no enumerado en la cola.",
+        "legend.keyboard_shortcuts": "Atajos de teclado",
+        "legend.search": "Buscar descripciones + etiquetas",
+        "legend.prev_next": "Foto anterior / siguiente",
+        "legend.preview": "Vista previa a pantalla completa",
+        "legend.edit": "Editar descripci\u{00F3}n",
+        "legend.save_edit": "Guardar edici\u{00F3}n",
+        "legend.select_all": "Seleccionar todo lo visible",
+        "legend.thumbs": "Miniaturas peque\u{00F1}as / medianas / grandes",
+        "legend.toggle_sel": "Alternar selecci\u{00F3}n",
+        "legend.range_sel": "Selecci\u{00F3}n por rango",
+        "legend.escape": "Borrar selecci\u{00F3}n / cerrar vista previa",
+        "legend.reprocess_sel": "Reprocesar selecci\u{00F3}n",
+        "legend.clear_sel": "Borrar descripciones de la selecci\u{00F3}n",
+
+        // Bulk actions help
+        "bulk.reprocess_help": "Reprocesar \u{2014} devolver estas fotos a la cola pendiente",
+        "bulk.clear_help": "Borrar descripci\u{00F3}n \u{2014} eliminar descripciones de photo-snail de Photos.app",
+        "bulk.export_help": "Exportar JSON \u{2014} guardar cada fila seleccionada en un archivo",
+        "bulk.deselect_help": "Deseleccionar todo",
+
+        // About
+        "about.description": "Herramienta local de etiquetado de fotos para macOS.\nGenera descripciones y etiquetas para su biblioteca de Photos usando Apple Vision y un LLM local, completamente en el dispositivo.",
+        "about.author": "por Laurent Chouinard",
+        "about.license": "Licencia MIT",
+        "about.github": "GitHub",
+
+        // Language change flow
+        "lang.confirm_title": "\u{00BF}Cambiar idioma de la app?",
+        "lang.confirm_change": "Cambiar",
+        "lang.prompt_title": "\u{00BF}Cambiar tambi\u{00E9}n el idioma del prompt IA?",
+        "lang.prompt_message": "Esto actualizar\u{00E1} el prompt para generar descripciones en el nuevo idioma e incrementar\u{00E1} la versi\u{00F3}n del centinela.",
+        "lang.translate_title": "\u{00BF}Traducir descripciones existentes?",
+        "lang.translate_message": "Esto pondr\u{00E1} en cola todas las fotos ya procesadas para traducci\u{00F3}n al nuevo idioma usando el modelo IA. La traducci\u{00F3}n es solo texto y mucho m\u{00E1}s r\u{00E1}pida que reprocesar.",
+        "lang.translate": "Traducir",
+    ]
+
+    // MARK: - German
+
+    private static let de: [String: String] = [
+        // Buttons
+        "button.close": "Schlie\u{00DF}en",
+        "button.save": "Sichern",
+        "button.cancel": "Abbrechen",
+        "button.skip": "\u{00DC}berspringen",
+        "button.clear": "L\u{00F6}schen",
+        "button.add": "Hinzuf\u{00FC}gen",
+        "button.revert": "Zur\u{00FC}cksetzen",
+        "button.deselect": "Auswahl aufheben",
+        "button.export": "Exportieren",
+        "button.reprocess": "Erneut verarbeiten",
+        "button.start_editing": "Bearbeiten",
+        "button.reset_to_default": "Standard wiederherstellen",
+        "button.refresh_model_list": "Modellliste aktualisieren",
+        "button.test_connection": "Verbindung testen",
+        "button.add_header": "Header hinzuf\u{00FC}gen",
+        "button.requeue_selected": "Ausgew\u{00E4}hlte erneut einreihen",
+        "button.clear_descriptions": "Beschreibungen l\u{00F6}schen",
+        "button.about": "\u{00DC}ber Photo Snail",
+
+        // Section headers
+        "section.library": "Mediathek",
+        "section.model": "Modell",
+        "section.prompt": "Prompt",
+        "section.sentinel": "Sentinel",
+        "section.ollama_connection": "Ollama-Verbindung",
+        "section.identity": "Identit\u{00E4}t",
+        "section.description": "Beschreibung",
+        "section.tags": "Tags",
+        "section.processing": "Verarbeitung",
+        "section.vision": "Vision",
+        "section.developer": "Entwickler",
+        "section.active_filters": "Aktive Filter",
+        "section.popular_tags": "Beliebte Tags",
+
+        // Filters
+        "filter.all": "Alle",
+        "filter.tagged": "Getaggt",
+        "filter.untouched": "Unber\u{00FC}hrt",
+        "filter.pending": "Ausstehend",
+        "filter.failed": "Fehlgeschlagen",
+
+        // Sort orders
+        "sort.date_created_desc": "Erstelldatum (neueste)",
+        "sort.date_created_asc": "Erstelldatum (\u{00E4}lteste)",
+        "sort.date_processed_desc": "Verarbeitungsdatum (neueste)",
+        "sort.date_processed_asc": "Verarbeitungsdatum (\u{00E4}lteste)",
+
+        // Thumbnail sizes
+        "thumbnail.small": "Klein",
+        "thumbnail.medium": "Mittel",
+        "thumbnail.large": "Gro\u{00DF}",
+
+        // Toolbar
+        "toolbar.sort": "Sortieren",
+        "toolbar.sort_help": "Sortierreihenfolge",
+        "toolbar.thumbnail_size": "Vorschaugr\u{00F6}\u{00DF}e",
+        "toolbar.thumbnail_size_help": "Vorschaugr\u{00F6}\u{00DF}e",
+        "toolbar.legend": "Legende",
+        "toolbar.legend_help": "Tastaturk\u{00FC}rzel + Status-Badge-Legende",
+        "toolbar.logs": "Protokolle",
+        "toolbar.logs_help": "Verarbeitungsprotokoll",
+        "toolbar.settings": "Einstellungen",
+        "toolbar.settings_help": "Modell, Sentinel, Ollama-Verbindung",
+
+        // Settings sheet
+        "settings.title": "Einstellungen",
+        "settings.changes_apply": "\u{00C4}nderungen gelten beim n\u{00E4}chsten Start",
+        "settings.loading_models": "Lade Modelle von Ollama\u{2026}",
+        "settings.model_placeholder": "Modellname (z.B. gemma4:31b)",
+        "settings.model_not_in_ollama": "(aktuell, nicht in Ollama)",
+        "settings.sentinel_unchanged": "Gleiche Modellfamilie \u{2014} Sentinel unver\u{00E4}ndert.",
+        "settings.sentinel_family_changed": "Dieses Modell geh\u{00F6}rt zu einer anderen Familie. W\u{00E4}hlen Sie:",
+        "settings.keep_current": "Aktuellen beibehalten:",
+        "settings.use_new": "Neuen verwenden:",
+        "settings.custom": "Benutzerdefiniert\u{2026}",
+        "settings.sentinel_placeholder": "ai:familie-v1",
+        "settings.base_url": "Basis-URL",
+        "settings.base_url_placeholder": "http://localhost:11434",
+        "settings.api_key": "API-Schl\u{00FC}ssel",
+        "settings.api_key_placeholder": "Bearer-Token (optional)",
+        "settings.api_key_help": "Wird als Klartext in ~/Library/Application Support/photo-snail/settings.json (0600) gespeichert. Setzen Sie PHOTO_SNAIL_OLLAMA_API_KEY in Ihrer Umgebung, um die Speicherung zu vermeiden.",
+        "settings.advanced_headers": "Erweitert: benutzerdefinierte Header",
+        "settings.advanced_headers_help": "F\u{00FC}r Proxys mit Nicht-Bearer-Auth (Basic, X-API-Key, etc.). Header \u{00FC}berschreiben den API-Schl\u{00FC}ssel, wenn beide Authorization setzen.",
+        "settings.header_name": "Header-Name",
+        "settings.header_value": "Wert",
+        "settings.prompt_changed": "Prompt ge\u{00E4}ndert \u{2014} die Sentinel-Version wird beim Speichern erh\u{00F6}ht, damit neue Ergebnisse von alten unterscheidbar sind.",
+        "settings.test_ok": "OK",
+        "settings.invalid_url": "Ung\u{00FC}ltige Basis-URL",
+        "settings.invalid_url_save": "Ung\u{00FC}ltige Basis-URL \u{2014} nicht gespeichert",
+
+        // Requeue dialog
+        "dialog.requeue_title": "Vorherige Fotos erneut verarbeiten?",
+        "dialog.requeue_description": "Der Sentinel wurde erh\u{00F6}ht. W\u{00E4}hlen Sie, welche bereits verarbeiteten Sentinel-Gruppen Sie erneut einreihen m\u{00F6}chten.",
+        "dialog.no_previous_sentinels": "Keine vorherigen Sentinels in der Warteschlange gefunden.",
+
+        // Confirmation dialogs
+        "dialog.clear_title": "Beschreibungen l\u{00F6}schen?",
+        "dialog.clear_message": "Dies entfernt die von photo-snail geschriebene Beschreibung aus Photos.app und setzt jede Zeile auf ausstehend zur\u{00FC}ck. Originalfotos werden nicht ver\u{00E4}ndert. Dies kann nicht r\u{00FC}ckg\u{00E4}ngig gemacht werden.",
+        "dialog.reprocess_title": "Erneut verarbeiten?",
+        "dialog.reprocess_message": "Fotos in der Warteschlange werden beim n\u{00E4}chsten Start verarbeitet.",
+
+        // Empty states
+        "empty.nothing_tagged": "Noch nichts getaggt",
+        "empty.everything_enumerated": "Alles ist aufgelistet",
+        "empty.no_pending": "Keine ausstehende Arbeit",
+        "empty.no_failures": "Keine Fehler",
+        "empty.no_images": "Keine Bilder in Ihrer Fotomediathek gefunden.",
+        "empty.run_batch": "Starten Sie einen Stapel, um Beschreibungen zu generieren.",
+        "empty.every_photo_queued": "Jedes Foto hat eine Zeile in der Warteschlange. Nichts zu entdecken.",
+        "empty.no_pending_alt": "Die Warteschlange hat keine ausstehende Arbeit.",
+        "empty.no_failed_assets": "Kein Asset ist im fehlgeschlagenen Zustand.",
+
+        // Status messages
+        "status.ready": "Bereit",
+        "status.loading_library": "Lade Mediathek\u{2026}",
+        "status.no_selection": "Keine Auswahl",
+        "status.running": "L\u{00E4}uft",
+        "status.batch": "Stapel",
+        "status.preview_unavailable": "Vorschau nicht verf\u{00FC}gbar",
+
+        // Inspector
+        "inspector.no_selection": "Keine Auswahl",
+        "inspector.select_photo": "W\u{00E4}hlen Sie ein Foto im Raster aus, um es zu inspizieren.",
+        "inspector.title": "Inspektor",
+        "inspector.use_bulk_bar": "Verwenden Sie die Massenaktionsleiste \u{00FC}ber dem Raster zum Erneut-Verarbeiten, L\u{00F6}schen, Kopieren von Tags oder Exportieren.",
+        "inspector.untouched_no_desc": "Unber\u{00FC}hrt \u{2014} noch keine Beschreibung. Starten Sie einen Stapel, um eine zu generieren.",
+        "inspector.no_description": "Noch keine Beschreibung.",
+        "inspector.no_tags": "Keine Tags.",
+        "inspector.add_tag": "Tag hinzuf\u{00FC}gen\u{2026}",
+        "inspector.copied": "Kopiert!",
+        "inspector.copy_desc_help": "Beschreibung in die Zwischenablage kopieren",
+        "inspector.copy_tags_help": "Tags in die Zwischenablage kopieren",
+        "inspector.no_processing_record": "Kein Verarbeitungsdatensatz f\u{00FC}r dieses Asset.",
+        "inspector.no_vision_data": "Keine Vision-Daten f\u{00FC}r diese Zeile aufgezeichnet (pre-v1 fertige Zeile).",
+        "inspector.vision_runs_later": "Der Vision-Vorlauf wird bei der Verarbeitung des Fotos ausgef\u{00FC}hrt.",
+        "inspector.vision_nothing": "Der Vision-Vorlauf wurde ausgef\u{00FC}hrt, hat aber nichts Strukturiertes gefunden.",
+        "inspector.no_queue_row": "Keine Zeile in der Warteschlange.",
+        "inspector.pre_v1": "\u{2014} (pre-v1 / nicht aufgezeichnet)",
+
+        // Labels
+        "label.file": "Datei",
+        "label.created": "Erstellt",
+        "label.modified": "Ge\u{00E4}ndert",
+        "label.dimensions": "Abmessungen",
+        "label.type": "Typ",
+        "label.favorite": "Favorit",
+        "label.location": "Standort",
+        "label.albums": "Alben",
+        "label.asset_id": "Asset-ID",
+        "label.status": "Status",
+        "label.model": "Modell",
+        "label.sentinel": "Sentinel",
+        "label.ran_at": "Ausgef\u{00FC}hrt am",
+        "label.total": "Gesamt",
+        "label.ollama": "Ollama",
+        "label.attempts": "Versuche",
+        "label.edited_at": "Bearbeitet am",
+        "label.error": "Fehler",
+        "label.classifications": "Klassifizierungen",
+        "label.animals": "Tiere",
+        "label.faces": "Gesichter",
+        "label.ocr": "OCR",
+        "label.vision_time": "Vision-Zeit",
+        "label.last_completed": "Zuletzt abgeschlossen",
+        "label.expand_runner": "Runner-Panel ausklappen",
+        "label.collapse_runner": "Runner-Panel einklappen",
+        "label.yes": "Ja",
+        "label.no": "Nein",
+        "label.description_payload": "Beschreibungsinhalt (was in Photos.app steht)",
+
+        // Log window
+        "log.detailed": "Detaillierte Protokolle",
+        "log.detailed_help": "Alle Eintr\u{00E4}ge einschlie\u{00DF}lich Pipeline-Schritte anzeigen",
+        "log.clear_help": "Alle Protokolleintr\u{00E4}ge l\u{00F6}schen",
+
+        // Legend
+        "legend.status_badges": "Status-Badges",
+        "legend.tagged": "Das Foto hat eine Beschreibung in Photos.app.",
+        "legend.pending": "In der Warteschlange. Animierter Ring w\u{00E4}hrend der Verarbeitung.",
+        "legend.failed": "Verarbeitung fehlgeschlagen. Erneut versuchen \u{00FC}ber Massen-Verarbeitung.",
+        "legend.untouched": "Noch nicht in die Warteschlange aufgenommen.",
+        "legend.keyboard_shortcuts": "Tastaturk\u{00FC}rzel",
+        "legend.search": "Beschreibungen + Tags suchen",
+        "legend.prev_next": "Vorheriges / n\u{00E4}chstes Foto",
+        "legend.preview": "Vollbildvorschau",
+        "legend.edit": "Beschreibung bearbeiten",
+        "legend.save_edit": "Bearbeitung speichern",
+        "legend.select_all": "Alle sichtbaren ausw\u{00E4}hlen",
+        "legend.thumbs": "Kleine / mittlere / gro\u{00DF}e Vorschaubilder",
+        "legend.toggle_sel": "Auswahl umschalten",
+        "legend.range_sel": "Bereichsauswahl",
+        "legend.escape": "Auswahl aufheben / Vorschau schlie\u{00DF}en",
+        "legend.reprocess_sel": "Auswahl erneut verarbeiten",
+        "legend.clear_sel": "Beschreibungen der Auswahl l\u{00F6}schen",
+
+        // Bulk actions help
+        "bulk.reprocess_help": "Erneut verarbeiten \u{2014} diese Fotos zur\u{00FC}ck in die Warteschlange",
+        "bulk.clear_help": "Beschreibung l\u{00F6}schen \u{2014} photo-snail-Beschreibungen aus Photos.app entfernen",
+        "bulk.export_help": "JSON exportieren \u{2014} jede ausgew\u{00E4}hlte Zeile in eine Datei speichern",
+        "bulk.deselect_help": "Alle abw\u{00E4}hlen",
+
+        // About
+        "about.description": "Lokales Foto-Tagging-Tool f\u{00FC}r macOS.\nErstellt Beschreibungen und Tags f\u{00FC}r Ihre Fotomediathek mit Apple Vision und einem lokalen LLM, vollst\u{00E4}ndig auf dem Ger\u{00E4}t.",
+        "about.author": "von Laurent Chouinard",
+        "about.license": "MIT-Lizenz",
+        "about.github": "GitHub",
+
+        // Language change flow
+        "lang.confirm_title": "App-Sprache \u{00E4}ndern?",
+        "lang.confirm_change": "\u{00C4}ndern",
+        "lang.prompt_title": "Auch die KI-Prompt-Sprache \u{00E4}ndern?",
+        "lang.prompt_message": "Dies aktualisiert den Prompt, um Beschreibungen in der neuen Sprache zu generieren, und erh\u{00F6}ht die Sentinel-Version.",
+        "lang.translate_title": "Bestehende Beschreibungen \u{00FC}bersetzen?",
+        "lang.translate_message": "Dies reiht alle bereits verarbeiteten Fotos zur \u{00DC}bersetzung in die neue Sprache ein. Die \u{00DC}bersetzung ist nur Text und viel schneller als erneutes Verarbeiten.",
+        "lang.translate": "\u{00DC}bersetzen",
+    ]
+
+    // MARK: - Portuguese
+
+    private static let pt: [String: String] = [
+        // Buttons
+        "button.close": "Fechar",
+        "button.save": "Salvar",
+        "button.cancel": "Cancelar",
+        "button.skip": "Pular",
+        "button.clear": "Limpar",
+        "button.add": "Adicionar",
+        "button.revert": "Reverter",
+        "button.deselect": "Desmarcar",
+        "button.export": "Exportar",
+        "button.reprocess": "Reprocessar",
+        "button.start_editing": "Editar",
+        "button.reset_to_default": "Restaurar padr\u{00E3}o",
+        "button.refresh_model_list": "Atualizar lista",
+        "button.test_connection": "Testar conex\u{00E3}o",
+        "button.add_header": "Adicionar cabe\u{00E7}alho",
+        "button.requeue_selected": "Reenfileirar sele\u{00E7}\u{00E3}o",
+        "button.clear_descriptions": "Limpar descri\u{00E7}\u{00F5}es",
+        "button.about": "Sobre o Photo Snail",
+
+        // Section headers
+        "section.library": "Biblioteca",
+        "section.model": "Modelo",
+        "section.prompt": "Prompt",
+        "section.sentinel": "Sentinela",
+        "section.ollama_connection": "Conex\u{00E3}o Ollama",
+        "section.identity": "Identidade",
+        "section.description": "Descri\u{00E7}\u{00E3}o",
+        "section.tags": "Tags",
+        "section.processing": "Processamento",
+        "section.vision": "Vision",
+        "section.developer": "Desenvolvedor",
+        "section.active_filters": "Filtros ativos",
+        "section.popular_tags": "Tags populares",
+
+        // Filters
+        "filter.all": "Tudo",
+        "filter.tagged": "Marcado",
+        "filter.untouched": "N\u{00E3}o processado",
+        "filter.pending": "Pendente",
+        "filter.failed": "Falhou",
+
+        // Sort orders
+        "sort.date_created_desc": "Data de cria\u{00E7}\u{00E3}o (mais recente)",
+        "sort.date_created_asc": "Data de cria\u{00E7}\u{00E3}o (mais antigo)",
+        "sort.date_processed_desc": "Data de processamento (mais recente)",
+        "sort.date_processed_asc": "Data de processamento (mais antigo)",
+
+        // Thumbnail sizes
+        "thumbnail.small": "Pequeno",
+        "thumbnail.medium": "M\u{00E9}dio",
+        "thumbnail.large": "Grande",
+
+        // Toolbar
+        "toolbar.sort": "Ordenar",
+        "toolbar.sort_help": "Ordem",
+        "toolbar.thumbnail_size": "Tamanho das miniaturas",
+        "toolbar.thumbnail_size_help": "Tamanho das miniaturas",
+        "toolbar.legend": "Legenda",
+        "toolbar.legend_help": "Atalhos de teclado + legenda de badges",
+        "toolbar.logs": "Registros",
+        "toolbar.logs_help": "Registro de processamento",
+        "toolbar.settings": "Configura\u{00E7}\u{00F5}es",
+        "toolbar.settings_help": "Modelo, sentinela, conex\u{00E3}o Ollama",
+
+        // Settings sheet
+        "settings.title": "Configura\u{00E7}\u{00F5}es",
+        "settings.changes_apply": "As altera\u{00E7}\u{00F5}es se aplicam no pr\u{00F3}ximo in\u{00ED}cio",
+        "settings.loading_models": "Carregando modelos do Ollama\u{2026}",
+        "settings.model_placeholder": "Nome do modelo (ex. gemma4:31b)",
+        "settings.model_not_in_ollama": "(atual, n\u{00E3}o no Ollama)",
+        "settings.sentinel_unchanged": "Mesma fam\u{00ED}lia de modelo \u{2014} sentinela inalterada.",
+        "settings.sentinel_family_changed": "Este modelo \u{00E9} de uma fam\u{00ED}lia diferente. Escolha uma op\u{00E7}\u{00E3}o:",
+        "settings.keep_current": "Manter atual:",
+        "settings.use_new": "Usar nova:",
+        "settings.custom": "Personalizada\u{2026}",
+        "settings.sentinel_placeholder": "ai:familia-v1",
+        "settings.base_url": "URL base",
+        "settings.base_url_placeholder": "http://localhost:11434",
+        "settings.api_key": "Chave API",
+        "settings.api_key_placeholder": "Token Bearer (opcional)",
+        "settings.api_key_help": "Armazenada em texto simples em ~/Library/Application Support/photo-snail/settings.json (0600). Defina PHOTO_SNAIL_OLLAMA_API_KEY no seu ambiente para evitar persist\u{00EA}ncia.",
+        "settings.advanced_headers": "Avan\u{00E7}ado: cabe\u{00E7}alhos personalizados",
+        "settings.advanced_headers_help": "Para proxies com auth n\u{00E3}o-Bearer (Basic, X-API-Key, etc.). Os cabe\u{00E7}alhos substituem a chave API se ambos definirem Authorization.",
+        "settings.header_name": "Nome do cabe\u{00E7}alho",
+        "settings.header_value": "Valor",
+        "settings.prompt_changed": "Prompt alterado \u{2014} a vers\u{00E3}o da sentinela ser\u{00E1} incrementada ao salvar para distinguir resultados novos dos antigos.",
+        "settings.test_ok": "OK",
+        "settings.invalid_url": "URL base inv\u{00E1}lida",
+        "settings.invalid_url_save": "URL base inv\u{00E1}lida \u{2014} n\u{00E3}o salva",
+
+        // Requeue dialog
+        "dialog.requeue_title": "Reprocessar fotos anteriores?",
+        "dialog.requeue_description": "A sentinela foi incrementada. Selecione quais grupos de sentinelas j\u{00E1} processados deseja reenfileirar.",
+        "dialog.no_previous_sentinels": "Nenhuma sentinela anterior encontrada na fila.",
+
+        // Confirmation dialogs
+        "dialog.clear_title": "Limpar descri\u{00E7}\u{00F5}es?",
+        "dialog.clear_message": "Isto remove a descri\u{00E7}\u{00E3}o escrita pelo photo-snail do Photos.app e redefine cada linha para pendente. As fotos originais n\u{00E3}o s\u{00E3}o modificadas. N\u{00E3}o pode ser desfeito.",
+        "dialog.reprocess_title": "Reprocessar?",
+        "dialog.reprocess_message": "As fotos na fila ser\u{00E3}o processadas no pr\u{00F3}ximo in\u{00ED}cio.",
+
+        // Empty states
+        "empty.nothing_tagged": "Nada marcado ainda",
+        "empty.everything_enumerated": "Tudo est\u{00E1} enumerado",
+        "empty.no_pending": "Sem trabalho pendente",
+        "empty.no_failures": "Sem falhas",
+        "empty.no_images": "Nenhuma imagem encontrada na sua biblioteca do Photos.",
+        "empty.run_batch": "Execute um lote para gerar descri\u{00E7}\u{00F5}es.",
+        "empty.every_photo_queued": "Cada foto tem uma linha na fila. Nada a descobrir.",
+        "empty.no_pending_alt": "A fila n\u{00E3}o tem trabalho pendente.",
+        "empty.no_failed_assets": "Nenhum recurso terminou em estado de falha.",
+
+        // Status messages
+        "status.ready": "Pronto",
+        "status.loading_library": "Carregando biblioteca\u{2026}",
+        "status.no_selection": "Sem sele\u{00E7}\u{00E3}o",
+        "status.running": "Em execu\u{00E7}\u{00E3}o",
+        "status.batch": "Lote",
+        "status.preview_unavailable": "Pr\u{00E9}-visualiza\u{00E7}\u{00E3}o indispon\u{00ED}vel",
+
+        // Inspector
+        "inspector.no_selection": "Sem sele\u{00E7}\u{00E3}o",
+        "inspector.select_photo": "Selecione uma foto na grade para inspecion\u{00E1}-la.",
+        "inspector.title": "Inspetor",
+        "inspector.use_bulk_bar": "Use a barra de a\u{00E7}\u{00F5}es em massa acima da grade para reprocessar, limpar, copiar tags ou exportar.",
+        "inspector.untouched_no_desc": "N\u{00E3}o processado \u{2014} sem descri\u{00E7}\u{00E3}o ainda. Execute um lote para gerar uma.",
+        "inspector.no_description": "Sem descri\u{00E7}\u{00E3}o ainda.",
+        "inspector.no_tags": "Sem tags.",
+        "inspector.add_tag": "Adicionar tag\u{2026}",
+        "inspector.copied": "Copiado!",
+        "inspector.copy_desc_help": "Copiar descri\u{00E7}\u{00E3}o para a \u{00E1}rea de transfer\u{00EA}ncia",
+        "inspector.copy_tags_help": "Copiar tags para a \u{00E1}rea de transfer\u{00EA}ncia",
+        "inspector.no_processing_record": "Nenhum registro de processamento para este recurso.",
+        "inspector.no_vision_data": "Nenhum dado Vision registrado para esta linha (linha conclu\u{00ED}da pre-v1).",
+        "inspector.vision_runs_later": "A pr\u{00E9}-passagem Vision \u{00E9} executada quando a foto \u{00E9} processada.",
+        "inspector.vision_nothing": "A pr\u{00E9}-passagem Vision foi executada mas n\u{00E3}o encontrou nada estruturado.",
+        "inspector.no_queue_row": "Sem linha na fila.",
+        "inspector.pre_v1": "\u{2014} (pre-v1 / n\u{00E3}o registrado)",
+
+        // Labels
+        "label.file": "Arquivo",
+        "label.created": "Criado",
+        "label.modified": "Modificado",
+        "label.dimensions": "Dimens\u{00F5}es",
+        "label.type": "Tipo",
+        "label.favorite": "Favorito",
+        "label.location": "Localiza\u{00E7}\u{00E3}o",
+        "label.albums": "\u{00C1}lbuns",
+        "label.asset_id": "ID do recurso",
+        "label.status": "Status",
+        "label.model": "Modelo",
+        "label.sentinel": "Sentinela",
+        "label.ran_at": "Executado em",
+        "label.total": "Total",
+        "label.ollama": "Ollama",
+        "label.attempts": "Tentativas",
+        "label.edited_at": "Editado em",
+        "label.error": "Erro",
+        "label.classifications": "Classifica\u{00E7}\u{00F5}es",
+        "label.animals": "Animais",
+        "label.faces": "Rostos",
+        "label.ocr": "OCR",
+        "label.vision_time": "Tempo Vision",
+        "label.last_completed": "\u{00DA}ltimo conclu\u{00ED}do",
+        "label.expand_runner": "Expandir painel de execu\u{00E7}\u{00E3}o",
+        "label.collapse_runner": "Recolher painel de execu\u{00E7}\u{00E3}o",
+        "label.yes": "Sim",
+        "label.no": "N\u{00E3}o",
+        "label.description_payload": "conte\u{00FA}do da descri\u{00E7}\u{00E3}o (o que est\u{00E1} no Photos.app)",
+
+        // Log window
+        "log.detailed": "Registros detalhados",
+        "log.detailed_help": "Mostrar todas as entradas incluindo etapas do pipeline",
+        "log.clear_help": "Limpar todas as entradas do registro",
+
+        // Legend
+        "legend.status_badges": "Badges de status",
+        "legend.tagged": "A foto tem uma descri\u{00E7}\u{00E3}o no Photos.app.",
+        "legend.pending": "Na fila para processamento. Anel animado durante o processo.",
+        "legend.failed": "O processamento falhou. Tente novamente com Reprocessar em lote.",
+        "legend.untouched": "Ainda n\u{00E3}o enumerado na fila.",
+        "legend.keyboard_shortcuts": "Atalhos de teclado",
+        "legend.search": "Pesquisar descri\u{00E7}\u{00F5}es + tags",
+        "legend.prev_next": "Foto anterior / pr\u{00F3}xima",
+        "legend.preview": "Pr\u{00E9}-visualiza\u{00E7}\u{00E3}o em tela cheia",
+        "legend.edit": "Editar descri\u{00E7}\u{00E3}o",
+        "legend.save_edit": "Salvar edi\u{00E7}\u{00E3}o",
+        "legend.select_all": "Selecionar todos vis\u{00ED}veis",
+        "legend.thumbs": "Miniaturas pequenas / m\u{00E9}dias / grandes",
+        "legend.toggle_sel": "Alternar sele\u{00E7}\u{00E3}o",
+        "legend.range_sel": "Sele\u{00E7}\u{00E3}o por intervalo",
+        "legend.escape": "Limpar sele\u{00E7}\u{00E3}o / fechar pr\u{00E9}-visualiza\u{00E7}\u{00E3}o",
+        "legend.reprocess_sel": "Reprocessar sele\u{00E7}\u{00E3}o",
+        "legend.clear_sel": "Limpar descri\u{00E7}\u{00F5}es da sele\u{00E7}\u{00E3}o",
+
+        // Bulk actions help
+        "bulk.reprocess_help": "Reprocessar \u{2014} devolver estas fotos para a fila pendente",
+        "bulk.clear_help": "Limpar descri\u{00E7}\u{00E3}o \u{2014} remover descri\u{00E7}\u{00F5}es do photo-snail do Photos.app",
+        "bulk.export_help": "Exportar JSON \u{2014} salvar cada linha selecionada em um arquivo",
+        "bulk.deselect_help": "Desmarcar tudo",
+
+        // About
+        "about.description": "Ferramenta local de marca\u{00E7}\u{00E3}o de fotos para macOS.\nGera descri\u{00E7}\u{00F5}es e tags para sua biblioteca do Photos usando Apple Vision e um LLM local, totalmente no dispositivo.",
+        "about.author": "por Laurent Chouinard",
+        "about.license": "Licen\u{00E7}a MIT",
+        "about.github": "GitHub",
+
+        // Language change flow
+        "lang.confirm_title": "Mudar idioma do app?",
+        "lang.confirm_change": "Mudar",
+        "lang.prompt_title": "Mudar tamb\u{00E9}m o idioma do prompt IA?",
+        "lang.prompt_message": "Isto atualizar\u{00E1} o prompt para gerar descri\u{00E7}\u{00F5}es no novo idioma e incrementar\u{00E1} a vers\u{00E3}o da sentinela.",
+        "lang.translate_title": "Traduzir descri\u{00E7}\u{00F5}es existentes?",
+        "lang.translate_message": "Isto colocar\u{00E1} na fila todas as fotos j\u{00E1} processadas para tradu\u{00E7}\u{00E3}o no novo idioma usando o modelo IA. A tradu\u{00E7}\u{00E3}o \u{00E9} somente texto e muito mais r\u{00E1}pida que reprocessar.",
+        "lang.translate": "Traduzir",
+    ]
+
+    // MARK: - Japanese
+
+    private static let ja: [String: String] = [
+        // Buttons
+        "button.close": "\u{9589}\u{3058}\u{308B}",
+        "button.save": "\u{4FDD}\u{5B58}",
+        "button.cancel": "\u{30AD}\u{30E3}\u{30F3}\u{30BB}\u{30EB}",
+        "button.skip": "\u{30B9}\u{30AD}\u{30C3}\u{30D7}",
+        "button.clear": "\u{30AF}\u{30EA}\u{30A2}",
+        "button.add": "\u{8FFD}\u{52A0}",
+        "button.revert": "\u{5143}\u{306B}\u{623B}\u{3059}",
+        "button.deselect": "\u{9078}\u{629E}\u{89E3}\u{9664}",
+        "button.export": "\u{30A8}\u{30AF}\u{30B9}\u{30DD}\u{30FC}\u{30C8}",
+        "button.reprocess": "\u{518D}\u{51E6}\u{7406}",
+        "button.start_editing": "\u{7DE8}\u{96C6}\u{958B}\u{59CB}",
+        "button.reset_to_default": "\u{30C7}\u{30D5}\u{30A9}\u{30EB}\u{30C8}\u{306B}\u{623B}\u{3059}",
+        "button.refresh_model_list": "\u{30E2}\u{30C7}\u{30EB}\u{30EA}\u{30B9}\u{30C8}\u{3092}\u{66F4}\u{65B0}",
+        "button.test_connection": "\u{63A5}\u{7D9A}\u{30C6}\u{30B9}\u{30C8}",
+        "button.add_header": "\u{30D8}\u{30C3}\u{30C0}\u{30FC}\u{3092}\u{8FFD}\u{52A0}",
+        "button.requeue_selected": "\u{9078}\u{629E}\u{3092}\u{518D}\u{30AD}\u{30E5}\u{30FC}",
+        "button.clear_descriptions": "\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30A2}",
+        "button.about": "Photo Snail\u{306B}\u{3064}\u{3044}\u{3066}",
+
+        // Section headers
+        "section.library": "\u{30E9}\u{30A4}\u{30D6}\u{30E9}\u{30EA}",
+        "section.model": "\u{30E2}\u{30C7}\u{30EB}",
+        "section.prompt": "\u{30D7}\u{30ED}\u{30F3}\u{30D7}\u{30C8}",
+        "section.sentinel": "\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}",
+        "section.ollama_connection": "Ollama\u{63A5}\u{7D9A}",
+        "section.identity": "\u{8B58}\u{5225}\u{60C5}\u{5831}",
+        "section.description": "\u{8AAC}\u{660E}",
+        "section.tags": "\u{30BF}\u{30B0}",
+        "section.processing": "\u{51E6}\u{7406}",
+        "section.vision": "Vision",
+        "section.developer": "\u{958B}\u{767A}\u{8005}",
+        "section.active_filters": "\u{6709}\u{52B9}\u{306A}\u{30D5}\u{30A3}\u{30EB}\u{30BF}\u{30FC}",
+        "section.popular_tags": "\u{4EBA}\u{6C17}\u{306E}\u{30BF}\u{30B0}",
+
+        // Filters
+        "filter.all": "\u{3059}\u{3079}\u{3066}",
+        "filter.tagged": "\u{30BF}\u{30B0}\u{4ED8}\u{304D}",
+        "filter.untouched": "\u{672A}\u{51E6}\u{7406}",
+        "filter.pending": "\u{4FDD}\u{7559}\u{4E2D}",
+        "filter.failed": "\u{5931}\u{6557}",
+
+        // Sort orders
+        "sort.date_created_desc": "\u{4F5C}\u{6210}\u{65E5}\u{FF08}\u{65B0}\u{3057}\u{3044}\u{9806}\u{FF09}",
+        "sort.date_created_asc": "\u{4F5C}\u{6210}\u{65E5}\u{FF08}\u{53E4}\u{3044}\u{9806}\u{FF09}",
+        "sort.date_processed_desc": "\u{51E6}\u{7406}\u{65E5}\u{FF08}\u{65B0}\u{3057}\u{3044}\u{9806}\u{FF09}",
+        "sort.date_processed_asc": "\u{51E6}\u{7406}\u{65E5}\u{FF08}\u{53E4}\u{3044}\u{9806}\u{FF09}",
+
+        // Thumbnail sizes
+        "thumbnail.small": "\u{5C0F}",
+        "thumbnail.medium": "\u{4E2D}",
+        "thumbnail.large": "\u{5927}",
+
+        // Toolbar
+        "toolbar.sort": "\u{4E26}\u{3073}\u{66FF}\u{3048}",
+        "toolbar.sort_help": "\u{4E26}\u{3073}\u{9806}",
+        "toolbar.thumbnail_size": "\u{30B5}\u{30E0}\u{30CD}\u{30A4}\u{30EB}\u{30B5}\u{30A4}\u{30BA}",
+        "toolbar.thumbnail_size_help": "\u{30B5}\u{30E0}\u{30CD}\u{30A4}\u{30EB}\u{30B5}\u{30A4}\u{30BA}",
+        "toolbar.legend": "\u{51E1}\u{4F8B}",
+        "toolbar.legend_help": "\u{30AD}\u{30FC}\u{30DC}\u{30FC}\u{30C9}\u{30B7}\u{30E7}\u{30FC}\u{30C8}\u{30AB}\u{30C3}\u{30C8} + \u{30B9}\u{30C6}\u{30FC}\u{30BF}\u{30B9}\u{30D0}\u{30C3}\u{30B8}\u{306E}\u{51E1}\u{4F8B}",
+        "toolbar.logs": "\u{30ED}\u{30B0}",
+        "toolbar.logs_help": "\u{51E6}\u{7406}\u{30ED}\u{30B0}",
+        "toolbar.settings": "\u{8A2D}\u{5B9A}",
+        "toolbar.settings_help": "\u{30E2}\u{30C7}\u{30EB}\u{3001}\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}\u{3001}Ollama\u{63A5}\u{7D9A}",
+
+        // Settings sheet
+        "settings.title": "\u{8A2D}\u{5B9A}",
+        "settings.changes_apply": "\u{5909}\u{66F4}\u{306F}\u{6B21}\u{306E}\u{958B}\u{59CB}\u{6642}\u{306B}\u{9069}\u{7528}\u{3055}\u{308C}\u{307E}\u{3059}",
+        "settings.loading_models": "Ollama\u{304B}\u{3089}\u{30E2}\u{30C7}\u{30EB}\u{3092}\u{8AAD}\u{307F}\u{8FBC}\u{307F}\u{4E2D}\u{2026}",
+        "settings.model_placeholder": "\u{30E2}\u{30C7}\u{30EB}\u{540D}\u{FF08}\u{4F8B}: gemma4:31b\u{FF09}",
+        "settings.model_not_in_ollama": "\u{FF08}\u{73FE}\u{5728}\u{3001}Ollama\u{306B}\u{306A}\u{3057}\u{FF09}",
+        "settings.sentinel_unchanged": "\u{540C}\u{3058}\u{30E2}\u{30C7}\u{30EB}\u{30D5}\u{30A1}\u{30DF}\u{30EA}\u{30FC} \u{2014} \u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}\u{5909}\u{66F4}\u{306A}\u{3057}\u{3002}",
+        "settings.sentinel_family_changed": "\u{3053}\u{306E}\u{30E2}\u{30C7}\u{30EB}\u{306F}\u{73FE}\u{5728}\u{306E}\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}\u{3068}\u{7570}\u{306A}\u{308B}\u{30D5}\u{30A1}\u{30DF}\u{30EA}\u{30FC}\u{3067}\u{3059}\u{3002}\u{9078}\u{629E}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}:",
+        "settings.keep_current": "\u{73FE}\u{5728}\u{3092}\u{7DAD}\u{6301}:",
+        "settings.use_new": "\u{65B0}\u{3057}\u{3044}\u{3082}\u{306E}\u{3092}\u{4F7F}\u{7528}:",
+        "settings.custom": "\u{30AB}\u{30B9}\u{30BF}\u{30E0}\u{2026}",
+        "settings.sentinel_placeholder": "ai:family-v1",
+        "settings.base_url": "\u{30D9}\u{30FC}\u{30B9}URL",
+        "settings.base_url_placeholder": "http://localhost:11434",
+        "settings.api_key": "API\u{30AD}\u{30FC}",
+        "settings.api_key_placeholder": "Bearer\u{30C8}\u{30FC}\u{30AF}\u{30F3}\u{FF08}\u{4EFB}\u{610F}\u{FF09}",
+        "settings.api_key_help": "~/Library/Application Support/photo-snail/settings.json (0600)\u{306B}\u{30D7}\u{30EC}\u{30FC}\u{30F3}\u{30C6}\u{30AD}\u{30B9}\u{30C8}\u{3067}\u{4FDD}\u{5B58}\u{3055}\u{308C}\u{307E}\u{3059}\u{3002}\u{6C38}\u{7D9A}\u{5316}\u{3092}\u{907F}\u{3051}\u{308B}\u{306B}\u{306F}\u{74B0}\u{5883}\u{5909}\u{6570}PHOTO_SNAIL_OLLAMA_API_KEY\u{3092}\u{8A2D}\u{5B9A}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}",
+        "settings.advanced_headers": "\u{8A73}\u{7D30}: \u{30AB}\u{30B9}\u{30BF}\u{30E0}\u{30D8}\u{30C3}\u{30C0}\u{30FC}",
+        "settings.advanced_headers_help": "\u{975E}Bearer\u{8A8D}\u{8A3C}\u{3092}\u{4F7F}\u{7528}\u{3059}\u{308B}\u{30D7}\u{30ED}\u{30AD}\u{30B7}\u{7528}\u{FF08}Basic\u{3001}X-API-Key\u{306A}\u{3069}\u{FF09}\u{3002}\u{4E21}\u{65B9}\u{304C}Authorization\u{3092}\u{8A2D}\u{5B9A}\u{3057}\u{3066}\u{3044}\u{308B}\u{5834}\u{5408}\u{3001}\u{30D8}\u{30C3}\u{30C0}\u{30FC}\u{304C}API\u{30AD}\u{30FC}\u{3092}\u{4E0A}\u{66F8}\u{304D}\u{3057}\u{307E}\u{3059}\u{3002}",
+        "settings.header_name": "\u{30D8}\u{30C3}\u{30C0}\u{30FC}\u{540D}",
+        "settings.header_value": "\u{5024}",
+        "settings.prompt_changed": "\u{30D7}\u{30ED}\u{30F3}\u{30D7}\u{30C8}\u{304C}\u{5909}\u{66F4}\u{3055}\u{308C}\u{307E}\u{3057}\u{305F} \u{2014} \u{4FDD}\u{5B58}\u{6642}\u{306B}\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}\u{30D0}\u{30FC}\u{30B8}\u{30E7}\u{30F3}\u{304C}\u{4E0A}\u{304C}\u{308A}\u{3001}\u{65B0}\u{3057}\u{3044}\u{7D50}\u{679C}\u{3068}\u{53E4}\u{3044}\u{7D50}\u{679C}\u{3092}\u{533A}\u{5225}\u{3067}\u{304D}\u{307E}\u{3059}\u{3002}",
+        "settings.test_ok": "OK",
+        "settings.invalid_url": "\u{7121}\u{52B9}\u{306A}\u{30D9}\u{30FC}\u{30B9}URL",
+        "settings.invalid_url_save": "\u{7121}\u{52B9}\u{306A}\u{30D9}\u{30FC}\u{30B9}URL \u{2014} \u{4FDD}\u{5B58}\u{3055}\u{308C}\u{307E}\u{305B}\u{3093}\u{3067}\u{3057}\u{305F}",
+
+        // Requeue dialog
+        "dialog.requeue_title": "\u{4EE5}\u{524D}\u{306E}\u{5199}\u{771F}\u{3092}\u{518D}\u{51E6}\u{7406}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
+        "dialog.requeue_description": "\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}\u{304C}\u{66F4}\u{65B0}\u{3055}\u{308C}\u{307E}\u{3057}\u{305F}\u{3002}\u{518D}\u{30AD}\u{30E5}\u{30FC}\u{3059}\u{308B}\u{51E6}\u{7406}\u{6E08}\u{307F}\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}\u{30B0}\u{30EB}\u{30FC}\u{30D7}\u{3092}\u{9078}\u{629E}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}",
+        "dialog.no_previous_sentinels": "\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{4EE5}\u{524D}\u{306E}\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}\u{304C}\u{898B}\u{3064}\u{304B}\u{308A}\u{307E}\u{305B}\u{3093}\u{3002}",
+
+        // Confirmation dialogs
+        "dialog.clear_title": "\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30A2}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
+        "dialog.clear_message": "photo-snail\u{304C}\u{66F8}\u{304D}\u{8FBC}\u{3093}\u{3060}\u{8AAC}\u{660E}\u{3092}Photos.app\u{304B}\u{3089}\u{524A}\u{9664}\u{3057}\u{3001}\u{5404}\u{884C}\u{3092}\u{4FDD}\u{7559}\u{306B}\u{30EA}\u{30BB}\u{30C3}\u{30C8}\u{3057}\u{307E}\u{3059}\u{3002}\u{5143}\u{306E}\u{5199}\u{771F}\u{306F}\u{5909}\u{66F4}\u{3055}\u{308C}\u{307E}\u{305B}\u{3093}\u{3002}\u{3053}\u{306E}\u{64CD}\u{4F5C}\u{306F}\u{53D6}\u{308A}\u{6D88}\u{305B}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "dialog.reprocess_title": "\u{518D}\u{51E6}\u{7406}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
+        "dialog.reprocess_message": "\u{30AD}\u{30E5}\u{30FC}\u{5185}\u{306E}\u{5199}\u{771F}\u{306F}\u{6B21}\u{306E}\u{958B}\u{59CB}\u{6642}\u{306B}\u{51E6}\u{7406}\u{3055}\u{308C}\u{307E}\u{3059}\u{3002}",
+
+        // Empty states
+        "empty.nothing_tagged": "\u{307E}\u{3060}\u{30BF}\u{30B0}\u{4ED8}\u{3051}\u{306A}\u{3057}",
+        "empty.everything_enumerated": "\u{3059}\u{3079}\u{3066}\u{5217}\u{6319}\u{6E08}\u{307F}",
+        "empty.no_pending": "\u{4FDD}\u{7559}\u{4E2D}\u{306E}\u{4F5C}\u{696D}\u{306A}\u{3057}",
+        "empty.no_failures": "\u{5931}\u{6557}\u{306A}\u{3057}",
+        "empty.no_images": "Photos\u{30E9}\u{30A4}\u{30D6}\u{30E9}\u{30EA}\u{306B}\u{753B}\u{50CF}\u{304C}\u{898B}\u{3064}\u{304B}\u{308A}\u{307E}\u{305B}\u{3093}\u{3067}\u{3057}\u{305F}\u{3002}",
+        "empty.run_batch": "\u{30D0}\u{30C3}\u{30C1}\u{3092}\u{5B9F}\u{884C}\u{3057}\u{3066}\u{8AAC}\u{660E}\u{3092}\u{751F}\u{6210}\u{3057}\u{307E}\u{3057}\u{3087}\u{3046}\u{3002}",
+        "empty.every_photo_queued": "\u{3059}\u{3079}\u{3066}\u{306E}\u{5199}\u{771F}\u{306B}\u{30AD}\u{30E5}\u{30FC}\u{884C}\u{304C}\u{3042}\u{308A}\u{307E}\u{3059}\u{3002}\u{65B0}\u{305F}\u{306A}\u{767A}\u{898B}\u{306F}\u{3042}\u{308A}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "empty.no_pending_alt": "\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{4FDD}\u{7559}\u{4E2D}\u{306E}\u{4F5C}\u{696D}\u{306F}\u{3042}\u{308A}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "empty.no_failed_assets": "\u{5931}\u{6557}\u{72B6}\u{614B}\u{306E}\u{30A2}\u{30BB}\u{30C3}\u{30C8}\u{306F}\u{3042}\u{308A}\u{307E}\u{305B}\u{3093}\u{3002}",
+
+        // Status messages
+        "status.ready": "\u{6E96}\u{5099}\u{5B8C}\u{4E86}",
+        "status.loading_library": "\u{30E9}\u{30A4}\u{30D6}\u{30E9}\u{30EA}\u{3092}\u{8AAD}\u{307F}\u{8FBC}\u{307F}\u{4E2D}\u{2026}",
+        "status.no_selection": "\u{9078}\u{629E}\u{306A}\u{3057}",
+        "status.running": "\u{5B9F}\u{884C}\u{4E2D}",
+        "status.batch": "\u{30D0}\u{30C3}\u{30C1}",
+        "status.preview_unavailable": "\u{30D7}\u{30EC}\u{30D3}\u{30E5}\u{30FC}\u{5229}\u{7528}\u{4E0D}\u{53EF}",
+
+        // Inspector
+        "inspector.no_selection": "\u{9078}\u{629E}\u{306A}\u{3057}",
+        "inspector.select_photo": "\u{30B0}\u{30EA}\u{30C3}\u{30C9}\u{3067}\u{5199}\u{771F}\u{3092}\u{9078}\u{629E}\u{3057}\u{3066}\u{691C}\u{67FB}\u{3057}\u{307E}\u{3059}\u{3002}",
+        "inspector.title": "\u{30A4}\u{30F3}\u{30B9}\u{30DA}\u{30AF}\u{30BF}",
+        "inspector.use_bulk_bar": "\u{30B0}\u{30EA}\u{30C3}\u{30C9}\u{4E0A}\u{306E}\u{4E00}\u{62EC}\u{30A2}\u{30AF}\u{30B7}\u{30E7}\u{30F3}\u{30D0}\u{30FC}\u{3067}\u{518D}\u{51E6}\u{7406}\u{3001}\u{30AF}\u{30EA}\u{30A2}\u{3001}\u{30BF}\u{30B0}\u{30B3}\u{30D4}\u{30FC}\u{3001}\u{30A8}\u{30AF}\u{30B9}\u{30DD}\u{30FC}\u{30C8}\u{304C}\u{3067}\u{304D}\u{307E}\u{3059}\u{3002}",
+        "inspector.untouched_no_desc": "\u{672A}\u{51E6}\u{7406} \u{2014} \u{307E}\u{3060}\u{8AAC}\u{660E}\u{304C}\u{3042}\u{308A}\u{307E}\u{305B}\u{3093}\u{3002}\u{30D0}\u{30C3}\u{30C1}\u{3092}\u{5B9F}\u{884C}\u{3057}\u{3066}\u{751F}\u{6210}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}",
+        "inspector.no_description": "\u{307E}\u{3060}\u{8AAC}\u{660E}\u{304C}\u{3042}\u{308A}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "inspector.no_tags": "\u{30BF}\u{30B0}\u{306A}\u{3057}\u{3002}",
+        "inspector.add_tag": "\u{30BF}\u{30B0}\u{3092}\u{8FFD}\u{52A0}\u{2026}",
+        "inspector.copied": "\u{30B3}\u{30D4}\u{30FC}\u{3057}\u{307E}\u{3057}\u{305F}\u{FF01}",
+        "inspector.copy_desc_help": "\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30C3}\u{30D7}\u{30DC}\u{30FC}\u{30C9}\u{306B}\u{30B3}\u{30D4}\u{30FC}",
+        "inspector.copy_tags_help": "\u{30BF}\u{30B0}\u{3092}\u{30AF}\u{30EA}\u{30C3}\u{30D7}\u{30DC}\u{30FC}\u{30C9}\u{306B}\u{30B3}\u{30D4}\u{30FC}",
+        "inspector.no_processing_record": "\u{3053}\u{306E}\u{30A2}\u{30BB}\u{30C3}\u{30C8}\u{306E}\u{51E6}\u{7406}\u{8A18}\u{9332}\u{304C}\u{3042}\u{308A}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "inspector.no_vision_data": "\u{3053}\u{306E}\u{884C}\u{306E}Vision\u{30C7}\u{30FC}\u{30BF}\u{304C}\u{8A18}\u{9332}\u{3055}\u{308C}\u{3066}\u{3044}\u{307E}\u{305B}\u{3093}\u{FF08}pre-v1\u{5B8C}\u{4E86}\u{884C}\u{FF09}\u{3002}",
+        "inspector.vision_runs_later": "Vision\u{30D7}\u{30EA}\u{30D1}\u{30B9}\u{306F}\u{5199}\u{771F}\u{306E}\u{51E6}\u{7406}\u{6642}\u{306B}\u{5B9F}\u{884C}\u{3055}\u{308C}\u{307E}\u{3059}\u{3002}",
+        "inspector.vision_nothing": "Vision\u{30D7}\u{30EA}\u{30D1}\u{30B9}\u{306F}\u{5B9F}\u{884C}\u{3055}\u{308C}\u{307E}\u{3057}\u{305F}\u{304C}\u{3001}\u{69CB}\u{9020}\u{5316}\u{3055}\u{308C}\u{305F}\u{3082}\u{306E}\u{306F}\u{898B}\u{3064}\u{304B}\u{308A}\u{307E}\u{305B}\u{3093}\u{3067}\u{3057}\u{305F}\u{3002}",
+        "inspector.no_queue_row": "\u{30AD}\u{30E5}\u{30FC}\u{884C}\u{306A}\u{3057}\u{3002}",
+        "inspector.pre_v1": "\u{2014}\u{FF08}pre-v1 / \u{672A}\u{8A18}\u{9332}\u{FF09}",
+
+        // Labels
+        "label.file": "\u{30D5}\u{30A1}\u{30A4}\u{30EB}",
+        "label.created": "\u{4F5C}\u{6210}\u{65E5}",
+        "label.modified": "\u{5909}\u{66F4}\u{65E5}",
+        "label.dimensions": "\u{30B5}\u{30A4}\u{30BA}",
+        "label.type": "\u{30BF}\u{30A4}\u{30D7}",
+        "label.favorite": "\u{304A}\u{6C17}\u{306B}\u{5165}\u{308A}",
+        "label.location": "\u{5834}\u{6240}",
+        "label.albums": "\u{30A2}\u{30EB}\u{30D0}\u{30E0}",
+        "label.asset_id": "\u{30A2}\u{30BB}\u{30C3}\u{30C8}ID",
+        "label.status": "\u{30B9}\u{30C6}\u{30FC}\u{30BF}\u{30B9}",
+        "label.model": "\u{30E2}\u{30C7}\u{30EB}",
+        "label.sentinel": "\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}",
+        "label.ran_at": "\u{5B9F}\u{884C}\u{65E5}\u{6642}",
+        "label.total": "\u{5408}\u{8A08}",
+        "label.ollama": "Ollama",
+        "label.attempts": "\u{8A66}\u{884C}\u{56DE}\u{6570}",
+        "label.edited_at": "\u{7DE8}\u{96C6}\u{65E5}\u{6642}",
+        "label.error": "\u{30A8}\u{30E9}\u{30FC}",
+        "label.classifications": "\u{5206}\u{985E}",
+        "label.animals": "\u{52D5}\u{7269}",
+        "label.faces": "\u{9854}",
+        "label.ocr": "OCR",
+        "label.vision_time": "Vision\u{6642}\u{9593}",
+        "label.last_completed": "\u{6700}\u{5F8C}\u{306B}\u{5B8C}\u{4E86}",
+        "label.expand_runner": "\u{30E9}\u{30F3}\u{30CA}\u{30FC}\u{30D1}\u{30CD}\u{30EB}\u{3092}\u{5C55}\u{958B}",
+        "label.collapse_runner": "\u{30E9}\u{30F3}\u{30CA}\u{30FC}\u{30D1}\u{30CD}\u{30EB}\u{3092}\u{6298}\u{308A}\u{305F}\u{305F}\u{3080}",
+        "label.yes": "\u{306F}\u{3044}",
+        "label.no": "\u{3044}\u{3044}\u{3048}",
+        "label.description_payload": "\u{8AAC}\u{660E}\u{30DA}\u{30A4}\u{30ED}\u{30FC}\u{30C9}\u{FF08}Photos.app\u{306E}\u{5185}\u{5BB9}\u{FF09}",
+
+        // Log window
+        "log.detailed": "\u{8A73}\u{7D30}\u{30ED}\u{30B0}",
+        "log.detailed_help": "\u{30D1}\u{30A4}\u{30D7}\u{30E9}\u{30A4}\u{30F3}\u{30B9}\u{30C6}\u{30C3}\u{30D7}\u{3092}\u{542B}\u{3080}\u{3059}\u{3079}\u{3066}\u{306E}\u{30ED}\u{30B0}\u{3092}\u{8868}\u{793A}",
+        "log.clear_help": "\u{3059}\u{3079}\u{3066}\u{306E}\u{30ED}\u{30B0}\u{3092}\u{30AF}\u{30EA}\u{30A2}",
+
+        // Legend
+        "legend.status_badges": "\u{30B9}\u{30C6}\u{30FC}\u{30BF}\u{30B9}\u{30D0}\u{30C3}\u{30B8}",
+        "legend.tagged": "\u{5199}\u{771F}\u{306B}Photos.app\u{3067}\u{306E}\u{8AAC}\u{660E}\u{304C}\u{3042}\u{308A}\u{307E}\u{3059}\u{3002}",
+        "legend.pending": "\u{51E6}\u{7406}\u{5F85}\u{3061}\u{3002}\u{51E6}\u{7406}\u{4E2D}\u{306F}\u{30A2}\u{30CB}\u{30E1}\u{30FC}\u{30B7}\u{30E7}\u{30F3}\u{30EA}\u{30F3}\u{30B0}\u{304C}\u{8868}\u{793A}\u{3055}\u{308C}\u{307E}\u{3059}\u{3002}",
+        "legend.failed": "\u{51E6}\u{7406}\u{304C}\u{5931}\u{6557}\u{3057}\u{307E}\u{3057}\u{305F}\u{3002}\u{4E00}\u{62EC}\u{518D}\u{51E6}\u{7406}\u{3067}\u{30EA}\u{30C8}\u{30E9}\u{30A4}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}",
+        "legend.untouched": "\u{307E}\u{3060}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{5217}\u{6319}\u{3055}\u{308C}\u{3066}\u{3044}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "legend.keyboard_shortcuts": "\u{30AD}\u{30FC}\u{30DC}\u{30FC}\u{30C9}\u{30B7}\u{30E7}\u{30FC}\u{30C8}\u{30AB}\u{30C3}\u{30C8}",
+        "legend.search": "\u{8AAC}\u{660E} + \u{30BF}\u{30B0}\u{3092}\u{691C}\u{7D22}",
+        "legend.prev_next": "\u{524D} / \u{6B21}\u{306E}\u{5199}\u{771F}",
+        "legend.preview": "\u{30D5}\u{30EB}\u{30B9}\u{30AF}\u{30EA}\u{30FC}\u{30F3}\u{30D7}\u{30EC}\u{30D3}\u{30E5}\u{30FC}",
+        "legend.edit": "\u{8AAC}\u{660E}\u{3092}\u{7DE8}\u{96C6}",
+        "legend.save_edit": "\u{7DE8}\u{96C6}\u{3092}\u{4FDD}\u{5B58}",
+        "legend.select_all": "\u{8868}\u{793A}\u{4E2D}\u{306E}\u{3059}\u{3079}\u{3066}\u{3092}\u{9078}\u{629E}",
+        "legend.thumbs": "\u{5C0F} / \u{4E2D} / \u{5927}\u{30B5}\u{30E0}\u{30CD}\u{30A4}\u{30EB}",
+        "legend.toggle_sel": "\u{9078}\u{629E}\u{5207}\u{308A}\u{66FF}\u{3048}",
+        "legend.range_sel": "\u{7BC4}\u{56F2}\u{9078}\u{629E}",
+        "legend.escape": "\u{9078}\u{629E}\u{89E3}\u{9664} / \u{30D7}\u{30EC}\u{30D3}\u{30E5}\u{30FC}\u{3092}\u{9589}\u{3058}\u{308B}",
+        "legend.reprocess_sel": "\u{9078}\u{629E}\u{3092}\u{518D}\u{51E6}\u{7406}",
+        "legend.clear_sel": "\u{9078}\u{629E}\u{306E}\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30A2}",
+
+        // Bulk actions help
+        "bulk.reprocess_help": "\u{518D}\u{51E6}\u{7406} \u{2014} \u{3053}\u{308C}\u{3089}\u{306E}\u{5199}\u{771F}\u{3092}\u{4FDD}\u{7559}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{623B}\u{3059}",
+        "bulk.clear_help": "\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30A2} \u{2014} Photos.app\u{304B}\u{3089}photo-snail\u{306E}\u{8AAC}\u{660E}\u{3092}\u{524A}\u{9664}",
+        "bulk.export_help": "JSON\u{30A8}\u{30AF}\u{30B9}\u{30DD}\u{30FC}\u{30C8} \u{2014} \u{9078}\u{629E}\u{3057}\u{305F}\u{5404}\u{884C}\u{3092}\u{30D5}\u{30A1}\u{30A4}\u{30EB}\u{306B}\u{4FDD}\u{5B58}",
+        "bulk.deselect_help": "\u{3059}\u{3079}\u{3066}\u{9078}\u{629E}\u{89E3}\u{9664}",
+
+        // About
+        "about.description": "macOS\u{7528}\u{30ED}\u{30FC}\u{30AB}\u{30EB}\u{30D5}\u{30A1}\u{30FC}\u{30B9}\u{30C8}\u{306E}\u{5199}\u{771F}\u{30BF}\u{30B0}\u{4ED8}\u{3051}\u{30C4}\u{30FC}\u{30EB}\u{3002}\nApple Vision\u{3068}\u{30ED}\u{30FC}\u{30AB}\u{30EB}LLM\u{3092}\u{4F7F}\u{7528}\u{3057}\u{3066}\u{3001}Photos\u{30E9}\u{30A4}\u{30D6}\u{30E9}\u{30EA}\u{306E}\u{8AAC}\u{660E}\u{3068}\u{30BF}\u{30B0}\u{3092}\u{5B8C}\u{5168}\u{306B}\u{30C7}\u{30D0}\u{30A4}\u{30B9}\u{4E0A}\u{3067}\u{751F}\u{6210}\u{3057}\u{307E}\u{3059}\u{3002}",
+        "about.author": "Laurent Chouinard \u{4F5C}",
+        "about.license": "MIT\u{30E9}\u{30A4}\u{30BB}\u{30F3}\u{30B9}",
+        "about.github": "GitHub",
+
+        // Language change flow
+        "lang.confirm_title": "\u{30A2}\u{30D7}\u{30EA}\u{306E}\u{8A00}\u{8A9E}\u{3092}\u{5909}\u{66F4}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
+        "lang.confirm_change": "\u{5909}\u{66F4}",
+        "lang.prompt_title": "AI\u{30D7}\u{30ED}\u{30F3}\u{30D7}\u{30C8}\u{306E}\u{8A00}\u{8A9E}\u{3082}\u{5909}\u{66F4}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
+        "lang.prompt_message": "\u{65B0}\u{3057}\u{3044}\u{8A00}\u{8A9E}\u{3067}\u{8AAC}\u{660E}\u{3092}\u{751F}\u{6210}\u{3059}\u{308B}\u{3088}\u{3046}\u{30D7}\u{30ED}\u{30F3}\u{30D7}\u{30C8}\u{3092}\u{66F4}\u{65B0}\u{3057}\u{3001}\u{30BB}\u{30F3}\u{30C1}\u{30CD}\u{30EB}\u{30D0}\u{30FC}\u{30B8}\u{30E7}\u{30F3}\u{3092}\u{4E0A}\u{3052}\u{307E}\u{3059}\u{3002}",
+        "lang.translate_title": "\u{65E2}\u{5B58}\u{306E}\u{8AAC}\u{660E}\u{3092}\u{7FFB}\u{8A33}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
+        "lang.translate_message": "AI\u{30E2}\u{30C7}\u{30EB}\u{3092}\u{4F7F}\u{7528}\u{3057}\u{3066}\u{3001}\u{51E6}\u{7406}\u{6E08}\u{307F}\u{306E}\u{3059}\u{3079}\u{3066}\u{306E}\u{5199}\u{771F}\u{3092}\u{65B0}\u{3057}\u{3044}\u{8A00}\u{8A9E}\u{306B}\u{7FFB}\u{8A33}\u{3059}\u{308B}\u{305F}\u{3081}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{5165}\u{308C}\u{307E}\u{3059}\u{3002}\u{7FFB}\u{8A33}\u{306F}\u{30C6}\u{30AD}\u{30B9}\u{30C8}\u{306E}\u{307F}\u{3067}\u{3001}\u{518D}\u{51E6}\u{7406}\u{3088}\u{308A}\u{306F}\u{308B}\u{304B}\u{306B}\u{9AD8}\u{901F}\u{3067}\u{3059}\u{3002}",
+        "lang.translate": "\u{7FFB}\u{8A33}",
+    ]
+
+    // MARK: - Chinese (Simplified)
+
+    private static let zhHans: [String: String] = [
+        // Buttons
+        "button.close": "\u{5173}\u{95ED}",
+        "button.save": "\u{4FDD}\u{5B58}",
+        "button.cancel": "\u{53D6}\u{6D88}",
+        "button.skip": "\u{8DF3}\u{8FC7}",
+        "button.clear": "\u{6E05}\u{9664}",
+        "button.add": "\u{6DFB}\u{52A0}",
+        "button.revert": "\u{8FD8}\u{539F}",
+        "button.deselect": "\u{53D6}\u{6D88}\u{9009}\u{62E9}",
+        "button.export": "\u{5BFC}\u{51FA}",
+        "button.reprocess": "\u{91CD}\u{65B0}\u{5904}\u{7406}",
+        "button.start_editing": "\u{5F00}\u{59CB}\u{7F16}\u{8F91}",
+        "button.reset_to_default": "\u{6062}\u{590D}\u{9ED8}\u{8BA4}",
+        "button.refresh_model_list": "\u{5237}\u{65B0}\u{6A21}\u{578B}\u{5217}\u{8868}",
+        "button.test_connection": "\u{6D4B}\u{8BD5}\u{8FDE}\u{63A5}",
+        "button.add_header": "\u{6DFB}\u{52A0}\u{5934}\u{90E8}",
+        "button.requeue_selected": "\u{91CD}\u{65B0}\u{6392}\u{961F}\u{9009}\u{4E2D}\u{9879}",
+        "button.clear_descriptions": "\u{6E05}\u{9664}\u{63CF}\u{8FF0}",
+        "button.about": "\u{5173}\u{4E8E} Photo Snail",
+
+        // Section headers
+        "section.library": "\u{56FE}\u{5E93}",
+        "section.model": "\u{6A21}\u{578B}",
+        "section.prompt": "\u{63D0}\u{793A}\u{8BCD}",
+        "section.sentinel": "\u{54E8}\u{5175}",
+        "section.ollama_connection": "Ollama \u{8FDE}\u{63A5}",
+        "section.identity": "\u{8EAB}\u{4EFD}",
+        "section.description": "\u{63CF}\u{8FF0}",
+        "section.tags": "\u{6807}\u{7B7E}",
+        "section.processing": "\u{5904}\u{7406}",
+        "section.vision": "Vision",
+        "section.developer": "\u{5F00}\u{53D1}\u{8005}",
+        "section.active_filters": "\u{6D3B}\u{52A8}\u{7B5B}\u{9009}\u{5668}",
+        "section.popular_tags": "\u{70ED}\u{95E8}\u{6807}\u{7B7E}",
+
+        // Filters
+        "filter.all": "\u{5168}\u{90E8}",
+        "filter.tagged": "\u{5DF2}\u{6807}\u{8BB0}",
+        "filter.untouched": "\u{672A}\u{5904}\u{7406}",
+        "filter.pending": "\u{7B49}\u{5F85}\u{4E2D}",
+        "filter.failed": "\u{5931}\u{8D25}",
+
+        // Sort orders
+        "sort.date_created_desc": "\u{521B}\u{5EFA}\u{65E5}\u{671F}\u{FF08}\u{6700}\u{65B0}\u{FF09}",
+        "sort.date_created_asc": "\u{521B}\u{5EFA}\u{65E5}\u{671F}\u{FF08}\u{6700}\u{65E7}\u{FF09}",
+        "sort.date_processed_desc": "\u{5904}\u{7406}\u{65E5}\u{671F}\u{FF08}\u{6700}\u{65B0}\u{FF09}",
+        "sort.date_processed_asc": "\u{5904}\u{7406}\u{65E5}\u{671F}\u{FF08}\u{6700}\u{65E7}\u{FF09}",
+
+        // Thumbnail sizes
+        "thumbnail.small": "\u{5C0F}",
+        "thumbnail.medium": "\u{4E2D}",
+        "thumbnail.large": "\u{5927}",
+
+        // Toolbar
+        "toolbar.sort": "\u{6392}\u{5E8F}",
+        "toolbar.sort_help": "\u{6392}\u{5E8F}\u{65B9}\u{5F0F}",
+        "toolbar.thumbnail_size": "\u{7F29}\u{7565}\u{56FE}\u{5927}\u{5C0F}",
+        "toolbar.thumbnail_size_help": "\u{7F29}\u{7565}\u{56FE}\u{5927}\u{5C0F}",
+        "toolbar.legend": "\u{56FE}\u{4F8B}",
+        "toolbar.legend_help": "\u{952E}\u{76D8}\u{5FEB}\u{6377}\u{952E} + \u{72B6}\u{6001}\u{5FBD}\u{7AE0}\u{56FE}\u{4F8B}",
+        "toolbar.logs": "\u{65E5}\u{5FD7}",
+        "toolbar.logs_help": "\u{5904}\u{7406}\u{65E5}\u{5FD7}",
+        "toolbar.settings": "\u{8BBE}\u{7F6E}",
+        "toolbar.settings_help": "\u{6A21}\u{578B}\u{3001}\u{54E8}\u{5175}\u{3001}Ollama \u{8FDE}\u{63A5}",
+
+        // Settings sheet
+        "settings.title": "\u{8BBE}\u{7F6E}",
+        "settings.changes_apply": "\u{66F4}\u{6539}\u{5C06}\u{5728}\u{4E0B}\u{6B21}\u{542F}\u{52A8}\u{65F6}\u{751F}\u{6548}",
+        "settings.loading_models": "\u{6B63}\u{5728}\u{4ECE} Ollama \u{52A0}\u{8F7D}\u{6A21}\u{578B}\u{2026}",
+        "settings.model_placeholder": "\u{6A21}\u{578B}\u{540D}\u{79F0}\u{FF08}\u{4F8B}\u{5982} gemma4:31b\u{FF09}",
+        "settings.model_not_in_ollama": "\u{FF08}\u{5F53}\u{524D}\u{FF0C}\u{4E0D}\u{5728} Ollama \u{4E2D}\u{FF09}",
+        "settings.sentinel_unchanged": "\u{76F8}\u{540C}\u{6A21}\u{578B}\u{5BB6}\u{65CF} \u{2014} \u{54E8}\u{5175}\u{672A}\u{53D8}\u{3002}",
+        "settings.sentinel_family_changed": "\u{6B64}\u{6A21}\u{578B}\u{5C5E}\u{4E8E}\u{4E0D}\u{540C}\u{7684}\u{5BB6}\u{65CF}\u{3002}\u{8BF7}\u{9009}\u{62E9}\u{FF1A}",
+        "settings.keep_current": "\u{4FDD}\u{7559}\u{5F53}\u{524D}\u{FF1A}",
+        "settings.use_new": "\u{4F7F}\u{7528}\u{65B0}\u{7684}\u{FF1A}",
+        "settings.custom": "\u{81EA}\u{5B9A}\u{4E49}\u{2026}",
+        "settings.sentinel_placeholder": "ai:family-v1",
+        "settings.base_url": "\u{57FA}\u{7840} URL",
+        "settings.base_url_placeholder": "http://localhost:11434",
+        "settings.api_key": "API \u{5BC6}\u{94A5}",
+        "settings.api_key_placeholder": "Bearer \u{4EE4}\u{724C}\u{FF08}\u{53EF}\u{9009}\u{FF09}",
+        "settings.api_key_help": "\u{4EE5}\u{7EAF}\u{6587}\u{672C}\u{5B58}\u{50A8}\u{5728} ~/Library/Application Support/photo-snail/settings.json (0600)\u{3002}\u{8BBE}\u{7F6E}\u{73AF}\u{5883}\u{53D8}\u{91CF} PHOTO_SNAIL_OLLAMA_API_KEY \u{4EE5}\u{907F}\u{514D}\u{6301}\u{4E45}\u{5316}\u{3002}",
+        "settings.advanced_headers": "\u{9AD8}\u{7EA7}\u{FF1A}\u{81EA}\u{5B9A}\u{4E49}\u{5934}\u{90E8}",
+        "settings.advanced_headers_help": "\u{7528}\u{4E8E}\u{4F7F}\u{7528}\u{975E} Bearer \u{8BA4}\u{8BC1}\u{7684}\u{4EE3}\u{7406}\u{FF08}Basic\u{3001}X-API-Key \u{7B49}\u{FF09}\u{3002}\u{5982}\u{679C}\u{4E24}\u{8005}\u{90FD}\u{8BBE}\u{7F6E}\u{4E86} Authorization\u{FF0C}\u{5934}\u{90E8}\u{4F1A}\u{8986}\u{76D6} API \u{5BC6}\u{94A5}\u{3002}",
+        "settings.header_name": "\u{5934}\u{90E8}\u{540D}\u{79F0}",
+        "settings.header_value": "\u{503C}",
+        "settings.prompt_changed": "\u{63D0}\u{793A}\u{8BCD}\u{5DF2}\u{66F4}\u{6539} \u{2014} \u{4FDD}\u{5B58}\u{65F6}\u{54E8}\u{5175}\u{7248}\u{672C}\u{5C06}\u{9012}\u{589E}\u{FF0C}\u{4EE5}\u{533A}\u{5206}\u{65B0}\u{65E7}\u{7ED3}\u{679C}\u{3002}",
+        "settings.test_ok": "OK",
+        "settings.invalid_url": "\u{65E0}\u{6548}\u{7684}\u{57FA}\u{7840} URL",
+        "settings.invalid_url_save": "\u{65E0}\u{6548}\u{7684}\u{57FA}\u{7840} URL \u{2014} \u{672A}\u{4FDD}\u{5B58}",
+
+        // Requeue dialog
+        "dialog.requeue_title": "\u{91CD}\u{65B0}\u{5904}\u{7406}\u{4E4B}\u{524D}\u{7684}\u{7167}\u{7247}\u{FF1F}",
+        "dialog.requeue_description": "\u{54E8}\u{5175}\u{5DF2}\u{66F4}\u{65B0}\u{3002}\u{9009}\u{62E9}\u{8981}\u{91CD}\u{65B0}\u{6392}\u{961F}\u{7684}\u{5DF2}\u{5904}\u{7406}\u{54E8}\u{5175}\u{7EC4}\u{3002}",
+        "dialog.no_previous_sentinels": "\u{961F}\u{5217}\u{4E2D}\u{672A}\u{627E}\u{5230}\u{4E4B}\u{524D}\u{7684}\u{54E8}\u{5175}\u{3002}",
+
+        // Confirmation dialogs
+        "dialog.clear_title": "\u{6E05}\u{9664}\u{63CF}\u{8FF0}\u{FF1F}",
+        "dialog.clear_message": "\u{8FD9}\u{5C06}\u{4ECE} Photos.app \u{4E2D}\u{5220}\u{9664} photo-snail \u{5199}\u{5165}\u{7684}\u{63CF}\u{8FF0}\u{FF0C}\u{5E76}\u{5C06}\u{6BCF}\u{884C}\u{91CD}\u{7F6E}\u{4E3A}\u{7B49}\u{5F85}\u{3002}\u{539F}\u{59CB}\u{7167}\u{7247}\u{4E0D}\u{4F1A}\u{88AB}\u{4FEE}\u{6539}\u{3002}\u{6B64}\u{64CD}\u{4F5C}\u{65E0}\u{6CD5}\u{64A4}\u{9500}\u{3002}",
+        "dialog.reprocess_title": "\u{91CD}\u{65B0}\u{5904}\u{7406}\u{FF1F}",
+        "dialog.reprocess_message": "\u{961F}\u{5217}\u{4E2D}\u{7684}\u{7167}\u{7247}\u{5C06}\u{5728}\u{4E0B}\u{6B21}\u{542F}\u{52A8}\u{65F6}\u{5904}\u{7406}\u{3002}",
+
+        // Empty states
+        "empty.nothing_tagged": "\u{5C1A}\u{672A}\u{6807}\u{8BB0}\u{4EFB}\u{4F55}\u{5185}\u{5BB9}",
+        "empty.everything_enumerated": "\u{5168}\u{90E8}\u{5DF2}\u{679A}\u{4E3E}",
+        "empty.no_pending": "\u{65E0}\u{7B49}\u{5F85}\u{5DE5}\u{4F5C}",
+        "empty.no_failures": "\u{65E0}\u{5931}\u{8D25}",
+        "empty.no_images": "\u{5728}\u{60A8}\u{7684} Photos \u{56FE}\u{5E93}\u{4E2D}\u{672A}\u{627E}\u{5230}\u{56FE}\u{7247}\u{3002}",
+        "empty.run_batch": "\u{8FD0}\u{884C}\u{6279}\u{5904}\u{7406}\u{4EE5}\u{5F00}\u{59CB}\u{751F}\u{6210}\u{63CF}\u{8FF0}\u{3002}",
+        "empty.every_photo_queued": "\u{6BCF}\u{5F20}\u{7167}\u{7247}\u{90FD}\u{6709}\u{961F}\u{5217}\u{884C}\u{3002}\u{65E0}\u{65B0}\u{53D1}\u{73B0}\u{3002}",
+        "empty.no_pending_alt": "\u{961F}\u{5217}\u{4E2D}\u{6CA1}\u{6709}\u{7B49}\u{5F85}\u{5904}\u{7406}\u{7684}\u{5DE5}\u{4F5C}\u{3002}",
+        "empty.no_failed_assets": "\u{6CA1}\u{6709}\u{8D44}\u{4EA7}\u{5904}\u{4E8E}\u{5931}\u{8D25}\u{72B6}\u{6001}\u{3002}",
+
+        // Status messages
+        "status.ready": "\u{5C31}\u{7EEA}",
+        "status.loading_library": "\u{6B63}\u{5728}\u{52A0}\u{8F7D}\u{56FE}\u{5E93}\u{2026}",
+        "status.no_selection": "\u{672A}\u{9009}\u{62E9}",
+        "status.running": "\u{8FD0}\u{884C}\u{4E2D}",
+        "status.batch": "\u{6279}\u{5904}\u{7406}",
+        "status.preview_unavailable": "\u{9884}\u{89C8}\u{4E0D}\u{53EF}\u{7528}",
+
+        // Inspector
+        "inspector.no_selection": "\u{672A}\u{9009}\u{62E9}",
+        "inspector.select_photo": "\u{5728}\u{7F51}\u{683C}\u{4E2D}\u{9009}\u{62E9}\u{4E00}\u{5F20}\u{7167}\u{7247}\u{8FDB}\u{884C}\u{68C0}\u{67E5}\u{3002}",
+        "inspector.title": "\u{68C0}\u{67E5}\u{5668}",
+        "inspector.use_bulk_bar": "\u{4F7F}\u{7528}\u{7F51}\u{683C}\u{4E0A}\u{65B9}\u{7684}\u{6279}\u{91CF}\u{64CD}\u{4F5C}\u{680F}\u{8FDB}\u{884C}\u{91CD}\u{65B0}\u{5904}\u{7406}\u{3001}\u{6E05}\u{9664}\u{3001}\u{590D}\u{5236}\u{6807}\u{7B7E}\u{6216}\u{5BFC}\u{51FA}\u{3002}",
+        "inspector.untouched_no_desc": "\u{672A}\u{5904}\u{7406} \u{2014} \u{5C1A}\u{65E0}\u{63CF}\u{8FF0}\u{3002}\u{8FD0}\u{884C}\u{6279}\u{5904}\u{7406}\u{4EE5}\u{751F}\u{6210}\u{3002}",
+        "inspector.no_description": "\u{5C1A}\u{65E0}\u{63CF}\u{8FF0}\u{3002}",
+        "inspector.no_tags": "\u{65E0}\u{6807}\u{7B7E}\u{3002}",
+        "inspector.add_tag": "\u{6DFB}\u{52A0}\u{6807}\u{7B7E}\u{2026}",
+        "inspector.copied": "\u{5DF2}\u{590D}\u{5236}\u{FF01}",
+        "inspector.copy_desc_help": "\u{590D}\u{5236}\u{63CF}\u{8FF0}\u{5230}\u{526A}\u{8D34}\u{677F}",
+        "inspector.copy_tags_help": "\u{590D}\u{5236}\u{6807}\u{7B7E}\u{5230}\u{526A}\u{8D34}\u{677F}",
+        "inspector.no_processing_record": "\u{6B64}\u{8D44}\u{4EA7}\u{65E0}\u{5904}\u{7406}\u{8BB0}\u{5F55}\u{3002}",
+        "inspector.no_vision_data": "\u{6B64}\u{884C}\u{65E0} Vision \u{6570}\u{636E}\u{8BB0}\u{5F55}\u{FF08}pre-v1 \u{5B8C}\u{6210}\u{884C}\u{FF09}\u{3002}",
+        "inspector.vision_runs_later": "Vision \u{9884}\u{5904}\u{7406}\u{5728}\u{7167}\u{7247}\u{5904}\u{7406}\u{65F6}\u{8FD0}\u{884C}\u{3002}",
+        "inspector.vision_nothing": "Vision \u{9884}\u{5904}\u{7406}\u{5DF2}\u{8FD0}\u{884C}\u{4F46}\u{672A}\u{627E}\u{5230}\u{7ED3}\u{6784}\u{5316}\u{5185}\u{5BB9}\u{3002}",
+        "inspector.no_queue_row": "\u{65E0}\u{961F}\u{5217}\u{884C}\u{3002}",
+        "inspector.pre_v1": "\u{2014}\u{FF08}pre-v1 / \u{672A}\u{8BB0}\u{5F55}\u{FF09}",
+
+        // Labels
+        "label.file": "\u{6587}\u{4EF6}",
+        "label.created": "\u{521B}\u{5EFA}\u{65F6}\u{95F4}",
+        "label.modified": "\u{4FEE}\u{6539}\u{65F6}\u{95F4}",
+        "label.dimensions": "\u{5C3A}\u{5BF8}",
+        "label.type": "\u{7C7B}\u{578B}",
+        "label.favorite": "\u{6536}\u{85CF}",
+        "label.location": "\u{4F4D}\u{7F6E}",
+        "label.albums": "\u{76F8}\u{518C}",
+        "label.asset_id": "\u{8D44}\u{4EA7} ID",
+        "label.status": "\u{72B6}\u{6001}",
+        "label.model": "\u{6A21}\u{578B}",
+        "label.sentinel": "\u{54E8}\u{5175}",
+        "label.ran_at": "\u{8FD0}\u{884C}\u{65F6}\u{95F4}",
+        "label.total": "\u{603B}\u{8BA1}",
+        "label.ollama": "Ollama",
+        "label.attempts": "\u{5C1D}\u{8BD5}\u{6B21}\u{6570}",
+        "label.edited_at": "\u{7F16}\u{8F91}\u{65F6}\u{95F4}",
+        "label.error": "\u{9519}\u{8BEF}",
+        "label.classifications": "\u{5206}\u{7C7B}",
+        "label.animals": "\u{52A8}\u{7269}",
+        "label.faces": "\u{4EBA}\u{8138}",
+        "label.ocr": "OCR",
+        "label.vision_time": "Vision \u{65F6}\u{95F4}",
+        "label.last_completed": "\u{6700}\u{8FD1}\u{5B8C}\u{6210}",
+        "label.expand_runner": "\u{5C55}\u{5F00}\u{8FD0}\u{884C}\u{5668}\u{9762}\u{677F}",
+        "label.collapse_runner": "\u{6298}\u{53E0}\u{8FD0}\u{884C}\u{5668}\u{9762}\u{677F}",
+        "label.yes": "\u{662F}",
+        "label.no": "\u{5426}",
+        "label.description_payload": "\u{63CF}\u{8FF0}\u{5185}\u{5BB9}\u{FF08}Photos.app \u{4E2D}\u{7684}\u{5185}\u{5BB9}\u{FF09}",
+
+        // Log window
+        "log.detailed": "\u{8BE6}\u{7EC6}\u{65E5}\u{5FD7}",
+        "log.detailed_help": "\u{663E}\u{793A}\u{6240}\u{6709}\u{65E5}\u{5FD7}\u{6761}\u{76EE}\u{FF0C}\u{5305}\u{62EC}\u{7BA1}\u{9053}\u{6B65}\u{9AA4}",
+        "log.clear_help": "\u{6E05}\u{9664}\u{6240}\u{6709}\u{65E5}\u{5FD7}\u{6761}\u{76EE}",
+
+        // Legend
+        "legend.status_badges": "\u{72B6}\u{6001}\u{5FBD}\u{7AE0}",
+        "legend.tagged": "\u{7167}\u{7247}\u{5728} Photos.app \u{4E2D}\u{6709}\u{63CF}\u{8FF0}\u{3002}",
+        "legend.pending": "\u{7B49}\u{5F85}\u{5904}\u{7406}\u{3002}\u{5904}\u{7406}\u{65F6}\u{663E}\u{793A}\u{52A8}\u{753B}\u{5708}\u{3002}",
+        "legend.failed": "\u{5904}\u{7406}\u{5931}\u{8D25}\u{3002}\u{901A}\u{8FC7}\u{6279}\u{91CF}\u{91CD}\u{65B0}\u{5904}\u{7406}\u{91CD}\u{8BD5}\u{3002}",
+        "legend.untouched": "\u{5C1A}\u{672A}\u{679A}\u{4E3E}\u{5230}\u{961F}\u{5217}\u{3002}",
+        "legend.keyboard_shortcuts": "\u{952E}\u{76D8}\u{5FEB}\u{6377}\u{952E}",
+        "legend.search": "\u{641C}\u{7D22}\u{63CF}\u{8FF0} + \u{6807}\u{7B7E}",
+        "legend.prev_next": "\u{4E0A}\u{4E00}\u{5F20} / \u{4E0B}\u{4E00}\u{5F20}\u{7167}\u{7247}",
+        "legend.preview": "\u{5168}\u{5C4F}\u{9884}\u{89C8}",
+        "legend.edit": "\u{7F16}\u{8F91}\u{63CF}\u{8FF0}",
+        "legend.save_edit": "\u{4FDD}\u{5B58}\u{7F16}\u{8F91}",
+        "legend.select_all": "\u{9009}\u{62E9}\u{6240}\u{6709}\u{53EF}\u{89C1}\u{9879}",
+        "legend.thumbs": "\u{5C0F} / \u{4E2D} / \u{5927}\u{7F29}\u{7565}\u{56FE}",
+        "legend.toggle_sel": "\u{5207}\u{6362}\u{9009}\u{62E9}",
+        "legend.range_sel": "\u{8303}\u{56F4}\u{9009}\u{62E9}",
+        "legend.escape": "\u{6E05}\u{9664}\u{9009}\u{62E9} / \u{5173}\u{95ED}\u{9884}\u{89C8}",
+        "legend.reprocess_sel": "\u{91CD}\u{65B0}\u{5904}\u{7406}\u{9009}\u{4E2D}\u{9879}",
+        "legend.clear_sel": "\u{6E05}\u{9664}\u{9009}\u{4E2D}\u{9879}\u{7684}\u{63CF}\u{8FF0}",
+
+        // Bulk actions help
+        "bulk.reprocess_help": "\u{91CD}\u{65B0}\u{5904}\u{7406} \u{2014} \u{5C06}\u{8FD9}\u{4E9B}\u{7167}\u{7247}\u{653E}\u{56DE}\u{7B49}\u{5F85}\u{961F}\u{5217}",
+        "bulk.clear_help": "\u{6E05}\u{9664}\u{63CF}\u{8FF0} \u{2014} \u{4ECE} Photos.app \u{4E2D}\u{5220}\u{9664} photo-snail \u{63CF}\u{8FF0}",
+        "bulk.export_help": "\u{5BFC}\u{51FA} JSON \u{2014} \u{5C06}\u{6BCF}\u{4E2A}\u{9009}\u{4E2D}\u{884C}\u{4FDD}\u{5B58}\u{5230}\u{6587}\u{4EF6}",
+        "bulk.deselect_help": "\u{53D6}\u{6D88}\u{5168}\u{90E8}\u{9009}\u{62E9}",
+
+        // About
+        "about.description": "macOS \u{672C}\u{5730}\u{4F18}\u{5148}\u{7684}\u{7167}\u{7247}\u{6807}\u{8BB0}\u{5DE5}\u{5177}\u{3002}\n\u{4F7F}\u{7528} Apple Vision \u{548C}\u{672C}\u{5730} LLM \u{4E3A}\u{60A8}\u{7684} Photos \u{56FE}\u{5E93}\u{751F}\u{6210}\u{63CF}\u{8FF0}\u{548C}\u{6807}\u{7B7E}\u{FF0C}\u{5B8C}\u{5168}\u{5728}\u{8BBE}\u{5907}\u{4E0A}\u{8FD0}\u{884C}\u{3002}",
+        "about.author": "Laurent Chouinard \u{5236}\u{4F5C}",
+        "about.license": "MIT \u{8BB8}\u{53EF}\u{8BC1}",
+        "about.github": "GitHub",
+
+        // Language change flow
+        "lang.confirm_title": "\u{66F4}\u{6539}\u{5E94}\u{7528}\u{8BED}\u{8A00}\u{FF1F}",
+        "lang.confirm_change": "\u{66F4}\u{6539}",
+        "lang.prompt_title": "\u{540C}\u{65F6}\u{66F4}\u{6539} AI \u{63D0}\u{793A}\u{8BCD}\u{8BED}\u{8A00}\u{FF1F}",
+        "lang.prompt_message": "\u{8FD9}\u{5C06}\u{66F4}\u{65B0}\u{63D0}\u{793A}\u{8BCD}\u{4EE5}\u{4F7F}\u{7528}\u{65B0}\u{8BED}\u{8A00}\u{751F}\u{6210}\u{63CF}\u{8FF0}\u{FF0C}\u{5E76}\u{9012}\u{589E}\u{54E8}\u{5175}\u{7248}\u{672C}\u{3002}",
+        "lang.translate_title": "\u{7FFB}\u{8BD1}\u{73B0}\u{6709}\u{63CF}\u{8FF0}\u{FF1F}",
+        "lang.translate_message": "\u{8FD9}\u{5C06}\u{4F7F}\u{7528} AI \u{6A21}\u{578B}\u{5C06}\u{6240}\u{6709}\u{5DF2}\u{5904}\u{7406}\u{7684}\u{7167}\u{7247}\u{6392}\u{961F}\u{7FFB}\u{8BD1}\u{4E3A}\u{65B0}\u{8BED}\u{8A00}\u{3002}\u{7FFB}\u{8BD1}\u{4EC5}\u{4E3A}\u{6587}\u{672C}\u{FF0C}\u{6BD4}\u{91CD}\u{65B0}\u{5904}\u{7406}\u{5FEB}\u{5F97}\u{591A}\u{3002}",
+        "lang.translate": "\u{7FFB}\u{8BD1}",
+    ]
+
+    // MARK: - Korean
+
+    private static let ko: [String: String] = [
+        // Buttons
+        "button.close": "\u{B2EB}\u{AE30}",
+        "button.save": "\u{C800}\u{C7A5}",
+        "button.cancel": "\u{CDE8}\u{C18C}",
+        "button.skip": "\u{AC74}\u{B108}\u{B6F0}\u{AE30}",
+        "button.clear": "\u{C9C0}\u{C6B0}\u{AE30}",
+        "button.add": "\u{CD94}\u{AC00}",
+        "button.revert": "\u{B418}\u{B3CC}\u{B9AC}\u{AE30}",
+        "button.deselect": "\u{C120}\u{D0DD} \u{D574}\u{C81C}",
+        "button.export": "\u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}",
+        "button.reprocess": "\u{C7AC}\u{CC98}\u{B9AC}",
+        "button.start_editing": "\u{D3B8}\u{C9D1} \u{C2DC}\u{C791}",
+        "button.reset_to_default": "\u{AE30}\u{BCF8}\u{AC12}\u{C73C}\u{B85C} \u{C7AC}\u{C124}\u{C815}",
+        "button.refresh_model_list": "\u{BAA8}\u{B378} \u{BAA9}\u{B85D} \u{C0C8}\u{B85C}\u{ACE0}\u{CE68}",
+        "button.test_connection": "\u{C5F0}\u{ACB0} \u{D14C}\u{C2A4}\u{D2B8}",
+        "button.add_header": "\u{D5E4}\u{B354} \u{CD94}\u{AC00}",
+        "button.requeue_selected": "\u{C120}\u{D0DD}\u{D56D}\u{BAA9} \u{C7AC}\u{B300}\u{AE30}\u{C5F4}",
+        "button.clear_descriptions": "\u{C124}\u{BA85} \u{C9C0}\u{C6B0}\u{AE30}",
+        "button.about": "Photo Snail \u{C815}\u{BCF4}",
+
+        // Section headers
+        "section.library": "\u{B77C}\u{C774}\u{BE0C}\u{B7EC}\u{B9AC}",
+        "section.model": "\u{BAA8}\u{B378}",
+        "section.prompt": "\u{D504}\u{B86C}\u{D504}\u{D2B8}",
+        "section.sentinel": "\u{C13C}\u{D2F0}\u{B12C}",
+        "section.ollama_connection": "Ollama \u{C5F0}\u{ACBD}",
+        "section.identity": "\u{C2DD}\u{BCF4}",
+        "section.description": "\u{C124}\u{BA85}",
+        "section.tags": "\u{D0DC}\u{ADF8}",
+        "section.processing": "\u{CC98}\u{B9AC}",
+        "section.vision": "Vision",
+        "section.developer": "\u{AC1C}\u{BC1C}\u{C790}",
+        "section.active_filters": "\u{D65C}\u{C131} \u{D544}\u{D130}",
+        "section.popular_tags": "\u{C778}\u{AE30} \u{D0DC}\u{ADF8}",
+
+        // Filters
+        "filter.all": "\u{C804}\u{CCB4}",
+        "filter.tagged": "\u{D0DC}\u{ADF8} \u{C644}\u{B8CC}",
+        "filter.untouched": "\u{BBF8}\u{CC98}\u{B9AC}",
+        "filter.pending": "\u{B300}\u{AE30} \u{C911}",
+        "filter.failed": "\u{C2E4}\u{D328}",
+
+        // Sort orders
+        "sort.date_created_desc": "\u{C0DD}\u{C131}\u{C77C}\u{FF08}\u{CD5C}\u{C2E0}\u{FF09}",
+        "sort.date_created_asc": "\u{C0DD}\u{C131}\u{C77C}\u{FF08}\u{C624}\u{B798}\u{B41C}\u{FF09}",
+        "sort.date_processed_desc": "\u{CC98}\u{B9AC}\u{C77C}\u{FF08}\u{CD5C}\u{C2E0}\u{FF09}",
+        "sort.date_processed_asc": "\u{CC98}\u{B9AC}\u{C77C}\u{FF08}\u{C624}\u{B798}\u{B41C}\u{FF09}",
+
+        // Thumbnail sizes
+        "thumbnail.small": "\u{C791}\u{AC8C}",
+        "thumbnail.medium": "\u{C911}\u{AC04}",
+        "thumbnail.large": "\u{D06C}\u{AC8C}",
+
+        // Toolbar
+        "toolbar.sort": "\u{C815}\u{B82C}",
+        "toolbar.sort_help": "\u{C815}\u{B82C} \u{C21C}\u{C11C}",
+        "toolbar.thumbnail_size": "\u{C378}\u{B124}\u{C77C} \u{D06C}\u{AE30}",
+        "toolbar.thumbnail_size_help": "\u{C378}\u{B124}\u{C77C} \u{D06C}\u{AE30}",
+        "toolbar.legend": "\u{BC94}\u{B840}",
+        "toolbar.legend_help": "\u{D0A4}\u{BCF4}\u{B4DC} \u{B2E8}\u{CD95}\u{D0A4} + \u{C0C1}\u{D0DC} \u{BC43}\u{C9C0} \u{BC94}\u{B840}",
+        "toolbar.logs": "\u{B85C}\u{ADF8}",
+        "toolbar.logs_help": "\u{CC98}\u{B9AC} \u{B85C}\u{ADF8}",
+        "toolbar.settings": "\u{C124}\u{C815}",
+        "toolbar.settings_help": "\u{BAA8}\u{B378}, \u{C13C}\u{D2F0}\u{B12C}, Ollama \u{C5F0}\u{ACBD}",
+
+        // Settings sheet
+        "settings.title": "\u{C124}\u{C815}",
+        "settings.changes_apply": "\u{BCC0}\u{ACBD}\u{C0AC}\u{D56D}\u{C740} \u{B2E4}\u{C74C} \u{C2DC}\u{C791} \u{C2DC} \u{C801}\u{C6A9}\u{B429}\u{B2C8}\u{B2E4}",
+        "settings.loading_models": "Ollama\u{C5D0}\u{C11C} \u{BAA8}\u{B378}\u{C744} \u{B85C}\u{B4DC}\u{D558}\u{B294} \u{C911}\u{2026}",
+        "settings.model_placeholder": "\u{BAA8}\u{B378}\u{BA85}\u{FF08}\u{C608}: gemma4:31b\u{FF09}",
+        "settings.model_not_in_ollama": "\u{FF08}\u{D604}\u{C7AC}, Ollama\u{C5D0} \u{C5C6}\u{C74C}\u{FF09}",
+        "settings.sentinel_unchanged": "\u{AC19}\u{C740} \u{BAA8}\u{B378} \u{D328}\u{BC00}\u{B9AC} \u{2014} \u{C13C}\u{D2F0}\u{B12C} \u{BCC0}\u{ACBD} \u{C5C6}\u{C74C}.",
+        "settings.sentinel_family_changed": "\u{C774} \u{BAA8}\u{B378}\u{C740} \u{B2E4}\u{B978} \u{D328}\u{BC00}\u{B9AC}\u{C785}\u{B2C8}\u{B2E4}. \u{C120}\u{D0DD}\u{D558}\u{C138}\u{C694}:",
+        "settings.keep_current": "\u{D604}\u{C7AC} \u{C720}\u{C9C0}:",
+        "settings.use_new": "\u{C0C8}\u{B85C}\u{C6B4} \u{AC83} \u{C0AC}\u{C6A9}:",
+        "settings.custom": "\u{C0AC}\u{C6A9}\u{C790} \u{C815}\u{C758}\u{2026}",
+        "settings.sentinel_placeholder": "ai:family-v1",
+        "settings.base_url": "\u{AE30}\u{BCF8} URL",
+        "settings.base_url_placeholder": "http://localhost:11434",
+        "settings.api_key": "API \u{D0A4}",
+        "settings.api_key_placeholder": "Bearer \u{D1A0}\u{D070}\u{FF08}\u{C120}\u{D0DD}\u{C0AC}\u{D56D}\u{FF09}",
+        "settings.api_key_help": "~/Library/Application Support/photo-snail/settings.json (0600)\u{C5D0} \u{C77C}\u{BC18} \u{D14D}\u{C2A4}\u{D2B8}\u{B85C} \u{C800}\u{C7A5}\u{B429}\u{B2C8}\u{B2E4}. \u{C9C0}\u{C18D}\u{C744} \u{D53C}\u{D558}\u{B824}\u{BA74} \u{D658}\u{ACBD}\u{BCC0}\u{C218} PHOTO_SNAIL_OLLAMA_API_KEY\u{B97C} \u{C124}\u{C815}\u{D558}\u{C138}\u{C694}.",
+        "settings.advanced_headers": "\u{ACE0}\u{AE09}: \u{C0AC}\u{C6A9}\u{C790} \u{C815}\u{C758} \u{D5E4}\u{B354}",
+        "settings.advanced_headers_help": "\u{BE44}Bearer \u{C778}\u{C99D}\u{C744} \u{C0AC}\u{C6A9}\u{D558}\u{B294} \u{D504}\u{B85D}\u{C2DC}\u{C6A9}\u{FF08}Basic, X-API-Key \u{B4F1}\u{FF09}. \u{B458} \u{B2E4} Authorization\u{C744} \u{C124}\u{C815}\u{D558}\u{BA74} \u{D5E4}\u{B354}\u{AC00} API \u{D0A4}\u{B97C} \u{B36E}\u{C5B4}\u{C501}\u{B2C8}\u{B2E4}.",
+        "settings.header_name": "\u{D5E4}\u{B354}\u{BA85}",
+        "settings.header_value": "\u{AC12}",
+        "settings.prompt_changed": "\u{D504}\u{B86C}\u{D504}\u{D2B8}\u{AC00} \u{BCC0}\u{ACBD}\u{B428} \u{2014} \u{C800}\u{C7A5} \u{C2DC} \u{C13C}\u{D2F0}\u{B12C} \u{BC84}\u{C804}\u{C774} \u{C62C}\u{B77C}\u{AC00} \u{C0C8} \u{ACBD}\u{ACFC}\u{C640} \u{C774}\u{C804} \u{ACBD}\u{ACFC}\u{B97C} \u{AD6C}\u{BD84}\u{D569}\u{B2C8}\u{B2E4}.",
+        "settings.test_ok": "OK",
+        "settings.invalid_url": "\u{C798}\u{BABB}\u{B41C} \u{AE30}\u{BCF8} URL",
+        "settings.invalid_url_save": "\u{C798}\u{BABB}\u{B41C} \u{AE30}\u{BCF8} URL \u{2014} \u{C800}\u{C7A5}\u{B418}\u{C9C0} \u{C54A}\u{C74C}",
+
+        // Requeue dialog
+        "dialog.requeue_title": "\u{C774}\u{C804} \u{C0AC}\u{C9C4}\u{C744} \u{C7AC}\u{CC98}\u{B9AC}\u{D558}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
+        "dialog.requeue_description": "\u{C13C}\u{D2F0}\u{B12C}\u{C774} \u{C5C5}\u{B370}\u{C774}\u{D2B8}\u{B418}\u{C5C8}\u{C2B5}\u{B2C8}\u{B2E4}. \u{C7AC}\u{B300}\u{AE30}\u{C5F4}\u{D560} \u{CC98}\u{B9AC}\u{B41C} \u{C13C}\u{D2F0}\u{B12C} \u{ADF8}\u{B8F9}\u{C744} \u{C120}\u{D0DD}\u{D558}\u{C138}\u{C694}.",
+        "dialog.no_previous_sentinels": "\u{B300}\u{AE30}\u{C5F4}\u{C5D0}\u{C11C} \u{C774}\u{C804} \u{C13C}\u{D2F0}\u{B12C}\u{C744} \u{CC3E}\u{C744} \u{C218} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+
+        // Confirmation dialogs
+        "dialog.clear_title": "\u{C124}\u{BA85}\u{C744} \u{C9C0}\u{C6B0}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
+        "dialog.clear_message": "Photos.app\u{C5D0}\u{C11C} photo-snail\u{C774} \u{C791}\u{C131}\u{D55C} \u{C124}\u{BA85}\u{C744} \u{C81C}\u{AC70}\u{D558}\u{ACE0} \u{AC01} \u{D589}\u{C744} \u{B300}\u{AE30}\u{B85C} \u{C7AC}\u{C124}\u{C815}\u{D569}\u{B2C8}\u{B2E4}. \u{C6D0}\u{BCF8} \u{C0AC}\u{C9C4}\u{C740} \u{C218}\u{C815}\u{B418}\u{C9C0} \u{C54A}\u{C2B5}\u{B2C8}\u{B2E4}. \u{C774} \u{C791}\u{C5C5}\u{C740} \u{CDE8}\u{C18C}\u{D560} \u{C218} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "dialog.reprocess_title": "\u{C7AC}\u{CC98}\u{B9AC}\u{D558}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
+        "dialog.reprocess_message": "\u{B300}\u{AE30}\u{C5F4}\u{C758} \u{C0AC}\u{C9C4}\u{C740} \u{B2E4}\u{C74C} \u{C2DC}\u{C791} \u{C2DC} \u{CC98}\u{B9AC}\u{B429}\u{B2C8}\u{B2E4}.",
+
+        // Empty states
+        "empty.nothing_tagged": "\u{C544}\u{C9C1} \u{D0DC}\u{ADF8}\u{B41C} \u{D56D}\u{BAA9} \u{C5C6}\u{C74C}",
+        "empty.everything_enumerated": "\u{BAA8}\u{B450} \u{C5F4}\u{AC70}\u{B428}",
+        "empty.no_pending": "\u{B300}\u{AE30} \u{C911}\u{C778} \u{C791}\u{C5C5} \u{C5C6}\u{C74C}",
+        "empty.no_failures": "\u{C2E4}\u{D328} \u{C5C6}\u{C74C}",
+        "empty.no_images": "Photos \u{B77C}\u{C774}\u{BE0C}\u{B7EC}\u{B9AC}\u{C5D0}\u{C11C} \u{C774}\u{BBF8}\u{C9C0}\u{B97C} \u{CC3E}\u{C744} \u{C218} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "empty.run_batch": "\u{BC30}\u{CE58}\u{B97C} \u{C2E4}\u{D589}\u{D558}\u{C5EC} \u{C124}\u{BA85} \u{C0DD}\u{C131}\u{C744} \u{C2DC}\u{C791}\u{D558}\u{C138}\u{C694}.",
+        "empty.every_photo_queued": "\u{BAA8}\u{B4E0} \u{C0AC}\u{C9C4}\u{C5D0} \u{B300}\u{AE30}\u{C5F4} \u{D589}\u{C774} \u{C788}\u{C2B5}\u{B2C8}\u{B2E4}. \u{BC1C}\u{ACAC}\u{D560} \u{AC83}\u{C774} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "empty.no_pending_alt": "\u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CC98}\u{B9AC}\u{D560} \u{C791}\u{C5C5}\u{C774} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "empty.no_failed_assets": "\u{C2E4}\u{D328} \u{C0C1}\u{D0DC}\u{C758} \u{C560}\u{C14B}\u{C774} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+
+        // Status messages
+        "status.ready": "\u{C900}\u{BE44} \u{C644}\u{B8CC}",
+        "status.loading_library": "\u{B77C}\u{C774}\u{BE0C}\u{B7EC}\u{B9AC} \u{B85C}\u{B4DC} \u{C911}\u{2026}",
+        "status.no_selection": "\u{C120}\u{D0DD} \u{C5C6}\u{C74C}",
+        "status.running": "\u{C2E4}\u{D589} \u{C911}",
+        "status.batch": "\u{BC30}\u{CE58}",
+        "status.preview_unavailable": "\u{BBF8}\u{B9AC}\u{BCF4}\u{AE30} \u{C0AC}\u{C6A9} \u{BD88}\u{AC00}",
+
+        // Inspector
+        "inspector.no_selection": "\u{C120}\u{D0DD} \u{C5C6}\u{C74C}",
+        "inspector.select_photo": "\u{ADF8}\u{B9AC}\u{B4DC}\u{C5D0}\u{C11C} \u{C0AC}\u{C9C4}\u{C744} \u{C120}\u{D0DD}\u{D558}\u{C5EC} \u{AC80}\u{C0AC}\u{D558}\u{C138}\u{C694}.",
+        "inspector.title": "\u{AC80}\u{C0AC}\u{AE30}",
+        "inspector.use_bulk_bar": "\u{ADF8}\u{B9AC}\u{B4DC} \u{C704}\u{C758} \u{C77C}\u{AD04} \u{C561}\u{C158} \u{BC14}\u{B97C} \u{C0AC}\u{C6A9}\u{D558}\u{C5EC} \u{C7AC}\u{CC98}\u{B9AC}, \u{C9C0}\u{C6B0}\u{AE30}, \u{D0DC}\u{ADF8} \u{BCF5}\u{C0AC} \u{B610}\u{B294} \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}\u{B97C} \u{D560} \u{C218} \u{C788}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "inspector.untouched_no_desc": "\u{BBF8}\u{CC98}\u{B9AC} \u{2014} \u{C544}\u{C9C1} \u{C124}\u{BA85}\u{C774} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}. \u{BC30}\u{CE58}\u{B97C} \u{C2E4}\u{D589}\u{D558}\u{C5EC} \u{C0DD}\u{C131}\u{D558}\u{C138}\u{C694}.",
+        "inspector.no_description": "\u{C544}\u{C9C1} \u{C124}\u{BA85}\u{C774} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "inspector.no_tags": "\u{D0DC}\u{ADF8} \u{C5C6}\u{C74C}.",
+        "inspector.add_tag": "\u{D0DC}\u{ADF8} \u{CD94}\u{AC00}\u{2026}",
+        "inspector.copied": "\u{BCF5}\u{C0AC}\u{B428}!",
+        "inspector.copy_desc_help": "\u{C124}\u{BA85}\u{C744} \u{D074}\u{B9BD}\u{BCF4}\u{B4DC}\u{C5D0} \u{BCF5}\u{C0AC}",
+        "inspector.copy_tags_help": "\u{D0DC}\u{ADF8}\u{B97C} \u{D074}\u{B9BD}\u{BCF4}\u{B4DC}\u{C5D0} \u{BCF5}\u{C0AC}",
+        "inspector.no_processing_record": "\u{C774} \u{C560}\u{C14B}\u{C758} \u{CC98}\u{B9AC} \u{AE30}\u{B85D}\u{C774} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "inspector.no_vision_data": "\u{C774} \u{D589}\u{C5D0} \u{B300}\u{D55C} Vision \u{B370}\u{C774}\u{D130}\u{AC00} \u{AE30}\u{B85D}\u{B418}\u{C9C0} \u{C54A}\u{C558}\u{C2B5}\u{B2C8}\u{B2E4}\u{FF08}pre-v1 \u{C644}\u{B8CC} \u{D589}\u{FF09}.",
+        "inspector.vision_runs_later": "Vision \u{C0AC}\u{C804} \u{CC98}\u{B9AC}\u{B294} \u{C0AC}\u{C9C4} \u{CC98}\u{B9AC} \u{C2DC} \u{C2E4}\u{D589}\u{B429}\u{B2C8}\u{B2E4}.",
+        "inspector.vision_nothing": "Vision \u{C0AC}\u{C804} \u{CC98}\u{B9AC}\u{AC00} \u{C2E4}\u{D589}\u{B418}\u{C5C8}\u{C9C0}\u{B9CC} \u{AD6C}\u{C870}\u{D654}\u{B41C} \u{B0B4}\u{C6A9}\u{C744} \u{CC3E}\u{C9C0} \u{BABB}\u{D588}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "inspector.no_queue_row": "\u{B300}\u{AE30}\u{C5F4} \u{D589} \u{C5C6}\u{C74C}.",
+        "inspector.pre_v1": "\u{2014}\u{FF08}pre-v1 / \u{BBF8}\u{AE30}\u{B85D}\u{FF09}",
+
+        // Labels
+        "label.file": "\u{D30C}\u{C77C}",
+        "label.created": "\u{C0DD}\u{C131}\u{C77C}",
+        "label.modified": "\u{C218}\u{C815}\u{C77C}",
+        "label.dimensions": "\u{D06C}\u{AE30}",
+        "label.type": "\u{C720}\u{D615}",
+        "label.favorite": "\u{C990}\u{ACA8}\u{CC3E}\u{AE30}",
+        "label.location": "\u{C704}\u{CE58}",
+        "label.albums": "\u{C568}\u{BC94}",
+        "label.asset_id": "\u{C560}\u{C14B} ID",
+        "label.status": "\u{C0C1}\u{D0DC}",
+        "label.model": "\u{BAA8}\u{B378}",
+        "label.sentinel": "\u{C13C}\u{D2F0}\u{B12C}",
+        "label.ran_at": "\u{C2E4}\u{D589} \u{C2DC}\u{AC04}",
+        "label.total": "\u{CD1D}\u{ACC4}",
+        "label.ollama": "Ollama",
+        "label.attempts": "\u{C2DC}\u{B3C4} \u{D69F}\u{C218}",
+        "label.edited_at": "\u{D3B8}\u{C9D1} \u{C2DC}\u{AC04}",
+        "label.error": "\u{C624}\u{B958}",
+        "label.classifications": "\u{BD84}\u{B958}",
+        "label.animals": "\u{B3D9}\u{BB3C}",
+        "label.faces": "\u{C5BC}\u{AD74}",
+        "label.ocr": "OCR",
+        "label.vision_time": "Vision \u{C2DC}\u{AC04}",
+        "label.last_completed": "\u{B9C8}\u{C9C0}\u{B9C9} \u{C644}\u{B8CC}",
+        "label.expand_runner": "\u{B7EC}\u{B108} \u{D328}\u{B110} \u{D3BC}\u{CE58}\u{AE30}",
+        "label.collapse_runner": "\u{B7EC}\u{B108} \u{D328}\u{B110} \u{C811}\u{AE30}",
+        "label.yes": "\u{C608}",
+        "label.no": "\u{C544}\u{B2C8}\u{C624}",
+        "label.description_payload": "\u{C124}\u{BA85} \u{D398}\u{C774}\u{B85C}\u{B4DC}\u{FF08}Photos.app\u{C758} \u{B0B4}\u{C6A9}\u{FF09}",
+
+        // Log window
+        "log.detailed": "\u{C0C1}\u{C138} \u{B85C}\u{ADF8}",
+        "log.detailed_help": "\u{D30C}\u{C774}\u{D504}\u{B77C}\u{C778} \u{B2E8}\u{ACC4}\u{B97C} \u{D3EC}\u{D568}\u{D55C} \u{BAA8}\u{B4E0} \u{B85C}\u{ADF8} \u{D56D}\u{BAA9} \u{D45C}\u{C2DC}",
+        "log.clear_help": "\u{BAA8}\u{B4E0} \u{B85C}\u{ADF8} \u{D56D}\u{BAA9} \u{C9C0}\u{C6B0}\u{AE30}",
+
+        // Legend
+        "legend.status_badges": "\u{C0C1}\u{D0DC} \u{BC43}\u{C9C0}",
+        "legend.tagged": "\u{C0AC}\u{C9C4}\u{C5D0} Photos.app \u{C124}\u{BA85}\u{C774} \u{C788}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "legend.pending": "\u{CC98}\u{B9AC} \u{B300}\u{AE30} \u{C911}. \u{CC98}\u{B9AC} \u{C911} \u{C560}\u{B2C8}\u{BA54}\u{C774}\u{C158} \u{B9C1} \u{D45C}\u{C2DC}.",
+        "legend.failed": "\u{CC98}\u{B9AC} \u{C2E4}\u{D328}. \u{C77C}\u{AD04} \u{C7AC}\u{CC98}\u{B9AC}\u{B85C} \u{C7AC}\u{C2DC}\u{B3C4}\u{D558}\u{C138}\u{C694}.",
+        "legend.untouched": "\u{C544}\u{C9C1} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{C5F4}\u{AC70}\u{B418}\u{C9C0} \u{C54A}\u{C558}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "legend.keyboard_shortcuts": "\u{D0A4}\u{BCF4}\u{B4DC} \u{B2E8}\u{CD95}\u{D0A4}",
+        "legend.search": "\u{C124}\u{BA85} + \u{D0DC}\u{ADF8} \u{AC80}\u{C0C9}",
+        "legend.prev_next": "\u{C774}\u{C804} / \u{B2E4}\u{C74C} \u{C0AC}\u{C9C4}",
+        "legend.preview": "\u{C804}\u{CCB4} \u{D654}\u{BA74} \u{BBF8}\u{B9AC}\u{BCF4}\u{AE30}",
+        "legend.edit": "\u{C124}\u{BA85} \u{D3B8}\u{C9D1}",
+        "legend.save_edit": "\u{D3B8}\u{C9D1} \u{C800}\u{C7A5}",
+        "legend.select_all": "\u{BCF4}\u{C774}\u{B294} \u{BAA8}\u{B450} \u{C120}\u{D0DD}",
+        "legend.thumbs": "\u{C791}\u{AC8C} / \u{C911}\u{AC04} / \u{D06C}\u{AC8C} \u{C378}\u{B124}\u{C77C}",
+        "legend.toggle_sel": "\u{C120}\u{D0DD} \u{C804}\u{D658}",
+        "legend.range_sel": "\u{BC94}\u{C704} \u{C120}\u{D0DD}",
+        "legend.escape": "\u{C120}\u{D0DD} \u{D574}\u{C81C} / \u{BBF8}\u{B9AC}\u{BCF4}\u{AE30} \u{B2EB}\u{AE30}",
+        "legend.reprocess_sel": "\u{C120}\u{D0DD}\u{D56D}\u{BAA9} \u{C7AC}\u{CC98}\u{B9AC}",
+        "legend.clear_sel": "\u{C120}\u{D0DD}\u{D56D}\u{BAA9} \u{C124}\u{BA85} \u{C9C0}\u{C6B0}\u{AE30}",
+
+        // Bulk actions help
+        "bulk.reprocess_help": "\u{C7AC}\u{CC98}\u{B9AC} \u{2014} \u{C774} \u{C0AC}\u{C9C4}\u{B4E4}\u{C744} \u{B300}\u{AE30} \u{B300}\u{AE30}\u{C5F4}\u{B85C} \u{B3CC}\u{B824}\u{BCF4}\u{B0B4}\u{AE30}",
+        "bulk.clear_help": "\u{C124}\u{BA85} \u{C9C0}\u{C6B0}\u{AE30} \u{2014} Photos.app\u{C5D0}\u{C11C} photo-snail \u{C124}\u{BA85} \u{C81C}\u{AC70}",
+        "bulk.export_help": "JSON \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30} \u{2014} \u{C120}\u{D0DD}\u{B41C} \u{AC01} \u{D589}\u{C744} \u{D30C}\u{C77C}\u{B85C} \u{C800}\u{C7A5}",
+        "bulk.deselect_help": "\u{BAA8}\u{B450} \u{C120}\u{D0DD} \u{D574}\u{C81C}",
+
+        // About
+        "about.description": "macOS\u{C6A9} \u{B85C}\u{CEEC} \u{C6B0}\u{C120} \u{C0AC}\u{C9C4} \u{D0DC}\u{ADF8} \u{B3C4}\u{AD6C}.\nApple Vision\u{ACFC} \u{B85C}\u{CEEC} LLM\u{C744} \u{C0AC}\u{C6A9}\u{D558}\u{C5EC} Photos \u{B77C}\u{C774}\u{BE0C}\u{B7EC}\u{B9AC}\u{C758} \u{C124}\u{BA85}\u{ACFC} \u{D0DC}\u{ADF8}\u{B97C} \u{C644}\u{C804}\u{D788} \u{AE30}\u{AE30}\u{C5D0}\u{C11C} \u{C0DD}\u{C131}\u{D569}\u{B2C8}\u{B2E4}.",
+        "about.author": "Laurent Chouinard \u{C81C}\u{C791}",
+        "about.license": "MIT \u{B77C}\u{C774}\u{C120}\u{C2A4}",
+        "about.github": "GitHub",
+
+        // Language change flow
+        "lang.confirm_title": "\u{C571} \u{C5B8}\u{C5B4}\u{B97C} \u{BCC0}\u{ACBD}\u{D558}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
+        "lang.confirm_change": "\u{BCC0}\u{ACBD}",
+        "lang.prompt_title": "AI \u{D504}\u{B86C}\u{D504}\u{D2B8} \u{C5B8}\u{C5B4}\u{B3C4} \u{BCC0}\u{ACBD}\u{D558}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
+        "lang.prompt_message": "\u{C0C8} \u{C5B8}\u{C5B4}\u{B85C} \u{C124}\u{BA85}\u{C744} \u{C0DD}\u{C131}\u{D558}\u{B3C4}\u{B85D} \u{D504}\u{B86C}\u{D504}\u{D2B8}\u{B97C} \u{C5C5}\u{B370}\u{C774}\u{D2B8}\u{D558}\u{ACE0} \u{C13C}\u{D2F0}\u{B12C} \u{BC84}\u{C804}\u{C744} \u{C62C}\u{B9BD}\u{B2C8}\u{B2E4}.",
+        "lang.translate_title": "\u{AE30}\u{C874} \u{C124}\u{BA85}\u{C744} \u{BC88}\u{C5ED}\u{D558}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
+        "lang.translate_message": "AI \u{BAA8}\u{B378}\u{C744} \u{C0AC}\u{C6A9}\u{D558}\u{C5EC} \u{CC98}\u{B9AC}\u{B41C} \u{BAA8}\u{B4E0} \u{C0AC}\u{C9C4}\u{C744} \u{C0C8} \u{C5B8}\u{C5B4}\u{B85C} \u{BC88}\u{C5ED}\u{D558}\u{AE30} \u{C704}\u{D574} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{B123}\u{C2B5}\u{B2C8}\u{B2E4}. \u{BC88}\u{C5ED}\u{C740} \u{D14D}\u{C2A4}\u{D2B8}\u{B9CC} \u{CC98}\u{B9AC}\u{D558}\u{BA70} \u{C7AC}\u{CC98}\u{B9AC}\u{BCF4}\u{B2E4} \u{D6E8}\u{C52C} \u{BE60}\u{B985}\u{B2C8}\u{B2E4}.",
+        "lang.translate": "\u{BC88}\u{C5ED}",
+    ]
+}
