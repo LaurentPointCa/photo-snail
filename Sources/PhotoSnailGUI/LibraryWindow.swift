@@ -18,7 +18,7 @@ struct LibraryWindow: View {
         Group {
             if let err = store.loadError {
                 ContentUnavailableView(
-                    "Can't open library",
+                    loc.t("error.cant_open_library"),
                     systemImage: "exclamationmark.triangle",
                     description: Text(err)
                 )
@@ -393,7 +393,7 @@ struct LibraryGrid: View {
         .searchable(
             text: Bindable(store).searchText,
             placement: .toolbar,
-            prompt: "Search descriptions and tags"
+            prompt: loc.t("label.search_placeholder")
         )
         // Keyboard shortcuts. The grid is the focusable host; disabling the
         // focus effect keeps the whole pane from glowing blue on every click.
@@ -525,7 +525,7 @@ struct LibraryGrid: View {
         let shown = store.displayOrder.count
         let total = store.totalCount
         if shown == total { return "\(total)" }
-        return "\(shown) of \(total)"
+        return "\(shown) \(loc.t("label.of")) \(total)"
     }
 
     @ViewBuilder
@@ -840,7 +840,7 @@ struct BulkActionBar: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            Text(hasSelection ? "\(store.selection.count) selected" : loc.t("status.no_selection"))
+            Text(hasSelection ? String(format: loc.t("status.n_selected"), store.selection.count) : loc.t("status.no_selection"))
                 .font(AppFont.bodyEmphasized)
                 .monospacedDigit()
                 .foregroundStyle(hasSelection ? AppColor.textPrimary : AppColor.textSecondary)
@@ -915,11 +915,11 @@ struct BulkActionBar: View {
         } message: {
             Text(loc.t("dialog.clear_message"))
         }
-        .alert("Export failed", isPresented: Binding(
+        .alert(loc.t("error.export_failed"), isPresented: Binding(
             get: { showingExportError != nil },
             set: { if !$0 { showingExportError = nil } }
         )) {
-            Button("OK") { showingExportError = nil }
+            Button(loc.t("button.ok")) { showingExportError = nil }
         } message: {
             Text(showingExportError ?? "")
         }
@@ -1222,7 +1222,7 @@ struct RunnerDock: View {
                 // Current photo card (bottom). Shows a pulsing accent ring
                 // while the worker is running to match the Phase 0 mockup.
                 DockPhotoCard(
-                    title: engine.state == .running ? "Processing" : "Idle",
+                    title: engine.state == .running ? loc.t("status.processing_verb") : loc.t("status.idle"),
                     thumbnail: engine.currentThumbnail,
                     caption: engine.statusMessage,
                     isLive: engine.state == .running,
@@ -1244,12 +1244,12 @@ struct RunnerDock: View {
                 // on, LibraryGrid's onChange(engine.currentPhotoID) scrolls
                 // the grid to the in-flight photo every advance.
                 Toggle(isOn: Bindable(store).followCurrentProcessing) {
-                    Text("Follow processing in grid")
+                    Text(loc.t("label.follow_processing"))
                         .font(AppFont.label)
                 }
                 .toggleStyle(.switch)
                 .controlSize(.regular)
-                .help("Auto-scroll the grid to the currently-processing photo")
+                .help(loc.t("help.follow_processing"))
             }
 
             // Primary action — always visible.
@@ -1278,7 +1278,7 @@ struct RunnerDock: View {
                     .font(AppFont.display)
                     .monospacedDigit()
                     .foregroundStyle(AppColor.textPrimary)
-                Text("of \(engine.totalCount)")
+                Text("\(loc.t("label.of")) \(engine.totalCount)")
                     .font(AppFont.caption)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
@@ -1287,7 +1287,7 @@ struct RunnerDock: View {
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .imageScale(.small)
-                        Text("ETA \(engine.etaString)")
+                        Text("\(loc.t("label.eta")) \(engine.etaString)")
                             .font(AppFont.caption)
                             .monospacedDigit()
                     }
@@ -1312,7 +1312,7 @@ struct RunnerDock: View {
             Button {
                 Task { await engine.start() }
             } label: {
-                Label("Start", systemImage: "play.fill")
+                Label(loc.t("button.start"), systemImage: "play.fill")
                     .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 2)
@@ -1332,7 +1332,7 @@ struct RunnerDock: View {
             Button {
                 engine.pause()
             } label: {
-                Label("Pause", systemImage: "pause.fill")
+                Label(loc.t("button.pause"), systemImage: "pause.fill")
                     .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 2)
@@ -1343,7 +1343,7 @@ struct RunnerDock: View {
             Button {
                 engine.resume()
             } label: {
-                Label("Resume", systemImage: "play.fill")
+                Label(loc.t("button.resume"), systemImage: "play.fill")
                     .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 2)

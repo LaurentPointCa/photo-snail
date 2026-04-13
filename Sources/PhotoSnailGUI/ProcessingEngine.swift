@@ -40,7 +40,7 @@ final class ProcessingEngine {
     var etaString: String = "--"
 
     var failures: [FailedAsset] = []
-    var statusMessage: String = "Ready"
+    var statusMessage: String = ""
 
     struct FailedAsset: Identifiable {
         let id: String
@@ -85,12 +85,14 @@ final class ProcessingEngine {
     // MARK: - Initial load (no processing, just stats + settings + Ollama probe)
 
     func loadInitialStats() async {
+        self.statusMessage = Localizer.shared.t("status.ready")
+
         // 1. Load settings from disk (or defaults). Apply env-var overrides for runtime.
         let loaded: Settings
         do {
             loaded = try Settings.load()
         } catch {
-            statusMessage = "Settings error: \(error)"
+            statusMessage = "\(Localizer.shared.t("error.settings_error")): \(error)"
             return
         }
         let runtime = loaded.withEnvOverrides()
@@ -104,7 +106,7 @@ final class ProcessingEngine {
         do {
             try await refreshStats()
         } catch {
-            statusMessage = "Queue error: \(error)"
+            statusMessage = "\(Localizer.shared.t("error.queue_open_failed")): \(error)"
         }
 
         // 3. Kick off Ollama model discovery in the background — non-blocking.
@@ -154,9 +156,9 @@ final class ProcessingEngine {
                          customPrompt: customPrompt, promptLanguage: promptLanguage)
         do {
             try s.save()
-            statusMessage = "Settings saved"
+            statusMessage = Localizer.shared.t("status.settings_saved")
         } catch {
-            statusMessage = "Save failed: \(error)"
+            statusMessage = "\(Localizer.shared.t("error.save_failed")): \(error)"
         }
 
         // Re-probe Ollama with the new connection.
@@ -168,19 +170,19 @@ final class ProcessingEngine {
     func start() async {
         guard state == .idle || state == .finished else { return }
         state = .enumerating
-        statusMessage = "Requesting Photos access..."
+        statusMessage = Localizer.shared.t("status.requesting_photos")
         log.append(.info, "Requesting Photos access")
 
         let authStatus = await PhotoLibrary.requestAuth()
         guard authStatus == .authorized else {
-            statusMessage = "Photos access denied (\(PhotoLibrary.authStatusLabel(authStatus)))"
+            statusMessage = "\(Localizer.shared.t("error.photos_access_denied")) (\(PhotoLibrary.authStatusLabel(authStatus)))"
             log.append(.error, "Photos access denied: \(PhotoLibrary.authStatusLabel(authStatus))")
             state = .idle
             return
         }
 
         do {
-            statusMessage = "Enumerating library..."
+            statusMessage = Localizer.shared.t("status.enumerating")
             log.append(.info, "Enumerating library...")
             _ = try await PhotoLibraryEnumerator.fetchUnprocessedIdentifiers(
                 queue: queue,
@@ -193,7 +195,7 @@ final class ProcessingEngine {
             try await refreshStats()
 
             if pendingCount == 0 {
-                statusMessage = "All photos processed"
+                statusMessage = Localizer.shared.t("status.all_processed")
                 log.append(.success, "All photos already processed")
                 state = .finished
                 return
@@ -202,12 +204,12 @@ final class ProcessingEngine {
             state = .running
             sessionStartTime = Date()
             photosProcessedThisSession = 0
-            statusMessage = "Processing..."
+            statusMessage = "\(Localizer.shared.t("status.processing_verb"))..."
             log.append(.info, "Processing started — \(pendingCount) pending, \(doneCount) done, \(failedCount) failed")
 
             launchWorker()
         } catch {
-            statusMessage = "Error: \(error)"
+            statusMessage = "\(Localizer.shared.t("label.error")): \(error)"
             log.append(.error, "Start failed: \(error)")
             state = .idle
         }
@@ -215,14 +217,14 @@ final class ProcessingEngine {
 
     func pause() {
         isPausedFlag = true
-        statusMessage = "Pausing after current photo..."
+        statusMessage = Localizer.shared.t("status.pausing")
         log.append(.info, "Pause requested")
     }
 
     func resume() {
         isPausedFlag = false
         state = .running
-        statusMessage = "Resuming..."
+        statusMessage = Localizer.shared.t("status.resuming")
         log.append(.info, "Resumed")
         pauseContinuation?.resume()
         pauseContinuation = nil
@@ -233,9 +235,9 @@ final class ProcessingEngine {
             try await queue.requeueFailed(id)
             try await refreshStats()
             try await refreshFailures()
-            statusMessage = "Re-queued \(String(id.prefix(8)))..."
+            statusMessage = "\(Localizer.shared.t("button.reprocess")) \(String(id.prefix(8)))..."
         } catch {
-            statusMessage = "Retry error: \(error)"
+            statusMessage = "\(Localizer.shared.t("error.retry_error")): \(error)"
         }
     }
 
@@ -245,7 +247,7 @@ final class ProcessingEngine {
         }
         try? await refreshStats()
         try? await refreshFailures()
-        statusMessage = "Re-queued \(failures.count) failed assets"
+        statusMessage = String(format: Localizer.shared.t("status.requeued_failed"), failures.count)
     }
 
     // MARK: - Worker
@@ -261,6 +263,17 @@ final class ProcessingEngine {
         let customPrompt = self.customPrompt
         let promptLanguage = self.promptLanguage
         let dryRun = self.dryRun
+
+        // Capture localized strings before detaching — launchWorker() is on
+        // MainActor so Localizer.shared is accessible here.
+        let loc = Localizer.shared
+        let verbProcessing = loc.t("status.processing_verb")
+        let verbTranslating = loc.t("status.translating_verb")
+        let locPaused = loc.t("status.paused")
+        let locDryrunComplete = loc.t("status.dryrun_complete")
+        let locQueueError = loc.t("error.queue_open_failed")
+        let locAllProcessed = loc.t("status.all_processed")
+        let locAssetNotFound = loc.t("error.asset_not_found")
 
         // Dry-run uses an in-memory cursor over a snapshot of pending IDs so the
         // queue is never mutated. Build it on the actor before detaching the worker.
@@ -299,7 +312,7 @@ final class ProcessingEngine {
                 if await self?.isPausedFlag == true {
                     await MainActor.run {
                         self?.state = .paused
-                        self?.statusMessage = "Paused"
+                        self?.statusMessage = locPaused
                     }
                     await withCheckedContinuation { cont in
                         Task { @MainActor in
@@ -317,7 +330,7 @@ final class ProcessingEngine {
                     guard let nextId = await cursor.next() else {
                         await MainActor.run {
                             self?.state = .finished
-                            self?.statusMessage = "Dry-run complete (queue not mutated)"
+                            self?.statusMessage = locDryrunComplete
                             log.append(.success, "Dry-run complete — queue not mutated")
                         }
                         return
@@ -331,7 +344,7 @@ final class ProcessingEngine {
                         claim = try await queue.claimNext()
                     } catch {
                         await MainActor.run {
-                            self?.statusMessage = "Queue error: \(error)"
+                            self?.statusMessage = "\(locQueueError): \(error)"
                             log.append(.error, "Queue error: \(error)")
                         }
                         return
@@ -339,7 +352,7 @@ final class ProcessingEngine {
                     guard let c = claim else {
                         await MainActor.run {
                             self?.state = .finished
-                            self?.statusMessage = "All photos processed"
+                            self?.statusMessage = locAllProcessed
                             log.append(.success, "All photos processed")
                         }
                         return
@@ -351,7 +364,7 @@ final class ProcessingEngine {
 
                 await MainActor.run {
                     self?.currentPhotoID = id
-                    let verb = taskType == "translate" ? "Translating" : "Processing"
+                    let verb = taskType == "translate" ? verbTranslating : verbProcessing
                     self?.statusMessage = "\(verb) \(String(id.prefix(8)))..."
                     log.append(.info, "\(verb) \(String(id.prefix(8)))…", assetId: id)
                 }
@@ -439,7 +452,7 @@ final class ProcessingEngine {
                             try? await queue.markFailed(id, error: err)
                         }
                         await MainActor.run {
-                            self?.statusMessage = "Asset not found: \(String(id.prefix(8)))"
+                            self?.statusMessage = "\(locAssetNotFound): \(String(id.prefix(8)))"
                             log.append(.error, "Asset not found: \(String(id.prefix(8)))", assetId: id)
                         }
                         await self?.refreshStatsAndFailures()
