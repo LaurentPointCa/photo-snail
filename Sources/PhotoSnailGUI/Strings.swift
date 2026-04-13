@@ -326,6 +326,7 @@ enum Strings {
         "lang.translate_title": "Translate existing descriptions?",
         "lang.translate_message": "This will queue all previously-processed photos for translation to the new language using the AI model. Translation is text-only and much faster than re-processing.",
         "lang.translate": "Translate",
+        "status.translation_queued": "%d photos queued for translation",
     ]
 
     // MARK: - French
@@ -595,6 +596,7 @@ enum Strings {
         "lang.translate_title": "Traduire les descriptions existantes ?",
         "lang.translate_message": "Ceci mettra en file toutes les photos d\u{00E9}j\u{00E0} trait\u{00E9}es pour traduction dans la nouvelle langue via le mod\u{00E8}le IA. La traduction est textuelle et beaucoup plus rapide que le retraitement.",
         "lang.translate": "Traduire",
+        "status.translation_queued": "%d photos en file d'attente pour traduction",
     ]
 
     // MARK: - Spanish
@@ -858,6 +860,7 @@ enum Strings {
         "lang.translate_title": "\u{00BF}Traducir descripciones existentes?",
         "lang.translate_message": "Esto pondr\u{00E1} en cola todas las fotos ya procesadas para traducci\u{00F3}n al nuevo idioma usando el modelo IA. La traducci\u{00F3}n es solo texto y mucho m\u{00E1}s r\u{00E1}pida que reprocesar.",
         "lang.translate": "Traducir",
+        "status.translation_queued": "%d fotos en cola para traducción",
     ]
 
     // MARK: - German
@@ -1384,6 +1387,7 @@ enum Strings {
         "lang.translate_title": "Traduzir descri\u{00E7}\u{00F5}es existentes?",
         "lang.translate_message": "Isto colocar\u{00E1} na fila todas as fotos j\u{00E1} processadas para tradu\u{00E7}\u{00E3}o no novo idioma usando o modelo IA. A tradu\u{00E7}\u{00E3}o \u{00E9} somente texto e muito mais r\u{00E1}pida que reprocessar.",
         "lang.translate": "Traduzir",
+        "status.translation_queued": "%d fotos na fila para tradução",
     ]
 
     // MARK: - Japanese

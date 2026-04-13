@@ -147,7 +147,7 @@ struct LanguageChangeSheet: View {
                 .font(.system(size: 36))
                 .foregroundStyle(.green)
 
-            Text("\(translationQueued) photos queued for translation")
+            Text(String(format: loc.t("status.translation_queued"), translationQueued))
                 .font(.title3)
 
             Button(loc.t("button.close")) {
