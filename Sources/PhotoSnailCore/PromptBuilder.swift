@@ -6,15 +6,21 @@ public struct PromptBuilder {
     /// Confidence threshold above which a Vision classification label is shown to the LLM.
     public static let labelInclusionThreshold: Float = 0.30
 
-    /// Bare prompt — no Vision context. The English wording is the version that ran
-    /// Phase D successfully. A French variant was trialled and reverted on 2026-04-07
-    /// (see memory: project_locale_decision.md).
-    public static func bare() -> String {
-        return """
+    /// The default bare prompt — no Vision context. The English wording is the version
+    /// that ran Phase D successfully. A French variant was trialled and reverted on
+    /// 2026-04-07 (see memory: project_locale_decision.md).
+    public static let defaultPrompt: String = """
         Describe this image in 2-3 sentences. Then list 5-10 short tags (lowercase, comma-separated) that capture its content. Format strictly as:
         DESCRIPTION: <text>
         TAGS: <tag1>, <tag2>, ...
         """
+
+    /// Bare prompt, using a custom override if provided.
+    public static func bare(override: String? = nil) -> String {
+        if let custom = override, !custom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return custom
+        }
+        return defaultPrompt
     }
 
     /// Build a prompt that injects Vision findings as supporting context, then asks for description + tags

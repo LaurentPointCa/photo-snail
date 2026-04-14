@@ -16,7 +16,7 @@ The user's priorities, in order:
 
 ## Status
 
-Phases A–G complete. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, and failure inspector. Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
+Phases A–K complete. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, failure inspector, custom prompt editor, and runtime localization (8 languages). Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
 
 See `TODO.md` for the phased plan and current progress.
 
@@ -118,6 +118,29 @@ Missing file → `Settings.default` (today's hardcoded values). Saved atomically
 
 **Known minor bug**: diagnostic commands (`--list-models`, `--ollama-test`) return before the settings-save step, so combining them with config flags (`--model`, `--ollama-url`, etc.) won't persist the config. Workaround: re-run without the diagnostic flag. Not worth fixing unless it bites someone — diagnostics are inherently read-only by intent.
 
+### Custom prompt + sentinel version bumps (added 2026-04-12)
+
+`Settings.customPrompt` (optional, nil = use default) stores a user-edited prompt. `PromptBuilder.bare(override:)` uses it when non-nil. When the prompt changes, the sentinel version is bumped (e.g. `ai:gemma4-v1` → `ai:gemma4-v2`) so new results are distinguishable from old ones. The SettingsSheet offers to requeue photos processed under old sentinels.
+
+`Sentinel.bumpVersion(currentSentinel:)` parses the current version and returns `ai:<family>-v<N+1>`. `Sentinel.version(ofSentinel:)` extracts the integer version.
+
+### Runtime localization (added 2026-04-12)
+
+The GUI supports 8 languages: EN, FR, ES, DE, PT, JA, ZH-Hans, KO. `Localizer.swift` is an `@Observable @MainActor` singleton. Views call `loc.t("key")` and re-render automatically when the language changes. Translations are in `Strings.swift` (~181 keys per language). Persistence: `UserDefaults` key `"photo-snail.language"`.
+
+The Language menu (menubar → Language) triggers `LanguageChangeSheet`, which:
+1. Confirms the switch in the current language
+2. Offers to change the AI prompt language (bumps sentinel)
+3. Offers to translate existing descriptions via Ollama (enqueues translation jobs)
+
+### Translation pipeline (added 2026-04-12)
+
+Queue schema v2 adds `task_type` (`'caption'` default, `'translate'`), `original_description`, `original_tags_json`. Translation jobs are text-only Ollama calls (~2-5s each, no image). The worker loop in `ProcessingEngine` branches on `claim.taskType`:
+- `"caption"`: existing image pipeline (unchanged)
+- `"translate"`: reads `original_description`/`original_tags_json`, sends translation prompt, parses result with `CaptionParser`, writes back to Photos.app
+
+`AssetQueue.enqueueTranslation(_:)` snapshots current description/tags into `original_*` columns before setting rows back to pending. `OllamaClient.generateText(model:prompt:)` handles text-only calls.
+
 ### Dry-run is queue-pure (added 2026-04-11)
 
 `--dry-run` (CLI) and `ProcessingEngine.dryRun` (GUI) both run the full pipeline (Vision + Ollama + parser + tag merge) but **never mutate the queue DB**. No `claimNext`, no `markDone`, no `markFailed`, no `recordRetry` — the row that was at the head of `pending` before the dry-run is still at the head afterwards.
@@ -170,7 +193,10 @@ photo-snail/
 │       ├── PhotoPreview.swift         CompletedPhotoView (top) + CurrentPhotoView (bottom)
 │       ├── ControlsView.swift         Start / Pause / Resume
 │       ├── FailureListView.swift      Failed assets + error detail + retry
-│       ├── SettingsSheet.swift        Modal: model picker, sentinel choice, Ollama connection
+│       ├── SettingsSheet.swift        Modal: model picker, prompt editor, sentinel choice, Ollama connection
+│       ├── Localizer.swift           @Observable runtime language switching (8 languages)
+│       ├── Strings.swift             Localization string catalog (~181 keys × 8 languages)
+│       ├── LanguageChangeSheet.swift  Multi-step language change dialog flow
 │       ├── PhotoLibrary.swift         (copied from PhotoSnailApp)
 │       ├── PhotosScripter.swift       (copied from PhotoSnailApp)
 │       └── PhotoLibraryEnumerator.swift (adapted: logging via closure)

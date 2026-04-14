@@ -22,17 +22,20 @@ public final class Pipeline {
     public let promptStyle: PromptStyle
     public let visionAnalyzer: VisionAnalyzer
     public let ollama: OllamaClient
+    public let customPrompt: String?
 
     public init(
         model: String = "gemma4:31b",
         promptStyle: PromptStyle = .sideChannel,
         visionAnalyzer: VisionAnalyzer = VisionAnalyzer(),
-        ollama: OllamaClient = OllamaClient()
+        ollama: OllamaClient = OllamaClient(),
+        customPrompt: String? = nil
     ) {
         self.model = model
         self.promptStyle = promptStyle
         self.visionAnalyzer = visionAnalyzer
         self.ollama = ollama
+        self.customPrompt = customPrompt
     }
 
     /// Process an image from a file path (CLI entry point).
@@ -64,10 +67,10 @@ public final class Pipeline {
         switch promptStyle {
         case .bare:
             findings = .empty
-            prompt = PromptBuilder.bare()
+            prompt = PromptBuilder.bare(override: customPrompt)
         case .sideChannel:
             findings = try visionAnalyzer.analyze(imageData: imageData)
-            prompt = PromptBuilder.bare()
+            prompt = PromptBuilder.bare(override: customPrompt)
         case .hybrid:
             findings = try visionAnalyzer.analyze(imageData: imageData)
             prompt = PromptBuilder.build(findings: findings)

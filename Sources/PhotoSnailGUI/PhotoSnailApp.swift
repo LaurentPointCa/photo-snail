@@ -10,9 +10,34 @@ struct PhotoSnailApp: App {
         .defaultSize(width: 1400, height: 900)
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("About Photo Snail") {
+                Button(Localizer.shared.t("button.about")) {
                     showAbout()
                 }
+            }
+            CommandGroup(after: .appSettings) {
+                Button(Localizer.shared.t("toolbar.settings") + "...") {
+                    AppCommands.shared.pendingSettingsOpen = true
+                }
+                .keyboardShortcut(",", modifiers: .command)
+
+                Menu("Language") {
+                    ForEach(Localizer.Language.allCases) { lang in
+                        Button {
+                            Localizer.shared.pendingLanguageChange = lang
+                        } label: {
+                            HStack {
+                                Text(lang.nativeName)
+                                if Localizer.shared.language == lang {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CommandGroup(after: .windowArrangement) {
+                OpenLogsMenuButton()
             }
         }
 
@@ -33,17 +58,17 @@ struct PhotoSnailApp: App {
         ]
 
         credits.append(NSAttributedString(
-            string: "Local-first photo tagging tool for macOS.\nGenerates descriptions and tags for your Photos library using Apple Vision and a local LLM, fully on-device.\n\n",
+            string: Localizer.shared.t("about.description") + "\n\n",
             attributes: bodyAttrs
         ))
 
         credits.append(NSAttributedString(
-            string: "by Laurent Chouinard\n\n",
+            string: Localizer.shared.t("about.author") + "\n\n",
             attributes: [.font: bodyFont, .foregroundColor: NSColor.labelColor]
         ))
 
         credits.append(NSAttributedString(
-            string: "GitHub",
+            string: Localizer.shared.t("about.github"),
             attributes: [
                 .font: linkFont,
                 .link: URL(string: "https://github.com/LaurentPointCa/photo-snail")!,
@@ -51,9 +76,26 @@ struct PhotoSnailApp: App {
         ))
 
         credits.append(NSAttributedString(
-            string: " · MIT License",
+            string: " · \(Localizer.shared.t("about.license"))",
             attributes: bodyAttrs
         ))
+
+        // Build stamp — written into Info.plist by bundle-gui.sh at package time.
+        // Format: "v1.0.0-3-gabc1234 · Build 2026-04-13 20:12:10"
+        let buildDate = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailBuildDate") as? String
+        let gitVersion = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailGitVersion") as? String
+        var stampParts: [String] = []
+        if let g = gitVersion, !g.isEmpty, g != "unknown" { stampParts.append(g) }
+        if let d = buildDate, !d.isEmpty { stampParts.append("Build \(d)") }
+        if !stampParts.isEmpty {
+            credits.append(NSAttributedString(
+                string: "\n\n" + stampParts.joined(separator: " · "),
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: 10),
+                    .foregroundColor: NSColor.tertiaryLabelColor,
+                ]
+            ))
+        }
 
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
@@ -62,5 +104,18 @@ struct PhotoSnailApp: App {
         NSApplication.shared.orderFrontStandardAboutPanel(options: [
             .credits: credits,
         ])
+    }
+}
+
+/// Menu command that opens the Logs window. Wrapped as a View so it can use
+/// `@Environment(\.openWindow)` — Environment values aren't accessible from a
+/// CommandGroup's closure directly.
+private struct OpenLogsMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Button(Localizer.shared.t("toolbar.logs")) {
+            openWindow(id: "log-window")
+        }
+        .keyboardShortcut("l", modifiers: [.command, .shift])
     }
 }

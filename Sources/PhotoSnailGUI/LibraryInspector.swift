@@ -25,15 +25,16 @@ import PhotoSnailCore
 /// any manual change-tracking.
 struct LibraryInspector: View {
     @Bindable var store: LibraryStore
+    private let loc = Localizer.shared
 
     var body: some View {
         Group {
             switch store.selection.count {
             case 0:
                 ContentUnavailableView(
-                    "No selection",
+                    loc.t("inspector.no_selection"),
                     systemImage: "photo",
-                    description: Text("Select a photo in the grid to inspect it.")
+                    description: Text(loc.t("inspector.select_photo"))
                 )
             case 1:
                 // `selection.first!` is safe inside `count == 1`.
@@ -44,7 +45,7 @@ struct LibraryInspector: View {
                 MultiSelectionSummary(store: store)
             }
         }
-        .navigationTitle("Inspector")
+        .navigationTitle(loc.t("inspector.title"))
     }
 }
 
@@ -56,12 +57,13 @@ struct LibraryInspector: View {
 /// to do bulk ops, just a summary of what's selected.
 private struct MultiSelectionSummary: View {
     @Bindable var store: LibraryStore
+    private let loc = Localizer.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 SurfaceCard(spacing: Spacing.md) {
-                    Text("\(store.selection.count) photos selected")
+                    Text("\(store.selection.count) \(loc.t("inspector.photos_selected"))")
                         .font(AppFont.display)
                         .foregroundStyle(AppColor.textPrimary)
                     thumbFilmstrip
@@ -77,7 +79,7 @@ private struct MultiSelectionSummary: View {
                     SurfaceCard { modelBreakdownSection }
                 }
 
-                Text("Use the bulk action bar above the grid to re-process, clear, copy tags, or export.")
+                Text(loc.t("inspector.use_bulk_bar"))
                     .font(AppFont.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -145,17 +147,17 @@ private struct MultiSelectionSummary: View {
     @ViewBuilder
     private var statsSection: some View {
         let counts = countsByStatus
-        EyebrowLabel("Status")
+        EyebrowLabel(loc.t("label.status"))
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            statRow("Tagged", counts.tagged, tint: AppColor.statusDone)
-            statRow("Pending", counts.pending, tint: AppColor.statusPending)
-            statRow("Failed", counts.failed, tint: AppColor.statusFailed)
-            statRow("Untouched", counts.untouched, tint: AppColor.statusUntouched)
+            statRow(loc.t("filter.tagged"), counts.tagged, tint: AppColor.statusDone)
+            statRow(loc.t("filter.pending"), counts.pending, tint: AppColor.statusPending)
+            statRow(loc.t("filter.failed"), counts.failed, tint: AppColor.statusFailed)
+            statRow(loc.t("filter.untouched"), counts.untouched, tint: AppColor.statusUntouched)
         }
 
         let range = dateRange
         if let e = range.earliest, let l = range.latest, e != 0 || l != 0 {
-            EyebrowLabel("Processed")
+            EyebrowLabel(loc.t("section.processing"))
                 .padding(.top, Spacing.sm)
             Text("\(formatTimestamp(e)) → \(formatTimestamp(l))")
                 .font(AppFont.body)
@@ -199,7 +201,7 @@ private struct MultiSelectionSummary: View {
 
     @ViewBuilder
     private var commonTagsSection: some View {
-        EyebrowLabel("Tags in every selected photo")
+        EyebrowLabel(loc.t("inspector.common_tags"))
         ChipFlowLayout(spacing: 8, runSpacing: 8) {
             ForEach(commonTags, id: \.self) { tag in
                 CommonTagChip(tag: tag) {
@@ -214,7 +216,7 @@ private struct MultiSelectionSummary: View {
     private var modelBreakdown: [(String, Int)] {
         var counts: [String: Int] = [:]
         for id in store.selection {
-            let model = store.rows[id]?.model ?? "— (pre-v1 / unrecorded)"
+            let model = store.rows[id]?.model ?? loc.t("inspector.pre_v1")
             counts[model, default: 0] += 1
         }
         return counts.sorted { $0.value > $1.value }
@@ -222,7 +224,7 @@ private struct MultiSelectionSummary: View {
 
     @ViewBuilder
     private var modelBreakdownSection: some View {
-        EyebrowLabel("Models used")
+        EyebrowLabel(loc.t("inspector.models_used"))
         VStack(alignment: .leading, spacing: Spacing.xs) {
             ForEach(modelBreakdown, id: \.0) { pair in
                 HStack {
@@ -254,6 +256,7 @@ private struct MultiSelectionSummary: View {
 private struct InspectorContent: View {
     @Bindable var store: LibraryStore
     let assetId: String
+    private let loc = Localizer.shared
 
     // Hero preview
     @State private var heroImage: NSImage? = nil
@@ -341,28 +344,28 @@ private struct InspectorContent: View {
 
     @ViewBuilder
     private var identitySection: some View {
-        sectionHeader("Identity", systemImage: "info.circle")
+        sectionHeader(loc.t("section.identity"), systemImage: "info.circle")
         VStack(alignment: .leading, spacing: 6) {
             if let asset {
-                identityRow("File", value: filename(asset) ?? "—")
-                identityRow("Created", value: formatDate(asset.creationDate))
+                identityRow(loc.t("label.file"), value: filename(asset) ?? "—")
+                identityRow(loc.t("label.created"), value: formatDate(asset.creationDate))
                 if let modified = asset.modificationDate,
                    modified != asset.creationDate {
-                    identityRow("Modified", value: formatDate(modified))
+                    identityRow(loc.t("label.modified"), value: formatDate(modified))
                 }
-                identityRow("Dimensions", value: "\(asset.pixelWidth) × \(asset.pixelHeight)")
-                identityRow("Type", value: PhotoLibrary.mediaTypeLabel(asset.mediaType))
+                identityRow(loc.t("label.dimensions"), value: "\(asset.pixelWidth) × \(asset.pixelHeight)")
+                identityRow(loc.t("label.type"), value: PhotoLibrary.mediaTypeLabel(asset.mediaType))
                 if asset.isFavorite {
-                    identityRow("Favorite", value: "★")
+                    identityRow(loc.t("label.favorite"), value: "★")
                 }
-                if let loc = asset.location {
+                if let assetLocation = asset.location {
                     identityRow(
-                        "Location",
-                        value: String(format: "%.5f, %.5f", loc.coordinate.latitude, loc.coordinate.longitude)
+                        loc.t("label.location"),
+                        value: String(format: "%.5f, %.5f", assetLocation.coordinate.latitude, assetLocation.coordinate.longitude)
                     )
                 }
                 if !albums.isEmpty {
-                    identityRow("Albums", value: albums.joined(separator: ", "))
+                    identityRow(loc.t("label.albums"), value: albums.joined(separator: ", "))
                 }
             } else {
                 Text("PhotoKit asset not available")
@@ -371,7 +374,7 @@ private struct InspectorContent: View {
             }
             // The full PHAsset localIdentifier is hidden under a disclosure
             // because it's long and rarely useful outside debugging.
-            identityRow("Asset ID", value: assetId, monospaced: true)
+            identityRow(loc.t("label.asset_id"), value: assetId, monospaced: true)
         }
     }
 
@@ -395,7 +398,7 @@ private struct InspectorContent: View {
     @ViewBuilder
     private var descriptionSection: some View {
         sectionHeader(
-            "Description",
+            loc.t("section.description"),
             systemImage: "text.alignleft",
             trailing: descriptionHeaderTrailing
         )
@@ -403,15 +406,15 @@ private struct InspectorContent: View {
         if let row = store.rows[assetId], row.description != nil || isEditing {
             descriptionEditor(row: row)
         } else if store.rows[assetId] == nil {
-            Text("Untouched — no description yet. Run a batch to generate one.")
+            Text(loc.t("inspector.untouched_no_desc"))
                 .font(AppFont.body)
                 .foregroundStyle(.secondary)
         } else {
             // Row exists but description is empty (pending / failed / cleared)
-            Text("No description yet.")
+            Text(loc.t("inspector.no_description"))
                 .font(AppFont.body)
                 .foregroundStyle(.secondary)
-            Button("Start editing") {
+            Button(loc.t("button.start_editing")) {
                 beginEditing(with: "")
             }
             .buttonStyle(.link)
@@ -431,10 +434,10 @@ private struct InspectorContent: View {
                             .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
                     )
                 HStack {
-                    Button("Save", action: saveEdit)
+                    Button(loc.t("button.save"), action: saveEdit)
                         .buttonStyle(.borderedProminent)
                         .disabled(isSaving || !isDescriptionDirty)
-                    Button("Revert", role: .cancel, action: revertEdit)
+                    Button(loc.t("button.revert"), role: .cancel, action: revertEdit)
                         .disabled(isSaving)
                     if isSaving {
                         ProgressView()
@@ -455,7 +458,7 @@ private struct InspectorContent: View {
                     .lineSpacing(2)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Button("Edit") {
+                Button(loc.t("button.edit")) {
                     beginEditing(with: row.description ?? "")
                 }
                 .buttonStyle(.link)
@@ -484,7 +487,7 @@ private struct InspectorContent: View {
                     .foregroundStyle(descriptionCopied ? .green : .secondary)
             }
             .buttonStyle(.plain)
-            .help(descriptionCopied ? "Copied!" : "Copy description to clipboard")
+            .help(descriptionCopied ? loc.t("inspector.copied") : loc.t("inspector.copy_desc_help"))
         )
     }
 
@@ -494,10 +497,10 @@ private struct InspectorContent: View {
     private var tagsSection: some View {
         let activeTags = isEditing ? draftTags : (store.rows[assetId]?.tags ?? [])
 
-        sectionHeader("Tags", systemImage: "tag", trailing: tagsHeaderTrailing(tags: activeTags))
+        sectionHeader(loc.t("section.tags"), systemImage: "tag", trailing: tagsHeaderTrailing(tags: activeTags))
 
         if activeTags.isEmpty {
-            Text("No tags.")
+            Text(loc.t("inspector.no_tags"))
                 .font(AppFont.body)
                 .foregroundStyle(.secondary)
         } else {
@@ -510,10 +513,10 @@ private struct InspectorContent: View {
 
         if isEditing {
             HStack(spacing: 6) {
-                TextField("Add tag…", text: $newTagText)
+                TextField(loc.t("inspector.add_tag"), text: $newTagText)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { addDraftTag() }
-                Button("Add", action: addDraftTag)
+                Button(loc.t("button.add"), action: addDraftTag)
                     .disabled(newTagText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
@@ -543,7 +546,7 @@ private struct InspectorContent: View {
                             .foregroundStyle(tagsCopied ? .green : .secondary)
                     }
                     .buttonStyle(.plain)
-                    .help(tagsCopied ? "Copied!" : "Copy tags to clipboard")
+                    .help(tagsCopied ? loc.t("inspector.copied") : loc.t("inspector.copy_tags_help"))
                 }
             }
         )
@@ -561,43 +564,43 @@ private struct InspectorContent: View {
             default:                        return .accentColor
             }
         }()
-        sectionHeader("Processing", systemImage: "cpu", tint: tint)
+        sectionHeader(loc.t("section.processing"), systemImage: "cpu", tint: tint)
 
         if let row = store.rows[assetId] {
             VStack(alignment: .leading, spacing: 6) {
-                identityRow("Status", value: row.status.capitalized)
+                identityRow(loc.t("label.status"), value: row.status.capitalized)
                 if let model = row.model {
-                    identityRow("Model", value: model, monospaced: true)
+                    identityRow(loc.t("label.model"), value: model, monospaced: true)
                 } else if row.status == "done" {
-                    identityRow("Model", value: "— (pre-v1 row, not recorded)")
+                    identityRow(loc.t("label.model"), value: loc.t("inspector.pre_v1"))
                 }
                 if let sentinel = row.sentinel {
-                    identityRow("Sentinel", value: sentinel, monospaced: true)
+                    identityRow(loc.t("label.sentinel"), value: sentinel, monospaced: true)
                 }
                 if let ts = row.processedAt {
-                    identityRow("Ran at", value: formatTimestamp(ts))
+                    identityRow(loc.t("label.ran_at"), value: formatTimestamp(ts))
                 }
                 if let total = row.totalMs {
-                    identityRow("Total", value: formatMs(total))
+                    identityRow(loc.t("label.total"), value: formatMs(total))
                     TimingBar(visionMs: row.visionMs ?? 0, ollamaMs: row.ollamaMs ?? 0, totalMs: total)
                         .frame(height: 14)
                         .padding(.top, Spacing.xs)
                 } else if let ollama = row.ollamaMs {
-                    identityRow("Ollama", value: formatMs(ollama))
+                    identityRow(loc.t("label.ollama"), value: formatMs(ollama))
                 }
                 if row.attempts > 1 {
-                    identityRow("Attempts", value: "\(row.attempts)")
+                    identityRow(loc.t("label.attempts"), value: "\(row.attempts)")
                 }
                 if let ed = row.updatedAt, row.processedAt != ed, ed != row.processedAt ?? 0 {
-                    identityRow("Edited at", value: formatTimestamp(ed))
+                    identityRow(loc.t("label.edited_at"), value: formatTimestamp(ed))
                 }
                 if let err = row.error {
-                    identityRow("Error", value: err, monospaced: true)
+                    identityRow(loc.t("label.error"), value: err, monospaced: true)
                         .foregroundStyle(.red)
                 }
             }
         } else {
-            Text("No processing record for this asset.")
+            Text(loc.t("inspector.no_processing_record"))
                 .font(AppFont.body)
                 .foregroundStyle(.secondary)
         }
@@ -607,7 +610,7 @@ private struct InspectorContent: View {
 
     @ViewBuilder
     private var visionSection: some View {
-        sectionHeader("Vision", systemImage: "eye")
+        sectionHeader(loc.t("section.vision"), systemImage: "eye")
 
         if let findings = decodedVisionFindings {
             VStack(alignment: .leading, spacing: Spacing.md) {
@@ -615,13 +618,13 @@ private struct InspectorContent: View {
                     && findings.animals.isEmpty
                     && findings.faces.isEmpty
                     && findings.ocrText.isEmpty {
-                    Text("Vision pre-pass ran but found nothing structured.")
+                    Text(loc.t("inspector.vision_nothing"))
                         .font(AppFont.body)
                         .foregroundStyle(.secondary)
                 }
 
                 if !findings.classifications.isEmpty {
-                    EyebrowLabel("Classifications")
+                    EyebrowLabel(loc.t("label.classifications"))
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(findings.classifications.prefix(5), id: \.identifier) { label in
                             HStack(spacing: Spacing.sm) {
@@ -650,13 +653,13 @@ private struct InspectorContent: View {
                 }
 
                 if !findings.animals.isEmpty {
-                    identityRow("Animals", value: "\(findings.animals.count) (\(findings.animals.map(\.label).joined(separator: ", ")))")
+                    identityRow(loc.t("label.animals"), value: "\(findings.animals.count) (\(findings.animals.map(\.label).joined(separator: ", ")))")
                 }
                 if !findings.faces.isEmpty {
-                    identityRow("Faces", value: "\(findings.faces.count)")
+                    identityRow(loc.t("label.faces"), value: "\(findings.faces.count)")
                 }
                 if !findings.ocrText.isEmpty {
-                    EyebrowLabel("OCR")
+                    EyebrowLabel(loc.t("label.ocr"))
                     Text(findings.ocrText.joined(separator: " · "))
                         .font(AppFont.monoCaption)
                         .foregroundStyle(AppColor.textPrimary)
@@ -668,14 +671,14 @@ private struct InspectorContent: View {
                                 .fill(AppColor.surfaceSunken)
                         )
                 }
-                identityRow("Vision time", value: String(format: "%.0f ms", findings.elapsedSeconds * 1000))
+                identityRow(loc.t("label.vision_time"), value: String(format: "%.0f ms", findings.elapsedSeconds * 1000))
             }
         } else if store.rows[assetId]?.status == "done" {
-            Text("No Vision data recorded for this row (pre-v1 done row).")
+            Text(loc.t("inspector.no_vision_data"))
                 .font(AppFont.body)
                 .foregroundStyle(.secondary)
         } else {
-            Text("Vision pre-pass runs when the photo is processed.")
+            Text(loc.t("inspector.vision_runs_later"))
                 .font(AppFont.body)
                 .foregroundStyle(.secondary)
         }
@@ -703,7 +706,7 @@ private struct InspectorContent: View {
                     devRow("vision_json_bytes", row.visionJSON.map { String($0.utf8.count) } ?? "nil")
 
                     if let desc = row.description {
-                        Text("description payload (what's in Photos.app)")
+                        Text(loc.t("label.description_payload"))
                             .font(AppFont.caption)
                             .foregroundStyle(.secondary)
                             .padding(.top, Spacing.xs)
@@ -723,7 +726,7 @@ private struct InspectorContent: View {
                     }
                 }
             } else {
-                Text("No queue row.").font(.caption).foregroundStyle(.secondary)
+                Text(loc.t("inspector.no_queue_row")).font(.caption).foregroundStyle(.secondary)
             }
         } label: {
             HStack(spacing: Spacing.sm) {
@@ -731,7 +734,7 @@ private struct InspectorContent: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(AppColor.textTertiary)
                     .frame(width: 22, alignment: .center)
-                Text("Developer")
+                Text(loc.t("section.developer"))
                     .font(AppFont.sectionTitle)
                     .foregroundStyle(AppColor.textSecondary)
             }

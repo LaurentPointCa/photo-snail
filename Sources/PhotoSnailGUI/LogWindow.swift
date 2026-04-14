@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LogWindow: View {
     private let store = LogStore.shared
+    private let loc = Localizer.shared
 
     @State private var pinToBottom: Bool = true
 
@@ -12,23 +13,23 @@ struct LogWindow: View {
             Divider()
             HStack {
                 Toggle(isOn: Bindable(store).detailed) {
-                    Text("Detailed logs")
+                    Text(loc.t("log.detailed"))
                         .font(AppFont.label)
                 }
                 .toggleStyle(.switch)
                 .controlSize(.regular)
-                .help("Show all log entries including pipeline steps")
+                .help(loc.t("log.detailed_help"))
 
                 Spacer()
 
                 Button {
                     store.clear()
                 } label: {
-                    Label("Clear", systemImage: "trash")
+                    Label(loc.t("button.clear"), systemImage: "trash")
                         .font(AppFont.label)
                 }
                 .buttonStyle(.borderless)
-                .help("Clear all log entries")
+                .help(loc.t("log.clear_help"))
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.sm)

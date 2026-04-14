@@ -8,6 +8,7 @@ import PhotoSnailCore
 /// thumbnail grid, placeholder inspector. Phases 3–7 layer functionality on
 /// top without changing the enclosing structure.
 struct LibraryWindow: View {
+    private let loc = Localizer.shared
     @State private var store = LibraryStore()
     @State private var showSettings = false
     @State private var showLegend = false
@@ -17,7 +18,7 @@ struct LibraryWindow: View {
         Group {
             if let err = store.loadError {
                 ContentUnavailableView(
-                    "Can't open library",
+                    loc.t("error.cant_open_library"),
                     systemImage: "exclamationmark.triangle",
                     description: Text(err)
                 )
@@ -60,16 +61,16 @@ struct LibraryWindow: View {
                                 }
                             }
                         } label: {
-                            Label("Sort", systemImage: "arrow.up.arrow.down")
+                            Label(loc.t("toolbar.sort"), systemImage: "arrow.up.arrow.down")
                         }
-                        .help("Sort order")
+                        .help(loc.t("toolbar.sort_help"))
                     }
 
                     // Thumbnail size — three-way segmented picker bound
                     // directly to the store's preset enum. ⌘1/2/3 hit the
                     // same code path via the grid's key handler.
                     ToolbarItem(placement: .automatic) {
-                        Picker("Thumbnail size", selection: Bindable(store).thumbnailSize) {
+                        Picker(loc.t("toolbar.thumbnail_size"), selection: Bindable(store).thumbnailSize) {
                             Image(systemName: "square.grid.4x3.fill")
                                 .tag(LibraryStore.ThumbnailSize.small)
                             Image(systemName: "square.grid.3x3.fill")
@@ -78,16 +79,16 @@ struct LibraryWindow: View {
                                 .tag(LibraryStore.ThumbnailSize.large)
                         }
                         .pickerStyle(.segmented)
-                        .help("Thumbnail size (⌘1 / ⌘2 / ⌘3)")
+                        .help(loc.t("toolbar.thumbnail_size_help"))
                     }
 
                     ToolbarItem(placement: .automatic) {
                         Button {
                             showLegend = true
                         } label: {
-                            Label("Legend", systemImage: "questionmark.circle")
+                            Label(loc.t("toolbar.legend"), systemImage: "questionmark.circle")
                         }
-                        .help("Keyboard shortcuts + status badge legend")
+                        .help(loc.t("toolbar.legend_help"))
                         .popover(isPresented: $showLegend, arrowEdge: .top) {
                             LegendPopover()
                         }
@@ -96,23 +97,44 @@ struct LibraryWindow: View {
                         Button {
                             openWindow(id: "log-window")
                         } label: {
-                            Label("Logs", systemImage: "list.clipboard")
+                            Label(loc.t("toolbar.logs"), systemImage: "list.clipboard")
                         }
-                        .help("Processing log")
+                        .help(loc.t("toolbar.logs_help"))
                     }
                     ToolbarItem(placement: .automatic) {
                         Button {
                             showSettings = true
                         } label: {
-                            Label("Settings", systemImage: "gearshape")
+                            Label(loc.t("toolbar.settings"), systemImage: "gearshape")
                         }
-                        .help("Model · sentinel · Ollama connection")
+                        .help(loc.t("toolbar.settings_help"))
                         .disabled(store.engine == nil)
                     }
                 }
                 .sheet(isPresented: $showSettings) {
                     if let engine = store.engine {
                         SettingsSheet(engine: engine, isPresented: $showSettings)
+                    }
+                }
+                .onChange(of: AppCommands.shared.pendingSettingsOpen) { _, new in
+                    if new {
+                        showSettings = true
+                        AppCommands.shared.pendingSettingsOpen = false
+                    }
+                }
+                .sheet(isPresented: Binding(
+                    get: { loc.pendingLanguageChange != nil },
+                    set: { if !$0 { loc.pendingLanguageChange = nil } }
+                )) {
+                    if let target = loc.pendingLanguageChange {
+                        LanguageChangeSheet(
+                            targetLanguage: target,
+                            store: store,
+                            isPresented: Binding(
+                                get: { loc.pendingLanguageChange != nil },
+                                set: { if !$0 { loc.pendingLanguageChange = nil } }
+                            )
+                        )
                     }
                 }
             }
@@ -130,6 +152,7 @@ struct LibraryWindow: View {
 /// than `List(selection:)` because the latter needs `List` to own the
 /// identity of the selection state, and I want it explicitly in `LibraryStore`.
 struct LibrarySidebar: View {
+    private let loc = Localizer.shared
     @Bindable var store: LibraryStore
     @Environment(\.colorScheme) private var colorScheme
 
@@ -170,13 +193,13 @@ struct LibrarySidebar: View {
             }
 
             Section {
-                filterRow(.all, label: "All", count: store.totalCount, systemImage: "photo.stack", tint: .accentColor)
-                filterRow(.tagged, label: "Tagged", count: store.taggedCount, systemImage: "checkmark.seal.fill", tint: AppColor.statusDone)
-                filterRow(.untouched, label: "Untouched", count: store.untouchedCount, systemImage: "circle.dashed", tint: AppColor.statusUntouched)
-                filterRow(.pending, label: "Pending", count: store.pendingCount, systemImage: "hourglass", tint: AppColor.statusPending)
-                filterRow(.failed, label: "Failed", count: store.failedCount, systemImage: "exclamationmark.triangle.fill", tint: AppColor.statusFailed)
+                filterRow(.all, label: loc.t("filter.all"), count: store.totalCount, systemImage: "photo.stack", tint: .accentColor)
+                filterRow(.tagged, label: loc.t("filter.tagged"), count: store.taggedCount, systemImage: "checkmark.seal.fill", tint: AppColor.statusDone)
+                filterRow(.untouched, label: loc.t("filter.untouched"), count: store.untouchedCount, systemImage: "circle.dashed", tint: AppColor.statusUntouched)
+                filterRow(.pending, label: loc.t("filter.pending"), count: store.pendingCount, systemImage: "hourglass", tint: AppColor.statusPending)
+                filterRow(.failed, label: loc.t("filter.failed"), count: store.failedCount, systemImage: "exclamationmark.triangle.fill", tint: AppColor.statusFailed)
             } header: {
-                EyebrowLabel("Library")
+                EyebrowLabel(loc.t("section.library"))
             }
 
             // Active compound filters — only rendered when there's something
@@ -188,7 +211,7 @@ struct LibrarySidebar: View {
                             store.removeTagFilter(tag)
                         }
                     }
-                    Button("Clear all") {
+                    Button(loc.t("button.clear")) {
                         store.clearTagFilters()
                     }
                     .buttonStyle(.plain)
@@ -196,7 +219,7 @@ struct LibrarySidebar: View {
                     .foregroundStyle(.secondary)
                 } header: {
                     HStack {
-                        EyebrowLabel("Active Filters")
+                        EyebrowLabel(loc.t("section.active_filters"))
                         Spacer()
                         Text("\(store.activeTagFilters.count)")
                             .font(AppFont.caption.monospacedDigit())
@@ -218,7 +241,7 @@ struct LibrarySidebar: View {
                         }
                     }
                 } header: {
-                    EyebrowLabel("Popular Tags")
+                    EyebrowLabel(loc.t("section.popular_tags"))
                 }
             }
         }
@@ -352,6 +375,7 @@ private struct PopularTagRow: View {
 /// cancelled on disappear). Phase 7 can replace this with `PHCachingImageManager`
 /// if scroll perf is a problem on very large libraries.
 struct LibraryGrid: View {
+    private let loc = Localizer.shared
     @Bindable var store: LibraryStore
 
     /// Derived from `store.thumbnailSize`. Kept as a computed property so
@@ -375,7 +399,7 @@ struct LibraryGrid: View {
         .searchable(
             text: Bindable(store).searchText,
             placement: .toolbar,
-            prompt: "Search descriptions and tags"
+            prompt: loc.t("label.search_placeholder")
         )
         // Keyboard shortcuts. The grid is the focusable host; disabling the
         // focus effect keeps the whole pane from glowing blue on every click.
@@ -397,28 +421,28 @@ struct LibraryGrid: View {
         // Keyboard-triggered bulk confirmations. These live here rather than
         // on BulkActionBar because the key handler is on the grid.
         .confirmationDialog(
-            "Clear descriptions from \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
+            "\(loc.t("dialog.clear_title").replacingOccurrences(of: "?", with: "")) \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
             isPresented: $showingKeyboardClearConfirm,
             titleVisibility: .visible
         ) {
-            Button("Clear descriptions", role: .destructive) {
+            Button(loc.t("button.clear_descriptions"), role: .destructive) {
                 Task { await store.clearSelectionDescriptions() }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(loc.t("button.cancel"), role: .cancel) {}
         } message: {
-            Text("This removes the photo-snail-written description from Photos.app and resets each queue row to pending. Original photos are not modified. This cannot be undone.")
+            Text(loc.t("dialog.clear_message"))
         }
         .confirmationDialog(
-            "Re-process \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
+            "\(loc.t("dialog.reprocess_title").replacingOccurrences(of: "?", with: "")) \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
             isPresented: $showingKeyboardReprocessConfirm,
             titleVisibility: .visible
         ) {
-            Button("Re-process") {
+            Button(loc.t("button.reprocess")) {
                 Task { await store.requeueSelection() }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(loc.t("button.cancel"), role: .cancel) {}
         } message: {
-            Text("Queued photos will be processed on the next Start.")
+            Text(loc.t("dialog.reprocess_message"))
         }
     }
 
@@ -507,13 +531,13 @@ struct LibraryGrid: View {
         let shown = store.displayOrder.count
         let total = store.totalCount
         if shown == total { return "\(total)" }
-        return "\(shown) of \(total)"
+        return "\(shown) \(loc.t("label.of")) \(total)"
     }
 
     @ViewBuilder
     private var gridBody: some View {
         if store.isLoading && store.displayOrder.isEmpty {
-            ProgressView("Loading library…")
+            ProgressView(loc.t("status.loading_library"))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if store.displayOrder.isEmpty {
             ContentUnavailableView(
@@ -584,21 +608,21 @@ struct LibraryGrid: View {
 
     private var navigationTitleText: String {
         switch store.filter {
-        case .all:       return "All"
-        case .tagged:    return "Tagged"
-        case .untouched: return "Untouched"
-        case .pending:   return "Pending"
-        case .failed:    return "Failed"
+        case .all:       return loc.t("filter.all")
+        case .tagged:    return loc.t("filter.tagged")
+        case .untouched: return loc.t("filter.untouched")
+        case .pending:   return loc.t("filter.pending")
+        case .failed:    return loc.t("filter.failed")
         }
     }
 
     private var emptyStateTitle: String {
         switch store.filter {
-        case .all:       return "Library is empty"
-        case .tagged:    return "Nothing tagged yet"
-        case .untouched: return "Everything is enumerated"
-        case .pending:   return "No pending work"
-        case .failed:    return "No failures"
+        case .all:       return loc.t("empty.no_images")
+        case .tagged:    return loc.t("empty.nothing_tagged")
+        case .untouched: return loc.t("empty.everything_enumerated")
+        case .pending:   return loc.t("empty.no_pending")
+        case .failed:    return loc.t("empty.no_failures")
         }
     }
 
@@ -611,13 +635,14 @@ struct LibraryGrid: View {
 
     private var emptyStateDescription: String {
         switch store.filter {
-        case .all:       return "No images were found in your Photos library."
-        case .tagged:    return "Run a batch to start generating descriptions."
-        case .untouched: return "Every photo has a queue row. Nothing to discover."
-        case .pending:   return "The queue has no pending work to process."
-        case .failed:    return "No asset has ended in the failed state."
+        case .all:       return loc.t("empty.run_batch")
+        case .tagged:    return loc.t("empty.run_batch")
+        case .untouched: return loc.t("empty.every_photo_queued")
+        case .pending:   return loc.t("empty.no_pending_alt")
+        case .failed:    return loc.t("empty.no_failed_assets")
         }
     }
+
 }
 
 // MARK: - Thumbnail cell
@@ -811,6 +836,7 @@ struct StatusBadge: View {
 /// long-running Clear path flips `store.bulkProgress` which presents a
 /// modal progress sheet higher up in the view hierarchy.
 struct BulkActionBar: View {
+    private let loc = Localizer.shared
     @Bindable var store: LibraryStore
 
     @State private var showingClearConfirm = false
@@ -820,7 +846,7 @@ struct BulkActionBar: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            Text(hasSelection ? "\(store.selection.count) selected" : "No selection")
+            Text(hasSelection ? String(format: loc.t("status.n_selected"), store.selection.count) : loc.t("status.no_selection"))
                 .font(AppFont.bodyEmphasized)
                 .monospacedDigit()
                 .foregroundStyle(hasSelection ? AppColor.textPrimary : AppColor.textSecondary)
@@ -839,25 +865,25 @@ struct BulkActionBar: View {
             Button {
                 Task { await store.requeueSelection() }
             } label: {
-                Label("Re-process", systemImage: "arrow.clockwise")
+                Label(loc.t("button.reprocess"), systemImage: "arrow.clockwise")
             }
-            .help("Re-process — push these photos back into the pending queue")
+            .help(loc.t("bulk.reprocess_help"))
             .disabled(!hasSelection)
 
             Button(role: .destructive) {
                 showingClearConfirm = true
             } label: {
-                Label("Clear", systemImage: "eraser")
+                Label(loc.t("button.clear"), systemImage: "eraser")
             }
-            .help("Clear description — remove photo-snail descriptions from Photos.app")
+            .help(loc.t("bulk.clear_help"))
             .disabled(!hasSelection)
 
             Button {
                 runExport()
             } label: {
-                Label("Export", systemImage: "square.and.arrow.up")
+                Label(loc.t("button.export"), systemImage: "square.and.arrow.up")
             }
-            .help("Export JSON — save every selected row to a file")
+            .help(loc.t("bulk.export_help"))
             .disabled(!hasSelection)
 
             Divider()
@@ -866,9 +892,9 @@ struct BulkActionBar: View {
             Button {
                 store.clearSelection()
             } label: {
-                Label("Deselect", systemImage: "xmark.circle")
+                Label(loc.t("button.deselect"), systemImage: "xmark.circle")
             }
-            .help("Deselect all")
+            .help(loc.t("bulk.deselect_help"))
             .disabled(!hasSelection)
         }
         .labelStyle(.titleAndIcon)
@@ -884,22 +910,22 @@ struct BulkActionBar: View {
                 .frame(height: 1)
         }
         .confirmationDialog(
-            "Clear descriptions from \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
+            "\(loc.t("dialog.clear_title").replacingOccurrences(of: "?", with: "")) \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
             isPresented: $showingClearConfirm,
             titleVisibility: .visible
         ) {
-            Button("Clear descriptions", role: .destructive) {
+            Button(loc.t("button.clear_descriptions"), role: .destructive) {
                 Task { await store.clearSelectionDescriptions() }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(loc.t("button.cancel"), role: .cancel) {}
         } message: {
-            Text("This removes the photo-snail-written description from Photos.app and resets each queue row to pending. Original photos are not modified. This cannot be undone.")
+            Text(loc.t("dialog.clear_message"))
         }
-        .alert("Export failed", isPresented: Binding(
+        .alert(loc.t("error.export_failed"), isPresented: Binding(
             get: { showingExportError != nil },
             set: { if !$0 { showingExportError = nil } }
         )) {
-            Button("OK") { showingExportError = nil }
+            Button(loc.t("button.ok")) { showingExportError = nil }
         } message: {
             Text(showingExportError ?? "")
         }
@@ -926,32 +952,34 @@ struct BulkActionBar: View {
 /// keyboard shortcuts. Discoverability aid — the rest of the app tries
 /// to be obvious, this is where the non-obvious bits live.
 struct LegendPopover: View {
+    private let loc = Localizer.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                legendHeader("Status badges", systemImage: "circle.hexagongrid.fill")
-                badgeRow(color: AppColor.statusDone, label: "Tagged", description: "Photo has a description in Photos.app.")
-                badgeRow(color: AppColor.statusPending, label: "Pending", description: "Queued for processing. Live ring while in-progress.", ringed: true)
-                badgeRow(color: AppColor.statusFailed, label: "Failed", description: "Processing failed. Retry via bulk Re-process.")
-                badgeRow(color: AppColor.statusUntouched, label: "Untouched", description: "Not yet enumerated into the queue.")
+                legendHeader(loc.t("legend.status_badges"), systemImage: "circle.hexagongrid.fill")
+                badgeRow(color: AppColor.statusDone, label: loc.t("filter.tagged"), description: loc.t("legend.tagged"))
+                badgeRow(color: AppColor.statusPending, label: loc.t("filter.pending"), description: loc.t("legend.pending"), ringed: true)
+                badgeRow(color: AppColor.statusFailed, label: loc.t("filter.failed"), description: loc.t("legend.failed"))
+                badgeRow(color: AppColor.statusUntouched, label: loc.t("filter.untouched"), description: loc.t("legend.untouched"))
             }
 
             Divider()
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                legendHeader("Keyboard shortcuts", systemImage: "keyboard")
-                keyRow("⌘F", "Search descriptions + tags")
-                keyRow("←  →", "Previous / next photo")
-                keyRow("Space", "Full-screen preview")
-                keyRow("Return  E", "Edit description")
-                keyRow("⌘⏎", "Save edit")
-                keyRow("⌘A", "Select all visible")
-                keyRow("⌘1 / 2 / 3", "Small / medium / large thumbs")
-                keyRow("⌘-click", "Toggle selection")
-                keyRow("⇧-click", "Range-select")
-                keyRow("Esc", "Clear selection / close preview")
-                keyRow("R", "Re-process selection")
-                keyRow("⌫", "Clear descriptions for selection")
+                legendHeader(loc.t("legend.keyboard_shortcuts"), systemImage: "keyboard")
+                keyRow("⌘F", loc.t("legend.search"))
+                keyRow("←  →", loc.t("legend.prev_next"))
+                keyRow("Space", loc.t("legend.preview"))
+                keyRow("Return  E", loc.t("legend.edit"))
+                keyRow("⌘⏎", loc.t("legend.save_edit"))
+                keyRow("⌘A", loc.t("legend.select_all"))
+                keyRow("⌘1 / 2 / 3", loc.t("legend.thumbs"))
+                keyRow("⌘-click", loc.t("legend.toggle_sel"))
+                keyRow("⇧-click", loc.t("legend.range_sel"))
+                keyRow("Esc", loc.t("legend.escape"))
+                keyRow("R", loc.t("legend.reprocess_sel"))
+                keyRow("⌫", loc.t("legend.clear_sel"))
             }
         }
         .padding(Spacing.xl)
@@ -1035,6 +1063,7 @@ struct LegendPopover: View {
 /// close affordance. The runner-dock hover popover already covers the
 /// "small peek" case; this is the "take it all in" case.
 struct FullscreenPreviewSheet: View {
+    private let loc = Localizer.shared
     @Bindable var store: LibraryStore
 
     @State private var image: NSImage? = nil
@@ -1058,7 +1087,7 @@ struct FullscreenPreviewSheet: View {
                     VStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.largeTitle)
-                        Text("Preview unavailable")
+                        Text(loc.t("status.preview_unavailable"))
                     }
                     .foregroundStyle(.white.opacity(0.8))
                 } else {
@@ -1142,6 +1171,7 @@ struct FullscreenPreviewSheet: View {
 /// session stats, and a single Start/Pause/Resume button that adapts
 /// to the engine's state machine.
 struct RunnerDock: View {
+    private let loc = Localizer.shared
     @Bindable var engine: ProcessingEngine
     @Bindable var store: LibraryStore
 
@@ -1159,7 +1189,7 @@ struct RunnerDock: View {
             // dock from compact to expanded without hunting for a control.
             HStack {
                 if isCollapsed {
-                    EyebrowLabel(engine.state == .running ? "Running" : "Batch")
+                    EyebrowLabel(engine.state == .running ? loc.t("status.running") : loc.t("status.batch"))
                 }
                 Spacer()
                 Button {
@@ -1181,7 +1211,7 @@ struct RunnerDock: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .help(isCollapsed ? "Expand runner panel" : "Collapse runner panel")
+                .help(isCollapsed ? loc.t("label.expand_runner") : loc.t("label.collapse_runner"))
             }
 
             if !isCollapsed {
@@ -1189,7 +1219,7 @@ struct RunnerDock: View {
                 // photos so the user always has a concrete sense of what the
                 // pipeline just did.
                 DockPhotoCard(
-                    title: "Last completed",
+                    title: loc.t("label.last_completed"),
                     thumbnail: engine.completedThumbnail,
                     caption: engine.completedDescription,
                     assetId: engine.completedPhotoID
@@ -1198,7 +1228,7 @@ struct RunnerDock: View {
                 // Current photo card (bottom). Shows a pulsing accent ring
                 // while the worker is running to match the Phase 0 mockup.
                 DockPhotoCard(
-                    title: engine.state == .running ? "Processing" : "Idle",
+                    title: engine.state == .running ? loc.t("status.processing_verb") : loc.t("status.idle"),
                     thumbnail: engine.currentThumbnail,
                     caption: engine.statusMessage,
                     isLive: engine.state == .running,
@@ -1220,12 +1250,12 @@ struct RunnerDock: View {
                 // on, LibraryGrid's onChange(engine.currentPhotoID) scrolls
                 // the grid to the in-flight photo every advance.
                 Toggle(isOn: Bindable(store).followCurrentProcessing) {
-                    Text("Follow processing in grid")
+                    Text(loc.t("label.follow_processing"))
                         .font(AppFont.label)
                 }
                 .toggleStyle(.switch)
                 .controlSize(.regular)
-                .help("Auto-scroll the grid to the currently-processing photo")
+                .help(loc.t("help.follow_processing"))
             }
 
             // Primary action — always visible.
@@ -1254,7 +1284,7 @@ struct RunnerDock: View {
                     .font(AppFont.display)
                     .monospacedDigit()
                     .foregroundStyle(AppColor.textPrimary)
-                Text("of \(engine.totalCount)")
+                Text("\(loc.t("label.of")) \(engine.totalCount)")
                     .font(AppFont.caption)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
@@ -1263,7 +1293,7 @@ struct RunnerDock: View {
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .imageScale(.small)
-                        Text("ETA \(engine.etaString)")
+                        Text("\(loc.t("label.eta")) \(engine.etaString)")
                             .font(AppFont.caption)
                             .monospacedDigit()
                     }
@@ -1288,7 +1318,7 @@ struct RunnerDock: View {
             Button {
                 Task { await engine.start() }
             } label: {
-                Label("Start", systemImage: "play.fill")
+                Label(loc.t("button.start"), systemImage: "play.fill")
                     .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 2)
@@ -1308,7 +1338,7 @@ struct RunnerDock: View {
             Button {
                 engine.pause()
             } label: {
-                Label("Pause", systemImage: "pause.fill")
+                Label(loc.t("button.pause"), systemImage: "pause.fill")
                     .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 2)
@@ -1319,7 +1349,7 @@ struct RunnerDock: View {
             Button {
                 engine.resume()
             } label: {
-                Label("Resume", systemImage: "play.fill")
+                Label(loc.t("button.resume"), systemImage: "play.fill")
                     .font(AppFont.bodyEmphasized)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 2)
@@ -1476,6 +1506,7 @@ private struct DockPhotoCard: View {
 /// whether the image is portrait or landscape, while still leaving room
 /// for the popover arrow and enough margin to avoid spilling off-screen.
 private struct HoverPhotoPreview: View {
+    private let loc = Localizer.shared
     let assetId: String
 
     @State private var image: NSImage? = nil
@@ -1500,7 +1531,7 @@ private struct HoverPhotoPreview: View {
             } else if failed {
                 VStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle")
-                    Text("Preview unavailable")
+                    Text(loc.t("status.preview_unavailable"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1566,6 +1597,7 @@ private struct HoverPhotoPreview: View {
 /// `store.bulkProgress` and offers a Cancel button that cooperatively
 /// stops the loop after the current item finishes.
 struct BulkProgressSheet: View {
+    private let loc = Localizer.shared
     @Bindable var store: LibraryStore
 
     var body: some View {
@@ -1599,7 +1631,7 @@ struct BulkProgressSheet: View {
 
                 HStack {
                     Spacer()
-                    Button("Cancel", role: .cancel) {
+                    Button(loc.t("button.cancel"), role: .cancel) {
                         store.bulkProgress?.isCancelled = true
                     }
                     .disabled(progress.isCancelled)

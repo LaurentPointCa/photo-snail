@@ -40,7 +40,7 @@ final class ProcessingEngine {
     var etaString: String = "--"
 
     var failures: [FailedAsset] = []
-    var statusMessage: String = "Ready"
+    var statusMessage: String = ""
 
     struct FailedAsset: Identifiable {
         let id: String
@@ -55,6 +55,8 @@ final class ProcessingEngine {
     var model: String = Settings.default.model
     var sentinel: String = Settings.default.sentinel
     var connection: OllamaConnection = .default
+    var customPrompt: String? = nil
+    var promptLanguage: String? = nil
     var dryRun: Bool = false
 
     /// Models discovered from Ollama at startup. Empty until `refreshAvailableModels()`
@@ -68,7 +70,8 @@ final class ProcessingEngine {
     /// so worker mutations fan out to the store's row cache via the
     /// change stream. The store owns the queue's lifetime; we just hold
     /// a reference to it for our own reads/writes.
-    private let queue: AssetQueue
+    /// Exposed read-only for the settings sheet's requeue dialog.
+    let queue: AssetQueue
     private var workerTask: Task<Void, Never>?
     private var isPausedFlag = false
     private var pauseContinuation: CheckedContinuation<Void, Never>?
@@ -82,24 +85,28 @@ final class ProcessingEngine {
     // MARK: - Initial load (no processing, just stats + settings + Ollama probe)
 
     func loadInitialStats() async {
+        self.statusMessage = Localizer.shared.t("status.ready")
+
         // 1. Load settings from disk (or defaults). Apply env-var overrides for runtime.
         let loaded: Settings
         do {
             loaded = try Settings.load()
         } catch {
-            statusMessage = "Settings error: \(error)"
+            statusMessage = "\(Localizer.shared.t("error.settings_error")): \(error)"
             return
         }
         let runtime = loaded.withEnvOverrides()
         self.model = runtime.model
         self.sentinel = runtime.sentinel
         self.connection = runtime.ollama
+        self.customPrompt = runtime.customPrompt
+        self.promptLanguage = runtime.promptLanguage
 
         // 2. Queue stats. The queue was passed in at init — we just read.
         do {
             try await refreshStats()
         } catch {
-            statusMessage = "Queue error: \(error)"
+            statusMessage = "\(Localizer.shared.t("error.queue_open_failed")): \(error)"
         }
 
         // 3. Kick off Ollama model discovery in the background — non-blocking.
@@ -129,10 +136,13 @@ final class ProcessingEngine {
     /// Persists to settings.json. Caller is responsible for asking the user
     /// about sentinel choice on a family change BEFORE calling this.
     /// Changes take effect on the next `start()` — does NOT interrupt a running batch.
-    func applyConfigChange(model: String, sentinel: String, connection: OllamaConnection) async {
+    func applyConfigChange(model: String, sentinel: String, connection: OllamaConnection,
+                           customPrompt: String? = nil, promptLanguage: String? = nil) async {
         self.model = model
         self.sentinel = sentinel
         self.connection = connection
+        self.customPrompt = customPrompt
+        self.promptLanguage = promptLanguage
 
         // Persist (without env-var overrides — those are runtime-only).
         // Build a Settings from current state, but strip the env-var key if present
@@ -142,12 +152,13 @@ final class ProcessingEngine {
         if let envKey = envKey, !envKey.isEmpty, persisted.apiKey == envKey {
             persisted.apiKey = nil
         }
-        let s = Settings(model: model, sentinel: sentinel, ollama: persisted)
+        let s = Settings(model: model, sentinel: sentinel, ollama: persisted,
+                         customPrompt: customPrompt, promptLanguage: promptLanguage)
         do {
             try s.save()
-            statusMessage = "Settings saved"
+            statusMessage = Localizer.shared.t("status.settings_saved")
         } catch {
-            statusMessage = "Save failed: \(error)"
+            statusMessage = "\(Localizer.shared.t("error.save_failed")): \(error)"
         }
 
         // Re-probe Ollama with the new connection.
@@ -159,19 +170,19 @@ final class ProcessingEngine {
     func start() async {
         guard state == .idle || state == .finished else { return }
         state = .enumerating
-        statusMessage = "Requesting Photos access..."
+        statusMessage = Localizer.shared.t("status.requesting_photos")
         log.append(.info, "Requesting Photos access")
 
         let authStatus = await PhotoLibrary.requestAuth()
         guard authStatus == .authorized else {
-            statusMessage = "Photos access denied (\(PhotoLibrary.authStatusLabel(authStatus)))"
+            statusMessage = "\(Localizer.shared.t("error.photos_access_denied")) (\(PhotoLibrary.authStatusLabel(authStatus)))"
             log.append(.error, "Photos access denied: \(PhotoLibrary.authStatusLabel(authStatus))")
             state = .idle
             return
         }
 
         do {
-            statusMessage = "Enumerating library..."
+            statusMessage = Localizer.shared.t("status.enumerating")
             log.append(.info, "Enumerating library...")
             _ = try await PhotoLibraryEnumerator.fetchUnprocessedIdentifiers(
                 queue: queue,
@@ -184,7 +195,7 @@ final class ProcessingEngine {
             try await refreshStats()
 
             if pendingCount == 0 {
-                statusMessage = "All photos processed"
+                statusMessage = Localizer.shared.t("status.all_processed")
                 log.append(.success, "All photos already processed")
                 state = .finished
                 return
@@ -193,12 +204,12 @@ final class ProcessingEngine {
             state = .running
             sessionStartTime = Date()
             photosProcessedThisSession = 0
-            statusMessage = "Processing..."
+            statusMessage = "\(Localizer.shared.t("status.processing_verb"))..."
             log.append(.info, "Processing started — \(pendingCount) pending, \(doneCount) done, \(failedCount) failed")
 
             launchWorker()
         } catch {
-            statusMessage = "Error: \(error)"
+            statusMessage = "\(Localizer.shared.t("label.error")): \(error)"
             log.append(.error, "Start failed: \(error)")
             state = .idle
         }
@@ -206,14 +217,14 @@ final class ProcessingEngine {
 
     func pause() {
         isPausedFlag = true
-        statusMessage = "Pausing after current photo..."
+        statusMessage = Localizer.shared.t("status.pausing")
         log.append(.info, "Pause requested")
     }
 
     func resume() {
         isPausedFlag = false
         state = .running
-        statusMessage = "Resuming..."
+        statusMessage = Localizer.shared.t("status.resuming")
         log.append(.info, "Resumed")
         pauseContinuation?.resume()
         pauseContinuation = nil
@@ -224,9 +235,9 @@ final class ProcessingEngine {
             try await queue.requeueFailed(id)
             try await refreshStats()
             try await refreshFailures()
-            statusMessage = "Re-queued \(String(id.prefix(8)))..."
+            statusMessage = "\(Localizer.shared.t("button.reprocess")) \(String(id.prefix(8)))..."
         } catch {
-            statusMessage = "Retry error: \(error)"
+            statusMessage = "\(Localizer.shared.t("error.retry_error")): \(error)"
         }
     }
 
@@ -236,7 +247,7 @@ final class ProcessingEngine {
         }
         try? await refreshStats()
         try? await refreshFailures()
-        statusMessage = "Re-queued \(failures.count) failed assets"
+        statusMessage = String(format: Localizer.shared.t("status.requeued_failed"), failures.count)
     }
 
     // MARK: - Worker
@@ -249,7 +260,20 @@ final class ProcessingEngine {
         let model = self.model
         let sentinel = self.sentinel
         let connection = self.connection
+        let customPrompt = self.customPrompt
+        let promptLanguage = self.promptLanguage
         let dryRun = self.dryRun
+
+        // Capture localized strings before detaching — launchWorker() is on
+        // MainActor so Localizer.shared is accessible here.
+        let loc = Localizer.shared
+        let verbProcessing = loc.t("status.processing_verb")
+        let verbTranslating = loc.t("status.translating_verb")
+        let locPaused = loc.t("status.paused")
+        let locDryrunComplete = loc.t("status.dryrun_complete")
+        let locQueueError = loc.t("error.queue_open_failed")
+        let locAllProcessed = loc.t("status.all_processed")
+        let locAssetNotFound = loc.t("error.asset_not_found")
 
         // Dry-run uses an in-memory cursor over a snapshot of pending IDs so the
         // queue is never mutated. Build it on the actor before detaching the worker.
@@ -260,10 +284,12 @@ final class ProcessingEngine {
         }
 
         workerTask = Task.detached { [weak self] in
+            let ollamaClient = OllamaClient(connection: connection)
             let pipeline = Pipeline(
                 model: model,
                 promptStyle: .sideChannel,
-                ollama: OllamaClient(connection: connection)
+                ollama: ollamaClient,
+                customPrompt: customPrompt
             )
 
             let dryRunCursor: DryRunCursor?
@@ -286,7 +312,7 @@ final class ProcessingEngine {
                 if await self?.isPausedFlag == true {
                     await MainActor.run {
                         self?.state = .paused
-                        self?.statusMessage = "Paused"
+                        self?.statusMessage = locPaused
                     }
                     await withCheckedContinuation { cont in
                         Task { @MainActor in
@@ -299,24 +325,26 @@ final class ProcessingEngine {
                 // queue mutation), real run uses claimNext.
                 let id: String
                 let attempts: Int
+                let taskType: String
                 if let cursor = dryRunCursor {
                     guard let nextId = await cursor.next() else {
                         await MainActor.run {
                             self?.state = .finished
-                            self?.statusMessage = "Dry-run complete (queue not mutated)"
+                            self?.statusMessage = locDryrunComplete
                             log.append(.success, "Dry-run complete — queue not mutated")
                         }
                         return
                     }
                     id = nextId
                     attempts = 1
+                    taskType = "caption"
                 } else {
                     let claim: AssetQueue.Claim?
                     do {
                         claim = try await queue.claimNext()
                     } catch {
                         await MainActor.run {
-                            self?.statusMessage = "Queue error: \(error)"
+                            self?.statusMessage = "\(locQueueError): \(error)"
                             log.append(.error, "Queue error: \(error)")
                         }
                         return
@@ -324,19 +352,21 @@ final class ProcessingEngine {
                     guard let c = claim else {
                         await MainActor.run {
                             self?.state = .finished
-                            self?.statusMessage = "All photos processed"
+                            self?.statusMessage = locAllProcessed
                             log.append(.success, "All photos processed")
                         }
                         return
                     }
                     id = c.id
                     attempts = c.attempts
+                    taskType = c.taskType
                 }
 
                 await MainActor.run {
                     self?.currentPhotoID = id
-                    self?.statusMessage = "Processing \(String(id.prefix(8)))..."
-                    log.append(.info, "Processing \(String(id.prefix(8)))…", assetId: id)
+                    let verb = taskType == "translate" ? verbTranslating : verbProcessing
+                    self?.statusMessage = "\(verb) \(String(id.prefix(8)))..."
+                    log.append(.info, "\(verb) \(String(id.prefix(8)))…", assetId: id)
                 }
 
                 // Load thumbnail for preview
@@ -345,7 +375,76 @@ final class ProcessingEngine {
                     await MainActor.run { self?.currentThumbnail = thumb }
                 }
 
-                // Process
+                // Translation branch: text-only Ollama call, no image/Vision
+                if taskType == "translate" && !dryRun {
+                    do {
+                        let row = try await queue.fetchRow(id: id)
+                        guard let origDesc = row?.originalDescription, !origDesc.isEmpty else {
+                            let err = PhotoSnailError.imageLoadFailed("No original description to translate: \(id)")
+                            try? await queue.markFailed(id, error: err)
+                            await self?.refreshStatsAndFailures()
+                            continue
+                        }
+                        let origTags = row?.originalTags.isEmpty == false ? row!.originalTags : row?.tags ?? []
+                        let langName = Localizer.languageName(for: promptLanguage ?? "en")
+                        let translationPrompt = """
+                            Translate the following photo description and tags to \(langName). \
+                            Keep the same format exactly. Do not add or remove content, just translate.
+                            DESCRIPTION: <translated description>
+                            TAGS: <translated tag1>, <translated tag2>, ...
+
+                            Original:
+                            DESCRIPTION: \(origDesc)
+                            TAGS: \(origTags.joined(separator: ", "))
+                            """
+                        let t0 = Date()
+                        let textResult = try await ollamaClient.generateText(model: model, prompt: translationPrompt)
+                        let ollamaMs = Int64(Date().timeIntervalSince(t0) * 1000)
+                        let parsed = CaptionParser.parse(textResult.response)
+
+                        let payload = Pipeline.formatDescription(
+                            description: parsed.description,
+                            tags: parsed.tags,
+                            sentinel: sentinel
+                        )
+                        let uuid = PhotoLibrary.uuidPrefix(id)
+                        _ = try await MainActor.run {
+                            try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
+                        }
+
+                        try? await queue.markTranslationDone(
+                            id, description: parsed.description, tags: parsed.tags,
+                            sentinel: sentinel, model: model, ollamaMs: ollamaMs
+                        )
+
+                        await MainActor.run {
+                            self?.completedPhotoID = self?.currentPhotoID
+                            self?.completedThumbnail = self?.currentThumbnail
+                            self?.completedDescription = parsed.description
+                            self?.completedTags = parsed.tags
+                            self?.currentThumbnail = nil
+                            self?.photosProcessedThisSession += 1
+                            self?.updateThroughput()
+                            log.append(.success, "Translated: \(String(id.prefix(8)))", assetId: id)
+                        }
+                        await self?.refreshStatsAndFailures()
+                    } catch let e as PhotoSnailError {
+                        if e.isRetriable && attempts < 3 {
+                            try? await queue.recordRetry(id, error: e)
+                            try? await Task.sleep(nanoseconds: UInt64([10, 30, 60][attempts - 1]) * 1_000_000_000)
+                        } else {
+                            try? await queue.markFailed(id, error: e)
+                        }
+                        await self?.refreshStatsAndFailures()
+                    } catch {
+                        let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
+                        try? await queue.markFailed(id, error: wrapped)
+                        await self?.refreshStatsAndFailures()
+                    }
+                    continue
+                }
+
+                // Caption process (standard image pipeline)
                 do {
                     guard let asset = PhotoLibrary.fetch(id: id) else {
                         let err = PhotoSnailError.imageLoadFailed("PHAsset not found: \(id)")
@@ -353,7 +452,7 @@ final class ProcessingEngine {
                             try? await queue.markFailed(id, error: err)
                         }
                         await MainActor.run {
-                            self?.statusMessage = "Asset not found: \(String(id.prefix(8)))"
+                            self?.statusMessage = "\(locAssetNotFound): \(String(id.prefix(8)))"
                             log.append(.error, "Asset not found: \(String(id.prefix(8)))", assetId: id)
                         }
                         await self?.refreshStatsAndFailures()

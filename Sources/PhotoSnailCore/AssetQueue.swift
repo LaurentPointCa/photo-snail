@@ -6,7 +6,7 @@ import Foundation
 /// by sweeping any `in_progress` rows back to `pending` on init, and bounds retries on
 /// transient failures (the worker checks `Claim.attempts` against its retry cap).
 ///
-/// Schema, schema_version = 1:
+/// Schema, schema_version = 2:
 ///   assets(
 ///     id, status, attempts, error, processed_at, description, tags_json,
 ///     -- Added in v1 (Library revamp) for the inspector's processing-provenance section:
@@ -16,7 +16,11 @@ import Foundation
 ///     vision_ms,    -- Vision pre-pass wall time in ms
 ///     ollama_ms,    -- Ollama generation wall time in ms
 ///     total_ms,     -- End-to-end pipeline wall time in ms
-///     updated_at    -- Last time the row was mutated (edit tracking)
+///     updated_at,   -- Last time the row was mutated (edit tracking)
+///     -- Added in v2 (Localization) for custom prompts and translation:
+///     task_type,            -- 'caption' (default) or 'translate'
+///     original_description, -- Pre-translation description (preserved for rollback)
+///     original_tags_json    -- Pre-translation tags JSON (preserved for rollback)
 ///   )
 ///
 /// Status transitions:
@@ -31,6 +35,8 @@ public actor AssetQueue {
         public let id: String
         /// Post-bump attempt count: 1 on first try, 2 on first retry, 3 on second retry, etc.
         public let attempts: Int
+        /// `"caption"` for normal processing, `"translate"` for translation jobs.
+        public let taskType: String
     }
 
     public struct FailedRow: Sendable {
@@ -80,6 +86,9 @@ public actor AssetQueue {
         public let ollamaMs: Int?
         public let totalMs: Int?
         public let updatedAt: Int64?
+        public let taskType: String
+        public let originalDescription: String?
+        public let originalTags: [String]
     }
 
     /// `~/Library/Application Support/photo-snail/queue.sqlite`
@@ -92,10 +101,10 @@ public actor AssetQueue {
             .appendingPathComponent("queue.sqlite")
     }
 
-    /// Current schema version. Bumped to 1 for the library-revamp columns.
+    /// Current schema version. Bumped to 2 for translation/localization columns.
     /// Incrementing this again in the future means writing a new migration
     /// branch in `migrateIfNeeded`.
-    public static let currentSchemaVersion: Int64 = 1
+    public static let currentSchemaVersion: Int64 = 2
 
     private let db: SQLiteDB
     private let encoder: JSONEncoder
@@ -173,6 +182,16 @@ public actor AssetQueue {
             }
             // Bump user_version outside the transaction. The DB is now at v1.
             try db.exec("PRAGMA user_version = 1;")
+        }
+
+        // v1 → v2: add columns for translation support and custom prompts.
+        if current < 2 {
+            try db.transaction {
+                try db.exec("ALTER TABLE assets ADD COLUMN task_type            TEXT DEFAULT 'caption';")
+                try db.exec("ALTER TABLE assets ADD COLUMN original_description TEXT;")
+                try db.exec("ALTER TABLE assets ADD COLUMN original_tags_json   TEXT;")
+            }
+            try db.exec("PRAGMA user_version = 2;")
         }
     }
 
@@ -259,12 +278,13 @@ public actor AssetQueue {
     public func claimNext() throws -> Claim? {
         var result: Claim? = nil
         try db.transaction {
-            let select = try db.prepare("SELECT id, attempts FROM assets WHERE status = 'pending' ORDER BY rowid LIMIT 1")
+            let select = try db.prepare("SELECT id, attempts, task_type FROM assets WHERE status = 'pending' ORDER BY rowid LIMIT 1")
             defer { select.finalize() }
             guard try select.step() == .row, let id = select.columnText(0) else {
                 return
             }
             let newAttempts = select.columnInt(1) + 1
+            let taskType = select.columnText(2) ?? "caption"
 
             let update = try db.prepare("UPDATE assets SET status = 'in_progress', attempts = ?, processed_at = ? WHERE id = ?")
             defer { update.finalize() }
@@ -273,7 +293,7 @@ public actor AssetQueue {
             try update.bind(id, at: 3)
             _ = try update.step()
 
-            result = Claim(id: id, attempts: Int(newAttempts))
+            result = Claim(id: id, attempts: Int(newAttempts), taskType: taskType)
         }
         if let claim = result {
             broadcast(.updated(claim.id))
@@ -455,7 +475,8 @@ public actor AssetQueue {
     public func fetchAllRows() throws -> [Row] {
         let stmt = try db.prepare("""
             SELECT id, status, attempts, error, processed_at, description, tags_json,
-                   model, sentinel, vision_json, vision_ms, ollama_ms, total_ms, updated_at
+                   model, sentinel, vision_json, vision_ms, ollama_ms, total_ms, updated_at,
+                   task_type, original_description, original_tags_json
             FROM assets
             ORDER BY rowid
             """)
@@ -472,7 +493,8 @@ public actor AssetQueue {
     public func fetchRow(id: String) throws -> Row? {
         let stmt = try db.prepare("""
             SELECT id, status, attempts, error, processed_at, description, tags_json,
-                   model, sentinel, vision_json, vision_ms, ollama_ms, total_ms, updated_at
+                   model, sentinel, vision_json, vision_ms, ollama_ms, total_ms, updated_at,
+                   task_type, original_description, original_tags_json
             FROM assets
             WHERE id = ?
             """)
@@ -547,18 +569,21 @@ public actor AssetQueue {
     public func clearResult(_ id: String) throws {
         let stmt = try db.prepare("""
             UPDATE assets SET
-              status       = 'pending',
-              attempts     = 0,
-              error        = NULL,
-              description  = NULL,
-              tags_json    = NULL,
-              model        = NULL,
-              sentinel     = NULL,
-              vision_json  = NULL,
-              vision_ms    = NULL,
-              ollama_ms    = NULL,
-              total_ms     = NULL,
-              updated_at   = ?
+              status               = 'pending',
+              attempts             = 0,
+              error                = NULL,
+              description          = NULL,
+              tags_json            = NULL,
+              model                = NULL,
+              sentinel             = NULL,
+              vision_json          = NULL,
+              vision_ms            = NULL,
+              ollama_ms            = NULL,
+              total_ms             = NULL,
+              updated_at           = ?,
+              task_type            = 'caption',
+              original_description = NULL,
+              original_tags_json   = NULL
             WHERE id = ?
             """)
         defer { stmt.finalize() }
@@ -585,6 +610,15 @@ public actor AssetQueue {
         } else {
             tags = []
         }
+        // Decode original tags JSON (pre-translation snapshot).
+        let originalTags: [String]
+        if let json = stmt.columnText(16),
+           let data = json.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([String].self, from: data) {
+            originalTags = decoded
+        } else {
+            originalTags = []
+        }
         return Row(
             id: stmt.columnText(0) ?? "",
             status: stmt.columnText(1) ?? "pending",
@@ -599,7 +633,10 @@ public actor AssetQueue {
             visionMs: Self.nullableInt(stmt, at: 10).map(Int.init),
             ollamaMs: Self.nullableInt(stmt, at: 11).map(Int.init),
             totalMs:  Self.nullableInt(stmt, at: 12).map(Int.init),
-            updatedAt: Self.nullableInt(stmt, at: 13)
+            updatedAt: Self.nullableInt(stmt, at: 13),
+            taskType: stmt.columnText(14) ?? "caption",
+            originalDescription: stmt.columnText(15),
+            originalTags: originalTags
         )
     }
 
@@ -647,6 +684,102 @@ public actor AssetQueue {
             done:       counts["done"] ?? 0,
             failed:     counts["failed"] ?? 0
         )
+    }
+
+    // MARK: - Sentinel queries
+
+    /// All distinct sentinel values across done rows. Used by the Settings sheet
+    /// to offer re-processing of previously-processed sentinel groups after a
+    /// prompt or model change.
+    public func distinctSentinels() throws -> [String] {
+        let stmt = try db.prepare("SELECT DISTINCT sentinel FROM assets WHERE sentinel IS NOT NULL ORDER BY sentinel")
+        defer { stmt.finalize() }
+        var results: [String] = []
+        while try stmt.step() == .row {
+            if let s = stmt.columnText(0) { results.append(s) }
+        }
+        return results
+    }
+
+    /// All done row IDs that were processed with the given sentinel.
+    public func idsWithSentinel(_ sentinel: String) throws -> [String] {
+        let stmt = try db.prepare("SELECT id FROM assets WHERE sentinel = ? AND status = 'done'")
+        defer { stmt.finalize() }
+        try stmt.bind(sentinel, at: 1)
+        var results: [String] = []
+        while try stmt.step() == .row {
+            if let id = stmt.columnText(0) { results.append(id) }
+        }
+        return results
+    }
+
+    // MARK: - Translation
+
+    /// Queue done rows for translation. Snapshots the current description/tags
+    /// into `original_description`/`original_tags_json` before setting them
+    /// back to pending with `task_type = 'translate'`.
+    public func enqueueTranslation(_ ids: [String]) throws {
+        guard !ids.isEmpty else { return }
+        let now = Self.now()
+        try db.transaction {
+            let stmt = try db.prepare("""
+                UPDATE assets SET
+                  original_description = description,
+                  original_tags_json   = tags_json,
+                  task_type            = 'translate',
+                  status               = 'pending',
+                  attempts             = 0,
+                  error                = NULL,
+                  updated_at           = ?
+                WHERE id = ? AND status = 'done'
+                """)
+            defer { stmt.finalize() }
+            for id in ids {
+                try stmt.bind(now, at: 1)
+                try stmt.bind(id, at: 2)
+                _ = try stmt.step()
+                try stmt.reset()
+            }
+        }
+        for id in ids { broadcast(.updated(id)) }
+    }
+
+    /// Mark a translation job as done. Updates description/tags with the
+    /// translated text and stamps the new sentinel.
+    public func markTranslationDone(_ id: String, description: String, tags: [String],
+                                    sentinel: String, model: String, ollamaMs: Int64) throws {
+        let tagsJSON: String
+        do {
+            let data = try encoder.encode(tags)
+            tagsJSON = String(data: data, encoding: .utf8) ?? "[]"
+        } catch {
+            tagsJSON = "[]"
+        }
+        let now = Self.now()
+        let stmt = try db.prepare("""
+            UPDATE assets SET
+              status      = 'done',
+              error       = NULL,
+              description = ?,
+              tags_json   = ?,
+              model       = ?,
+              sentinel    = ?,
+              ollama_ms   = ?,
+              total_ms    = ?,
+              updated_at  = ?
+            WHERE id = ?
+            """)
+        defer { stmt.finalize() }
+        try stmt.bind(description, at: 1)
+        try stmt.bind(tagsJSON, at: 2)
+        try stmt.bind(model, at: 3)
+        try stmt.bind(sentinel, at: 4)
+        try stmt.bind(ollamaMs, at: 5)
+        try stmt.bind(ollamaMs, at: 6) // total ≈ ollama for text-only
+        try stmt.bind(now, at: 7)
+        try stmt.bind(id, at: 8)
+        _ = try stmt.step()
+        broadcast(.updated(id))
     }
 
     private static func now() -> Int64 {

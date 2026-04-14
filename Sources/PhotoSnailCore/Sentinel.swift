@@ -57,6 +57,26 @@ public enum Sentinel {
         return "ai:\(family)-v\(version)"
     }
 
+    /// Extract the integer version from an existing sentinel like `ai:gemma4-v1`.
+    /// Returns nil if the sentinel doesn't match the expected `ai:<family>-v<N>` shape.
+    public static func version(ofSentinel sentinel: String) -> Int? {
+        guard sentinel.hasPrefix("ai:") else { return nil }
+        let body = String(sentinel.dropFirst(3))
+        guard let vRange = body.range(of: "-v", options: .backwards) else { return nil }
+        let familyPart = String(body[..<vRange.lowerBound])
+        let versionPart = String(body[vRange.upperBound...])
+        guard !familyPart.isEmpty else { return nil }
+        return Int(versionPart)
+    }
+
+    /// Bump the version of an existing sentinel: `ai:gemma4-v1` → `ai:gemma4-v2`.
+    /// Returns nil if the sentinel is malformed.
+    public static func bumpVersion(currentSentinel: String) -> String? {
+        guard let fam = family(ofSentinel: currentSentinel),
+              let ver = version(ofSentinel: currentSentinel) else { return nil }
+        return make(family: fam, version: ver + 1)
+    }
+
     /// Propose a new sentinel for `model` if its family differs from `currentSentinel`'s.
     /// Returns `nil` when the family is unchanged (caller should keep `currentSentinel`).
     /// If `currentSentinel` is malformed or empty, returns a fresh `ai:<family>-v1`.

@@ -51,12 +51,12 @@ final class LibraryStore {
 
         var id: String { rawValue }
 
-        var label: String {
+        @MainActor var label: String {
             switch self {
-            case .dateCreatedDesc:   return "Date created (newest)"
-            case .dateCreatedAsc:    return "Date created (oldest)"
-            case .dateProcessedDesc: return "Date processed (newest)"
-            case .dateProcessedAsc:  return "Date processed (oldest)"
+            case .dateCreatedDesc:   return Localizer.shared.t("sort.date_created_desc")
+            case .dateCreatedAsc:    return Localizer.shared.t("sort.date_created_asc")
+            case .dateProcessedDesc: return Localizer.shared.t("sort.date_processed_desc")
+            case .dateProcessedAsc:  return Localizer.shared.t("sort.date_processed_asc")
             }
         }
 
@@ -77,11 +77,11 @@ final class LibraryStore {
 
         var id: Int { rawValue }
         var points: CGFloat { CGFloat(rawValue) }
-        var label: String {
+        @MainActor var label: String {
             switch self {
-            case .small: return "Small"
-            case .medium: return "Medium"
-            case .large: return "Large"
+            case .small: return Localizer.shared.t("thumbnail.small")
+            case .medium: return Localizer.shared.t("thumbnail.medium")
+            case .large: return Localizer.shared.t("thumbnail.large")
             }
         }
     }
@@ -322,7 +322,7 @@ final class LibraryStore {
             q = try AssetQueue(dbPath: AssetQueue.defaultDBPath)
             self.queue = q
         } catch {
-            self.loadError = "Queue open failed: \(error)"
+            self.loadError = "\(Localizer.shared.t("error.queue_open_failed")): \(error)"
             return
         }
 
@@ -348,7 +348,7 @@ final class LibraryStore {
         //    fetch result.
         let authStatus = await PhotoLibrary.requestAuth()
         guard authStatus == .authorized || authStatus == .limited else {
-            loadError = "Photos access: \(PhotoLibrary.authStatusLabel(authStatus))"
+            loadError = "\(Localizer.shared.t("error.photos_access_denied")): \(PhotoLibrary.authStatusLabel(authStatus))"
             return
         }
 
@@ -372,7 +372,7 @@ final class LibraryStore {
             }
             self.rows = dict
         } catch {
-            loadError = "Queue read failed: \(error)"
+            loadError = "\(Localizer.shared.t("error.queue_read_failed")): \(error)"
             return
         }
 
@@ -582,9 +582,9 @@ final class LibraryStore {
                 try await queue.requeue(idsWithRow)
             }
             let n = selection.count
-            bulkStatusMessage = "Re-queued \(n) photo\(n == 1 ? "" : "s") for processing"
+            bulkStatusMessage = String(format: Localizer.shared.t("status.requeued_photos"), n)
         } catch {
-            bulkStatusMessage = "Re-queue failed: \(error)"
+            bulkStatusMessage = "\(Localizer.shared.t("error.requeue_failed")): \(error)"
         }
     }
 
@@ -602,7 +602,7 @@ final class LibraryStore {
         let total = ids.count
 
         bulkProgress = BulkProgress(
-            title: "Clearing \(total) description\(total == 1 ? "" : "s")",
+            title: String(format: Localizer.shared.t("status.clearing_descriptions"), total),
             total: total,
             completed: 0,
             currentId: nil,
@@ -647,11 +647,11 @@ final class LibraryStore {
         bulkProgress = nil
 
         if cancelled {
-            bulkStatusMessage = "Cancelled after \(completed)/\(total) photos"
+            bulkStatusMessage = String(format: Localizer.shared.t("status.cancelled_after"), completed, total)
         } else if failed > 0 {
-            bulkStatusMessage = "Cleared \(completed - failed)/\(total) (\(failed) failed)"
+            bulkStatusMessage = String(format: Localizer.shared.t("status.cleared_with_failures"), completed - failed, total, failed)
         } else {
-            bulkStatusMessage = "Cleared \(completed) description\(completed == 1 ? "" : "s")"
+            bulkStatusMessage = String(format: Localizer.shared.t("status.cleared_descriptions"), completed)
         }
     }
 
@@ -666,13 +666,13 @@ final class LibraryStore {
             }
         }
         guard !tags.isEmpty else {
-            bulkStatusMessage = "No tags to copy"
+            bulkStatusMessage = Localizer.shared.t("status.no_tags_to_copy")
             return
         }
         let joined = tags.sorted().joined(separator: ", ")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(joined, forType: .string)
-        bulkStatusMessage = "Copied \(tags.count) tag\(tags.count == 1 ? "" : "s")"
+        bulkStatusMessage = String(format: Localizer.shared.t("status.copied_tags"), tags.count)
     }
 
     /// Write a JSON array of the selected rows to `url`. Each entry
@@ -717,7 +717,7 @@ final class LibraryStore {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(entries)
         try data.write(to: url)
-        bulkStatusMessage = "Exported \(entries.count) row\(entries.count == 1 ? "" : "s") to \(url.lastPathComponent)"
+        bulkStatusMessage = String(format: Localizer.shared.t("status.exported_rows"), entries.count, url.lastPathComponent)
     }
 
     // MARK: - Edits

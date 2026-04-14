@@ -573,3 +573,27 @@ _Bugs, UX tweaks, and one new feature (log window) identified during live testin
 ### New feature: Log window
 - [x] **Add a "Logs" toolbar button** — opens a secondary window showing a scrollable log of processing activity. Content: database state changes (queue inserts, status transitions, markDone/markFailed), pipeline events (start processing asset X, Vision pre-pass done, Ollama response received, write-back complete), and errors. This gives the user visibility into what the batch is doing without needing to watch the Terminal.
 - [x] **Add structured logging to the engine** — `ProcessingEngine` and `AssetQueue` need to emit log entries (timestamp + level + message) to an observable log store that the log window subscribes to. Keep it simple: an `@Observable` array of log entries with a max capacity (e.g. 10,000 lines, ring buffer). No file-based logging unless the user asks for it later.
+
+## Phase K — Prompt tweaking and localization (2026-04-12)
+
+_Custom prompt editor in Settings + runtime app localization with Language menu. Enables users to customize the AI prompt and switch the app's UI language at runtime without restarting._
+
+### Phase K.1: Custom prompt in Settings
+- [x] **Sentinel version parsing + bump** — `Sentinel.version(ofSentinel:)` and `Sentinel.bumpVersion(currentSentinel:)` for incrementing sentinel versions on prompt/language changes.
+- [x] **Settings: customPrompt, appLanguage, promptLanguage** — three new optional fields in `Settings.swift`, backward-compatible with existing JSON.
+- [x] **PromptBuilder override support** — `PromptBuilder.defaultPrompt` constant + `bare(override:)` overload that uses a custom prompt when provided.
+- [x] **Pipeline + ProcessingEngine threading** — `customPrompt` threaded through Pipeline and captured in the worker loop.
+- [x] **Prompt editor in SettingsSheet** — TextEditor showing the current prompt, "Reset to default" button, sentinel bump warning when prompt changes.
+- [x] **Requeue dialog after sentinel bump** — after a prompt or model change bumps the sentinel, offer to requeue photos processed under old sentinels.
+
+### Phase K.2: App localization
+- [x] **Localizer singleton** — `@Observable @MainActor` Localizer with 8 languages (EN/FR/ES/DE/PT/JA/ZH-Hans/KO), `t()` lookup, UserDefaults persistence.
+- [x] **String catalog** — `Strings.swift` with ~181 keys fully translated for all 8 languages + pre-translated prompt templates.
+- [x] **GUI view localization** — replaced ~80+ hardcoded strings across LibraryWindow, LibraryInspector, SettingsSheet, LogWindow, PhotoSnailApp, LibraryStore.
+- [x] **Language menu** — menubar `CommandGroup` with checkmark on current language, each shown in its native name.
+- [x] **Language change flow** — multi-step confirmation: (1) confirm switch in current language, (2) offer to change prompt language + sentinel bump, (3) offer to translate existing descriptions via Ollama.
+
+### Phase K.3: Translation pipeline
+- [x] **Schema v2 migration** — added `task_type`, `original_description`, `original_tags_json` columns to queue. Preserves original text before translation overwrites.
+- [x] **Text-only Ollama generation** — `OllamaClient.generateText(model:prompt:)` for translation (no image).
+- [x] **Translation worker branch** — ProcessingEngine handles `task_type == "translate"`: reads original description, sends translation prompt, parses result, writes back to Photos.app. ~2-5s per item vs ~65s for captioning.
