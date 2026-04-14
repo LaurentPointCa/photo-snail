@@ -81,9 +81,15 @@ struct PhotoSnailApp: App {
         ))
 
         // Build stamp — written into Info.plist by bundle-gui.sh at package time.
-        if let buildDate = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailBuildDate") as? String {
+        // Format: "v1.0.0-3-gabc1234 · Build 2026-04-13 20:12:10"
+        let buildDate = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailBuildDate") as? String
+        let gitVersion = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailGitVersion") as? String
+        var stampParts: [String] = []
+        if let g = gitVersion, !g.isEmpty, g != "unknown" { stampParts.append(g) }
+        if let d = buildDate, !d.isEmpty { stampParts.append("Build \(d)") }
+        if !stampParts.isEmpty {
             credits.append(NSAttributedString(
-                string: "\n\nBuild \(buildDate)",
+                string: "\n\n" + stampParts.joined(separator: " · "),
                 attributes: [
                     .font: NSFont.systemFont(ofSize: 10),
                     .foregroundColor: NSColor.tertiaryLabelColor,

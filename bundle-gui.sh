@@ -46,6 +46,14 @@ fi
 BUILD_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 BUILD_NUMBER="$(date '+%Y%m%d%H%M')"
 
+# Git-derived version. `git describe --tags --always --dirty`:
+#   - With a tag at HEAD         → "v1.0.0"
+#   - N commits past a tag       → "v1.0.0-3-gabc1234"
+#   - With uncommitted changes   → "...-dirty"
+#   - No tags yet                → the abbreviated commit hash
+# Falls back to "unknown" if git isn't available or this isn't a repo.
+GIT_VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
+
 cat > "${APP_DIR}/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -64,6 +72,8 @@ cat > "${APP_DIR}/Contents/Info.plist" << PLIST
     <string>1.0</string>
     <key>PhotoSnailBuildDate</key>
     <string>${BUILD_DATE}</string>
+    <key>PhotoSnailGitVersion</key>
+    <string>${GIT_VERSION}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key>
