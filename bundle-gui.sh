@@ -96,7 +96,65 @@ PLIST
 
 echo -n "APPL????" > "${APP_DIR}/Contents/PkgInfo"
 
+# Ad-hoc codesign. Without this, newer macOS versions can refuse to load some
+# linked frameworks on first launch. Ad-hoc signing (`--sign -`) does NOT bypass
+# Gatekeeper — a downloaded, non-notarized app will still be quarantined — but
+# it gives the binary a stable identity and keeps library validation happy.
+# Users still need to strip the quarantine attribute; `install.sh` in the
+# release zip does that for them.
+echo "Ad-hoc codesigning..."
+codesign --force --deep --sign - "${APP_DIR}"
+codesign --verify --deep --strict "${APP_DIR}" 2>&1 | head -5 || true
+
+# Generate the end-user install helper that ships in the release zip.
+# Strips the quarantine flag, moves the app to /Applications, and launches it.
+cat > "${BUILD_DIR}/install.sh" <<'INSTALLER'
+#!/bin/bash
+# Photo Snail installer — strips quarantine and moves the app to /Applications.
+#
+# Run from the unzipped download folder:
+#   ./install.sh
+#
+# Photo Snail is not signed with an Apple Developer ID (the developer chose
+# not to pay the $99/year Apple Developer Program fee). macOS Gatekeeper
+# therefore flags it as "damaged" on first launch. This script removes the
+# quarantine attribute that triggers that dialog.
+set -euo pipefail
+
+APP_NAME="PhotoSnail.app"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+SRC="${HERE}/${APP_NAME}"
+
+if [[ ! -d "${SRC}" ]]; then
+  echo "error: ${APP_NAME} not found next to this script."
+  echo "       Unzip the release archive and run ./install.sh from that folder."
+  exit 1
+fi
+
+DEST="/Applications/${APP_NAME}"
+if [[ -d "${DEST}" ]]; then
+  echo "Replacing existing /Applications/${APP_NAME}"
+  rm -rf "${DEST}"
+fi
+
+echo "Copying ${APP_NAME} to /Applications/"
+cp -R "${SRC}" "${DEST}"
+
+echo "Removing quarantine attribute (so macOS will launch it)"
+xattr -cr "${DEST}"
+
+echo "Launching Photo Snail"
+open "${DEST}"
+
+echo ""
+echo "Done. On first launch you'll be asked for Photos access — grant it."
+echo "You can delete the unzipped folder now; the app lives in /Applications."
+INSTALLER
+chmod +x "${BUILD_DIR}/install.sh"
+
 echo ""
 echo "Done: ${APP_DIR}"
+echo "Installer helper: ${BUILD_DIR}/install.sh"
+echo ""
 echo "  open '${APP_DIR}'"
 echo "  cp -R '${APP_DIR}' /Applications/   # to install"

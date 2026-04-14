@@ -70,11 +70,30 @@ Photo Snail needs a vision-capable LLM running locally. The recommended setup:
 
 ### 2. Install Photo Snail
 
-1. Download `PhotoSnail-v0.1.0-arm64.zip` from the [latest release](https://github.com/LaurentPointCa/photo-snail/releases/latest)
+Photo Snail is **not signed with an Apple Developer ID** (I chose not to pay Apple's $99/year fee for this personal project), so macOS Gatekeeper will flag it as "damaged" on first launch. The release zip includes `install.sh` to handle that for you.
+
+**Recommended — run the installer:**
+
+1. Download the latest `PhotoSnail-vX.Y.Z-arm64.zip` from the [latest release](https://github.com/LaurentPointCa/photo-snail/releases/latest)
 2. Unzip the archive
-3. Drag `PhotoSnail.app` into your `/Applications` folder
-4. **First launch:** the app is not notarized, so macOS will block it. Right-click (or Control-click) the app and select **Open**, then click **Open** in the dialog to approve it. You only need to do this once.
-5. Grant Photos access when prompted
+3. Open Terminal in the unzipped folder and run:
+   ```bash
+   ./install.sh
+   ```
+   This strips the macOS quarantine flag, copies `PhotoSnail.app` to `/Applications`, and launches it.
+4. Grant Photos access when prompted.
+
+**Manual install** (if you'd rather not run the script):
+
+1. Unzip the archive
+2. Drag `PhotoSnail.app` to `/Applications`
+3. In Terminal, strip the quarantine flag:
+   ```bash
+   xattr -cr /Applications/PhotoSnail.app
+   ```
+4. Double-click the app to launch. Grant Photos access when prompted.
+
+> Note: macOS's old "right-click → Open" workaround stopped working on recent macOS versions for apps downloaded through Chrome, so the `xattr` step is now required regardless of how you install.
 
 ## Build from source
 
