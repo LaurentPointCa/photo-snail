@@ -116,6 +116,12 @@ struct LibraryWindow: View {
                         SettingsSheet(engine: engine, isPresented: $showSettings)
                     }
                 }
+                .onChange(of: AppCommands.shared.pendingSettingsOpen) { _, new in
+                    if new {
+                        showSettings = true
+                        AppCommands.shared.pendingSettingsOpen = false
+                    }
+                }
                 .sheet(isPresented: Binding(
                     get: { loc.pendingLanguageChange != nil },
                     set: { if !$0 { loc.pendingLanguageChange = nil } }

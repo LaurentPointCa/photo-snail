@@ -15,6 +15,11 @@ struct PhotoSnailApp: App {
                 }
             }
             CommandGroup(after: .appSettings) {
+                Button(Localizer.shared.t("toolbar.settings") + "...") {
+                    AppCommands.shared.pendingSettingsOpen = true
+                }
+                .keyboardShortcut(",", modifiers: .command)
+
                 Menu("Language") {
                     ForEach(Localizer.Language.allCases) { lang in
                         Button {
@@ -30,6 +35,9 @@ struct PhotoSnailApp: App {
                         }
                     }
                 }
+            }
+            CommandGroup(after: .windowArrangement) {
+                OpenLogsMenuButton()
             }
         }
 
@@ -79,5 +87,18 @@ struct PhotoSnailApp: App {
         NSApplication.shared.orderFrontStandardAboutPanel(options: [
             .credits: credits,
         ])
+    }
+}
+
+/// Menu command that opens the Logs window. Wrapped as a View so it can use
+/// `@Environment(\.openWindow)` — Environment values aren't accessible from a
+/// CommandGroup's closure directly.
+private struct OpenLogsMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Button(Localizer.shared.t("toolbar.logs")) {
+            openWindow(id: "log-window")
+        }
+        .keyboardShortcut("l", modifiers: [.command, .shift])
     }
 }
