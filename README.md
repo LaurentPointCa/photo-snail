@@ -19,6 +19,8 @@ It's slow on purpose. ~65 seconds per photo on Apple Silicon. A 10,000-photo lib
 - **Resilient.** SQLite-backed queue survives restarts, sleep/wake, and crashes. Re-running on a processed library is a no-op.
 - **Configurable Ollama.** Default targets `localhost:11434`, but you can point at a remote Ollama instance, an HTTPS proxy, or a setup behind Bearer / Basic / `X-API-Key` auth. Runs against any vision-capable Ollama model you can pick from a list.
 - **Per-model sentinels.** Switch models and the tool proposes a matching sentinel (`ai:<family>-v1`) so re-runs across models stay distinguishable, or keep the existing one if you'd rather mix.
+- **Editable prompt.** Tweak the instruction sent to the LLM right from Settings. Changing the prompt automatically bumps the sentinel version so new results stay distinguishable from old ones, and offers to requeue previously-processed photos.
+- **8 languages, in-place.** UI switches at runtime between English, French, Spanish, German, Portuguese, Japanese, Simplified Chinese, and Korean — no restart. A language change can also re-point the prompt and queue existing descriptions for translation via a fast text-only pass.
 - **Two interfaces.** A SwiftUI dashboard with live photo preview, pause/resume, settings sheet, and a failure inspector — plus a CLI for headless / scripted runs.
 
 ## How it works
@@ -68,7 +70,7 @@ Photo Snail needs a vision-capable LLM running locally. The recommended setup:
 
 ### 2. Install Photo Snail
 
-1. Download `PhotoSnail-1.0-arm64.zip` from the [latest release](https://github.com/LaurentPointCa/photo-snail/releases/latest)
+1. Download `PhotoSnail-v0.1.0-arm64.zip` from the [latest release](https://github.com/LaurentPointCa/photo-snail/releases/latest)
 2. Unzip the archive
 3. Drag `PhotoSnail.app` into your `/Applications` folder
 4. **First launch:** the app is not notarized, so macOS will block it. Right-click (or Control-click) the app and select **Open**, then click **Open** in the dialog to approve it. You only need to do this once.
@@ -200,7 +202,7 @@ Verify yourself: `ollama` runs locally, the binary makes no other outbound conne
 
 ## Project status
 
-Phases A–J complete:
+Phases A–K complete (current release: **v0.1.0**):
 
 - A. Project plan
 - B. Hybrid pipeline scaffold
@@ -212,6 +214,7 @@ Phases A–J complete:
 - H. Deferred (mid-batch quality review showed no weak-output cluster to rescue)
 - I. Visual rehaul — 3-column library browser, inspector, design system
 - J. UI polish — bug fixes, UX improvements, log window, About box
+- K. Custom prompt editor, 8-language runtime localization, translation pipeline
 
 The CLI and GUI are in production use against the author's full library. See [`TODO.md`](TODO.md) for the phased plan and the parked items under "Potential future improvements".
 
