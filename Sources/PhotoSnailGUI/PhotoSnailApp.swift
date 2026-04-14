@@ -80,6 +80,17 @@ struct PhotoSnailApp: App {
             attributes: bodyAttrs
         ))
 
+        // Build stamp — written into Info.plist by bundle-gui.sh at package time.
+        if let buildDate = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailBuildDate") as? String {
+            credits.append(NSAttributedString(
+                string: "\n\nBuild \(buildDate)",
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: 10),
+                    .foregroundColor: NSColor.tertiaryLabelColor,
+                ]
+            ))
+        }
+
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         credits.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: credits.length))

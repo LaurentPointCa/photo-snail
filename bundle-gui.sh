@@ -39,7 +39,14 @@ if [[ -f "Resources/LogoWordmarkLight.png" ]]; then
   cp "Resources/LogoWordmarkLight.png" "${APP_DIR}/Contents/Resources/LogoWordmarkLight.png"
 fi
 
-cat > "${APP_DIR}/Contents/Info.plist" << 'PLIST'
+# Build stamp: human-readable date and monotonic build number.
+# BUILD_DATE is displayed in the About box; CFBundleVersion takes a compact
+# numeric form so macOS's version-comparison logic still sees builds as
+# monotonically increasing.
+BUILD_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
+BUILD_NUMBER="$(date '+%Y%m%d%H%M')"
+
+cat > "${APP_DIR}/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -52,9 +59,11 @@ cat > "${APP_DIR}/Contents/Info.plist" << 'PLIST'
     <key>CFBundleName</key>
     <string>PhotoSnail</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>${BUILD_NUMBER}</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
+    <key>PhotoSnailBuildDate</key>
+    <string>${BUILD_DATE}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key>
