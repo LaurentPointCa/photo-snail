@@ -16,7 +16,11 @@ It's slow on purpose. ~65 seconds per photo on Apple Silicon. A 10,000-photo lib
 - **Specific descriptions.** "A black cat sitting on a Sonos speaker next to a white cat" — not "two animals indoors."
 - **Searchable tags.** 5–15 lowercase tags per photo, including brands and named objects when visible.
 - **Writes back to Photos.app.** Uses AppleScript to populate the `description` field — iCloud syncs it to your iPhone, iPad, and Spotlight.
+- **Preserves your existing descriptions.** If a photo already has a caption you wrote, PhotoSnail keeps it and appends its own description after a separator. Only overwrites freely when the existing text was written by PhotoSnail (sentinel detection).
+- **Explicit queue semantics.** Queue starts empty on first launch. Add photos via "Add all unprocessed to queue" or by selecting and adding. **Process now** runs a single selected photo and stops — no surprise full-library batches.
+- **Doesn't hog your Mac.** Lowers Ollama's process priority while a batch runs so the browser, editor, and other apps stay responsive. Optional **Auto-start when Mac is locked** runs the queue only while you're away.
 - **Resilient.** SQLite-backed queue survives restarts, sleep/wake, and crashes. Re-running on a processed library is a no-op.
+- **Ollama preflight at startup.** GUI surfaces a blocking sheet with copy-paste fix commands (and a one-click Start Ollama button) when Ollama is unreachable or the configured model is missing. CLI exits 2 with the same fixes printed.
 - **Configurable Ollama.** Default targets `localhost:11434`, but you can point at a remote Ollama instance, an HTTPS proxy, or a setup behind Bearer / Basic / `X-API-Key` auth. Runs against any vision-capable Ollama model you can pick from a list.
 - **Per-model sentinels.** Switch models and the tool proposes a matching sentinel (`ai:<family>-v1`) so re-runs across models stay distinguishable, or keep the existing one if you'd rather mix.
 - **Editable prompt.** Tweak the instruction sent to the LLM right from Settings. Changing the prompt automatically bumps the sentinel version so new results stay distinguishable from old ones, and offers to requeue previously-processed photos.
@@ -128,9 +132,23 @@ cp -R .build/release/PhotoSnail.app /Applications/
 open .build/release/PhotoSnail.app
 ```
 
-Click **Start**. Grant Photos access when prompted (`System Settings > Privacy & Security > Photos`). PhotoSnail will enumerate your library, queue everything, and start processing. The dashboard shows the current photo, the most recently completed photo with its description and tags, throughput, ETA, and any failures.
+On first launch the app does an Ollama preflight check; if Ollama isn't running or the configured model isn't pulled, you get a blocking sheet with the exact `brew install` / `ollama pull` commands and a one-click **Start Ollama** button.
 
-You can pause and resume at any time. Closing the window does not stop processing — quit from the menu bar to fully exit.
+The queue is empty by default. Two ways to fill it:
+
+- **Add all unprocessed to queue** (header button, visible on the All and Untouched library views) — enumerates your library, runs the sentinel bootstrap to skip already-processed photos, and queues the rest.
+- **Add to queue** (selection action, when you've selected one or more photos) — adds just those photos. If they're already processed, this re-queues them.
+
+Then click **Start Queue**. Grant Photos access when prompted (`System Settings > Privacy & Security > Photos`). The dashboard shows the current photo, the most recently completed photo with its description and tags, throughput, ETA, and any failures.
+
+Other actions worth knowing:
+
+- **Process now** — single-selection action. Runs that one photo (jumping ahead of anything pending) and pauses. No surprise full-batch start.
+- **Pause** — flips to a disabled "Waiting to finish…" label until the in-flight photo completes, then transitions to fully paused. Click again to resume.
+- **Auto-start when Mac is locked** — toggle below the primary button. When on, the queue starts on screen lock and pauses on unlock. Useful for desktops left running.
+- **Queue view** — sidebar filter that shows only pending photos. The selection action becomes **Remove from queue**, and a **Clear queue** button appears in the header.
+
+While processing, PhotoSnail renices the Ollama daemon to keep your other apps responsive. Closing the window does not stop processing — quit from the menu bar to fully exit.
 
 ### CLI — single image
 
@@ -221,7 +239,7 @@ Verify yourself: `ollama` runs locally, the binary makes no other outbound conne
 
 ## Project status
 
-Phases A–K complete (current release: **v0.1.0**):
+Phases A–K complete (current release: **v0.1.2**):
 
 - A. Project plan
 - B. Hybrid pipeline scaffold
@@ -234,6 +252,7 @@ Phases A–K complete (current release: **v0.1.0**):
 - I. Visual rehaul — 3-column library browser, inspector, design system
 - J. UI polish — bug fixes, UX improvements, log window, About box
 - K. Custom prompt editor, 8-language runtime localization, translation pipeline
+- L. (v0.1.2) External-tester feedback batch — empty-queue default, Add to Queue / Process now, Remove/Clear queue actions, description preservation, Ollama preflight + Start Ollama button, auto-start when locked, Ollama priority lowered during batches, naming + label cleanup, full 8-locale translation sweep
 
 The CLI and GUI are in production use against the author's full library. See [`TODO.md`](TODO.md) for the phased plan and the parked items under "Potential future improvements".
 

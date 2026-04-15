@@ -16,7 +16,9 @@ The user's priorities, in order:
 
 ## Status
 
-Phases A–K complete. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, failure inspector, custom prompt editor, and runtime localization (8 languages). Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
+Phases A–L complete. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, failure inspector, custom prompt editor, and runtime localization (8 languages). Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
+
+**Phase L (v0.1.2, 2026-04-14):** External-tester feedback batch. Queue is now empty by default (no auto-enroll on first launch). New "Add all unprocessed to queue" / "Add to queue" / "Process now" / "Remove from queue" / "Clear queue" actions. AssetQueue schema bumped to v3 with a `priority` column so Process now jumps ahead of FIFO. Description preservation: write-back reads pre-description and prepends user text when no PhotoSnail sentinel is found. Ollama preflight at startup with a blocking sheet (and one-click Start Ollama). LockWatcher + auto-start-when-locked toggle. OllamaPriorityManager renices Ollama during batches. UI labels normalized: "PhotoSnail" (one word) everywhere; "Start Queue" / "Queued" / "Erase description" replace older terms. Off-main-thread library enumeration so the UI doesn't freeze on large libraries. New `Tests/PhotoSnailCoreTests` target covers Sentinel and Pipeline.formatDescription.
 
 See `TODO.md` for the phased plan and current progress.
 
