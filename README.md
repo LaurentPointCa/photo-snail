@@ -1,10 +1,10 @@
-# Photo Snail
+# PhotoSnail
 
 **Local-first AI that describes and tags every photo in your macOS Photos library.** No cloud, no upload — your photos never leave your Mac.
 
-Photo Snail runs a vision-language model on your machine, generates a 2–3 sentence description plus 5–15 tags for each photo, and writes the result back to the asset's `description` field in Photos.app. iCloud syncs the description to your other devices, so the new metadata becomes searchable in Photos and Spotlight everywhere.
+PhotoSnail runs a vision-language model on your machine, generates a 2–3 sentence description plus 5–15 tags for each photo, and writes the result back to the asset's `description` field in Photos.app. iCloud syncs the description to your other devices, so the new metadata becomes searchable in Photos and Spotlight everywhere.
 
-![Photo Snail](docs/screenshot-annotated.png)
+![PhotoSnail](docs/screenshot-annotated.png)
 
 ## Why "Snail"?
 
@@ -58,7 +58,7 @@ The pipeline runs Apple Vision as a *side channel*: its findings are not injecte
 
 ### 1. Set up a local inference model
 
-Photo Snail needs a vision-capable LLM running locally. The recommended setup:
+PhotoSnail needs a vision-capable LLM running locally. The recommended setup:
 
 1. Install [Ollama](https://ollama.com) — download the macOS app from their site
 2. Launch Ollama (it runs in the menu bar)
@@ -68,9 +68,9 @@ Photo Snail needs a vision-capable LLM running locally. The recommended setup:
    ```
    This downloads ~19 GB. Smaller models like `gemma4:latest` (~9.6 GB) are faster but produce lower-quality descriptions.
 
-### 2. Install Photo Snail
+### 2. Install PhotoSnail
 
-Photo Snail is **not signed with an Apple Developer ID** (I chose not to pay Apple's $99/year fee for this personal project), so macOS Gatekeeper will flag it as "damaged" on first launch. The release zip includes `install.sh` to handle that for you.
+PhotoSnail is **not signed with an Apple Developer ID** (I chose not to pay Apple's $99/year fee for this personal project), so macOS Gatekeeper will flag it as "damaged" on first launch. The release zip includes `install.sh` to handle that for you.
 
 **Recommended — run the installer:**
 
@@ -128,7 +128,7 @@ cp -R .build/release/PhotoSnail.app /Applications/
 open .build/release/PhotoSnail.app
 ```
 
-Click **Start**. Grant Photos access when prompted (`System Settings > Privacy & Security > Photos`). Photo Snail will enumerate your library, queue everything, and start processing. The dashboard shows the current photo, the most recently completed photo with its description and tags, throughput, ETA, and any failures.
+Click **Start**. Grant Photos access when prompted (`System Settings > Privacy & Security > Photos`). PhotoSnail will enumerate your library, queue everything, and start processing. The dashboard shows the current photo, the most recently completed photo with its description and tags, throughput, ETA, and any failures.
 
 You can pause and resume at any time. Closing the window does not stop processing — quit from the menu bar to fully exit.
 
@@ -211,7 +211,7 @@ Variance is real: the model runs at 0.5–4 tokens/sec depending on thermals and
 
 ## Privacy
 
-Photo Snail is designed to be a privacy maximalist's photo tagger:
+PhotoSnail is designed to be a privacy maximalist's photo tagger:
 
 - **No network calls** beyond `localhost:11434` (Ollama). The pipeline does not phone home, does not upload images, does not log telemetry.
 - **No cloud APIs** in the default path. Cloud vision-LLMs were considered and rejected as the default — see [`CLAUDE.md`](CLAUDE.md) for the rationale.

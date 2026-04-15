@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Runtime language switching for the Photo Snail GUI.
+/// Runtime language switching for the PhotoSnail GUI.
 ///
 /// SwiftUI's built-in localization system follows the system locale and requires
 /// an app restart. This provides runtime switching: views call `loc.t("key")`
