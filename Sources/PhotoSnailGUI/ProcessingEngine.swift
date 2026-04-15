@@ -59,6 +59,16 @@ final class ProcessingEngine {
     var promptLanguage: String? = nil
     var dryRun: Bool = false
 
+    /// When true, `handleScreenLocked` auto-starts the worker if the queue
+    /// has work and `handleScreenUnlocked` pauses it afterwards. Persisted
+    /// in Settings.autoStartWhenLocked; loaded in `loadInitialStats`.
+    var autoStartWhenLocked: Bool = false
+
+    /// Tracks whether the current run was initiated by the lock watcher so
+    /// we only auto-pause on unlock if we auto-started on lock (don't
+    /// pause a user-initiated batch just because they unlocked).
+    private var startedByLockWatcher: Bool = false
+
     /// Models discovered from Ollama at startup. Empty until `refreshAvailableModels()`
     /// completes (or returns empty if Ollama is unreachable).
     var availableModels: [OllamaModel] = []
@@ -89,6 +99,11 @@ final class ProcessingEngine {
     private var isPausedFlag = false
     private var pauseContinuation: CheckedContinuation<Void, Never>?
 
+    /// Lives for the engine's lifetime. Instantiated in `loadInitialStats`
+    /// (after settings are loaded) and forwards screen lock/unlock events
+    /// to `handleScreenLocked` / `handleScreenUnlocked`.
+    private var lockWatcher: LockWatcher?
+
     // MARK: - Init
 
     init(queue: AssetQueue) {
@@ -114,6 +129,7 @@ final class ProcessingEngine {
         self.connection = runtime.ollama
         self.customPrompt = runtime.customPrompt
         self.promptLanguage = runtime.promptLanguage
+        self.autoStartWhenLocked = runtime.autoStartWhenLocked
 
         // 2. Queue stats. The queue was passed in at init — we just read.
         do {
@@ -130,6 +146,20 @@ final class ProcessingEngine {
         //    but the UI surfaces a modal sheet as soon as the result comes
         //    back if it's a failure.
         Task { await self.runPreflight() }
+
+        // 5. Install the lock watcher. Callbacks check autoStartWhenLocked
+        //    themselves so flipping the toggle takes effect on the next
+        //    lock event without re-wiring observers.
+        if self.lockWatcher == nil {
+            self.lockWatcher = LockWatcher(
+                onLock: { [weak self] in
+                    Task { @MainActor in await self?.handleScreenLocked() }
+                },
+                onUnlock: { [weak self] in
+                    Task { @MainActor in self?.handleScreenUnlocked() }
+                }
+            )
+        }
     }
 
     /// Re-run the Ollama preflight. Invoked at startup and when the user
@@ -161,6 +191,39 @@ final class ProcessingEngine {
     func dismissPreflight() {
         self.preflightStatus = .dismissed
         self.log.append(.warning, "Ollama preflight dismissed by user")
+    }
+
+    // MARK: - Lock-triggered auto-start
+
+    /// Called by LockWatcher when the Mac locks. If the auto-start toggle
+    /// is on AND the queue has pending work AND we're currently idle,
+    /// start the worker and remember we did so (so unlock pauses it).
+    func handleScreenLocked() async {
+        guard autoStartWhenLocked else { return }
+        guard state == .idle || state == .finished else { return }
+        try? await refreshStats()
+        guard pendingCount > 0 else {
+            log.append(.info, "Screen locked — no pending work, staying idle")
+            return
+        }
+        log.append(.info, "Screen locked — auto-starting queue (\(pendingCount) pending)")
+        startedByLockWatcher = true
+        await start()
+    }
+
+    /// Called by LockWatcher when the Mac unlocks. Pauses the worker only
+    /// if the current run was lock-initiated; leaves user-initiated runs
+    /// alone so unlock doesn't interrupt work the user explicitly started.
+    func handleScreenUnlocked() {
+        guard autoStartWhenLocked else { return }
+        guard startedByLockWatcher else {
+            log.append(.info, "Screen unlocked — run was user-initiated, leaving alone")
+            return
+        }
+        startedByLockWatcher = false
+        guard state == .running else { return }
+        log.append(.info, "Screen unlocked — auto-pausing queue")
+        pause()
     }
 
     /// Probe Ollama and update `availableModels`. Safe to call repeatedly
@@ -203,7 +266,8 @@ final class ProcessingEngine {
             persisted.apiKey = nil
         }
         let s = Settings(model: model, sentinel: sentinel, ollama: persisted,
-                         customPrompt: customPrompt, promptLanguage: promptLanguage)
+                         customPrompt: customPrompt, promptLanguage: promptLanguage,
+                         autoStartWhenLocked: autoStartWhenLocked)
         do {
             try s.save()
             statusMessage = Localizer.shared.t("status.settings_saved")
@@ -213,6 +277,21 @@ final class ProcessingEngine {
 
         // Re-probe Ollama with the new connection.
         await refreshAvailableModels()
+    }
+
+    /// Toggle the auto-start-when-locked preference and persist to disk.
+    /// The LockWatcher polls this property; no need to re-wire observers.
+    func setAutoStartWhenLocked(_ flag: Bool) {
+        self.autoStartWhenLocked = flag
+        // Load, update, and re-save settings so we don't stomp on unrelated fields.
+        do {
+            var s = try Settings.load()
+            s.autoStartWhenLocked = flag
+            try s.save()
+            log.append(.info, "autoStartWhenLocked = \(flag)")
+        } catch {
+            log.append(.error, "Failed to persist autoStartWhenLocked: \(error)")
+        }
     }
 
     // MARK: - Controls

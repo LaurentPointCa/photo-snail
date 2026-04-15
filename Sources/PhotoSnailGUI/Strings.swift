@@ -310,6 +310,10 @@ enum Strings {
         "preflight.retry": "Retry",
         "preflight.continue_anyway": "Continue anyway",
         "preflight.open_settings": "Open Settings…",
+
+        // Auto-start-when-locked toggle
+        "setting.auto_start_when_locked": "Auto-start when Mac is locked",
+        "setting.auto_start_when_locked.help": "Start processing when the screen locks and pause when it unlocks. Useful for desktop Macs left running during long batches.",
         "status.settings_saved": "Settings saved",
         "status.dryrun_complete": "Dry-run complete (queue not mutated)",
         "button.start": "Start",
