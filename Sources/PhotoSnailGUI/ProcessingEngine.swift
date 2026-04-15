@@ -437,6 +437,18 @@ final class ProcessingEngine {
     // MARK: - Worker
 
     private func launchWorker() {
+        // Try to lower Ollama's scheduling priority so interactive apps
+        // stay responsive during long batches. Silent on failure — this
+        // is a nice-to-have, not a correctness requirement. The worker's
+        // `defer` below restores the original nice values on exit (normal
+        // finish, cancellation, or errors) so other tools sharing Ollama
+        // don't keep feeling the lowered priority forever.
+        let priorityEntries = OllamaPriorityManager.lower(by: 10)
+        if !priorityEntries.isEmpty {
+            let pids = priorityEntries.map { "\($0.pid)(\($0.previousNice)→\($0.newNice))" }.joined(separator: ", ")
+            log.append(.info, "Lowered Ollama priority: \(pids)")
+        }
+
         // Capture the queue (and other settings) into locals so the detached
         // worker task can reference them without a main-actor hop. All are
         // Sendable: `AssetQueue` is an actor, the rest are value types.
@@ -468,6 +480,14 @@ final class ProcessingEngine {
         }
 
         workerTask = Task.detached { [weak self] in
+            // Restore Ollama's nice values on ANY exit path — normal
+            // completion, cancellation, unexpected throw. Kept out of the
+            // MainActor so the restore still runs if the engine is torn
+            // down mid-batch.
+            defer {
+                OllamaPriorityManager.restore(entries: priorityEntries)
+            }
+
             let ollamaClient = OllamaClient(connection: connection)
             let pipeline = Pipeline(
                 model: model,
