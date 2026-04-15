@@ -23,6 +23,11 @@ struct PreflightSheet: View {
 
     private var onOpenSettings: () -> Void
 
+    /// Tracks the "Start Ollama" button's in-progress state so the UI
+    /// reflects the ~2 s we wait between launching `Ollama.app` and
+    /// re-running the preflight.
+    @State private var isStartingOllama: Bool = false
+
     init(result: OllamaClient.PreflightResult, model: String, baseURL: URL,
          engine: ProcessingEngine, isPresented: Binding<Bool>,
          onOpenSettings: @escaping () -> Void) {
@@ -32,6 +37,14 @@ struct PreflightSheet: View {
         self.engine = engine
         self._isPresented = isPresented
         self.onOpenSettings = onOpenSettings
+    }
+
+    /// True only when the failure is "can't reach Ollama" — the Start
+    /// button doesn't make sense for `.modelMissing` (daemon is already
+    /// running) or `.ok` (shouldn't be rendering anyway).
+    private var canStartOllama: Bool {
+        if case .unreachable = result { return true }
+        return false
     }
 
     var body: some View {
@@ -93,6 +106,21 @@ struct PreflightSheet: View {
                     engine.dismissPreflight()
                     isPresented = false
                 }
+                if canStartOllama {
+                    Button {
+                        Task { await startOllamaAndRetry() }
+                    } label: {
+                        if isStartingOllama {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text(loc.t("preflight.starting_ollama"))
+                            }
+                        } else {
+                            Text(loc.t("preflight.start_ollama"))
+                        }
+                    }
+                    .disabled(isStartingOllama)
+                }
                 Button(loc.t("preflight.retry")) {
                     Task {
                         await engine.runPreflight()
@@ -101,10 +129,26 @@ struct PreflightSheet: View {
                     }
                 }
                 .keyboardShortcut(.defaultAction)
+                .disabled(isStartingOllama)
             }
         }
         .padding(24)
         .frame(width: 560)
+    }
+
+    /// Launch `Ollama.app` (boots the menubar icon + HTTP daemon), wait
+    /// ~1.5 s for the daemon to start accepting connections, then re-run
+    /// the preflight. If Ollama.app isn't installed, `tryStartLocalOllama`
+    /// returns false and we still retry so the user sees an up-to-date
+    /// error without having to click Retry manually.
+    private func startOllamaAndRetry() async {
+        isStartingOllama = true
+        let started = OllamaClient.tryStartLocalOllama()
+        if started {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+        }
+        await engine.runPreflight()
+        isStartingOllama = false
     }
 }
 
