@@ -167,11 +167,38 @@ final class ProcessingEngine {
 
     // MARK: - Controls
 
+    /// Start processing whatever's currently pending in the queue. Does NOT
+    /// enumerate the library — that's now the "Add to Queue" action's job.
+    /// If the queue is empty, the engine stays idle and surfaces a hint.
     func start() async {
+        guard state == .idle || state == .finished else { return }
+        try? await refreshStats()
+
+        if pendingCount == 0 {
+            statusMessage = Localizer.shared.t("status.queue_empty_hint")
+            log.append(.info, "Start ignored — queue is empty")
+            state = .idle
+            return
+        }
+
+        state = .running
+        sessionStartTime = Date()
+        photosProcessedThisSession = 0
+        statusMessage = "\(Localizer.shared.t("status.processing_verb"))..."
+        log.append(.info, "Processing started — \(pendingCount) pending, \(doneCount) done, \(failedCount) failed")
+
+        launchWorker()
+    }
+
+    /// Enumerate the user's Photos library and enqueue every asset that
+    /// isn't already processed (sentinel bootstrap marks matching assets as
+    /// done without re-running the pipeline). First call on a fresh install
+    /// builds the initial queue; subsequent calls pick up newly-added photos.
+    func addAllUnprocessedToQueue() async {
         guard state == .idle || state == .finished else { return }
         state = .enumerating
         statusMessage = Localizer.shared.t("status.requesting_photos")
-        log.append(.info, "Requesting Photos access")
+        log.append(.info, "Requesting Photos access (Add all unprocessed)")
 
         let authStatus = await PhotoLibrary.requestAuth()
         guard authStatus == .authorized else {
@@ -193,25 +220,53 @@ final class ProcessingEngine {
             )
 
             try await refreshStats()
-
-            if pendingCount == 0 {
-                statusMessage = Localizer.shared.t("status.all_processed")
-                log.append(.success, "All photos already processed")
-                state = .finished
-                return
-            }
-
-            state = .running
-            sessionStartTime = Date()
-            photosProcessedThisSession = 0
-            statusMessage = "\(Localizer.shared.t("status.processing_verb"))..."
-            log.append(.info, "Processing started — \(pendingCount) pending, \(doneCount) done, \(failedCount) failed")
-
-            launchWorker()
+            state = .idle
+            statusMessage = String(format: Localizer.shared.t("status.added_to_queue"), pendingCount)
+            log.append(.success, "Enumeration done — \(pendingCount) pending, \(doneCount) done")
         } catch {
             statusMessage = "\(Localizer.shared.t("label.error")): \(error)"
-            log.append(.error, "Start failed: \(error)")
+            log.append(.error, "Add-all-unprocessed failed: \(error)")
             state = .idle
+        }
+    }
+
+    /// Upsert-enqueue a specific set of local identifiers. Existing rows are
+    /// reset to pending (so reprocessing a `done` photo works without the
+    /// old Re-Process action); new ids get a fresh pending row. No
+    /// enumeration, no Photos auth check — the caller already has rows for
+    /// these ids in the library view.
+    func addSelectedToQueue(_ ids: [String]) async {
+        guard !ids.isEmpty else { return }
+        do {
+            try await queue.addOrRequeue(ids)
+            try await refreshStats()
+            statusMessage = String(format: Localizer.shared.t("status.added_to_queue"), ids.count)
+            log.append(.info, "Added \(ids.count) photo(s) to queue (selected)")
+        } catch {
+            statusMessage = "\(Localizer.shared.t("label.error")): \(error)"
+            log.append(.error, "Add-selected failed: \(error)")
+        }
+    }
+
+    /// "Process now" on a single asset: bumps it to priority=1 so it's the
+    /// very next row claimNext picks. If the worker isn't running, starts it.
+    /// No-op if the asset is currently in-flight (the worker already owns it).
+    func processNow(id: String) async {
+        do {
+            let wasReset = try await queue.processNow(id: id)
+            try await refreshStats()
+            if !wasReset {
+                statusMessage = Localizer.shared.t("status.already_processing")
+                log.append(.info, "Process now: \(String(id.prefix(8))) is already in-flight")
+                return
+            }
+            log.append(.info, "Process now: \(String(id.prefix(8))) queued at priority=1")
+            if state == .idle || state == .finished {
+                await start()
+            }
+        } catch {
+            statusMessage = "\(Localizer.shared.t("label.error")): \(error)"
+            log.append(.error, "Process-now failed: \(error)")
         }
     }
 
