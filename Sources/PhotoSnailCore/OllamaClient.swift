@@ -194,6 +194,50 @@ public final class OllamaClient {
         }
     }
 
+    // MARK: - Startup preflight
+
+    /// Outcome of `preflight(model:)`. Each case carries the fix message
+    /// the UI / CLI should surface so the user can copy-paste a resolution
+    /// without switching contexts.
+    public enum PreflightResult: Sendable, Equatable {
+        /// Ollama is reachable and the configured model is installed.
+        case ok
+        /// Couldn't reach the baseURL at all (daemon not running, wrong URL,
+        /// network error). Payload is a short one-line reason.
+        case unreachable(reason: String)
+        /// Connected, but the configured model isn't in `/api/tags`. Payload
+        /// is the list of installed model names for a helpful error.
+        case modelMissing(installed: [String])
+
+        /// Short label for logging.
+        public var shortLabel: String {
+            switch self {
+            case .ok: return "ok"
+            case .unreachable: return "unreachable"
+            case .modelMissing: return "model-missing"
+            }
+        }
+    }
+
+    /// Verify that (a) the Ollama daemon is reachable via the current
+    /// connection and (b) the configured `model` tag is present locally.
+    /// Runs at app startup so failures surface once, loud, with the exact
+    /// commands needed to fix things — rather than mid-batch when the first
+    /// generate call explodes.
+    public func preflight(model: String) async -> PreflightResult {
+        let models: [OllamaModel]
+        do {
+            models = try await listModels()
+        } catch {
+            return .unreachable(reason: error.localizedDescription)
+        }
+        let names = models.map { $0.name }
+        if names.contains(model) {
+            return .ok
+        }
+        return .modelMissing(installed: names)
+    }
+
     // MARK: - Text-only generation (no image)
 
     /// Result from a text-only Ollama generation (translation, summarization, etc.).

@@ -137,6 +137,34 @@ struct LibraryWindow: View {
                         )
                     }
                 }
+                // Ollama startup preflight: appears when preflightStatus
+                // becomes `.failed(...)`. User can Retry, open Settings, or
+                // dismiss for this session.
+                .sheet(isPresented: Binding(
+                    get: {
+                        if case .failed = store.engine?.preflightStatus { return true }
+                        return false
+                    },
+                    set: { _ in }
+                )) {
+                    if let engine = store.engine,
+                       case .failed(let result) = engine.preflightStatus {
+                        PreflightSheet(
+                            result: result,
+                            model: engine.model,
+                            baseURL: engine.connection.baseURL,
+                            engine: engine,
+                            isPresented: Binding(
+                                get: {
+                                    if case .failed = engine.preflightStatus { return true }
+                                    return false
+                                },
+                                set: { _ in }
+                            ),
+                            onOpenSettings: { showSettings = true }
+                        )
+                    }
+                }
             }
         }
         .frame(minWidth: 1100, minHeight: 700)
