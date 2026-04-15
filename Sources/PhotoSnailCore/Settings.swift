@@ -17,6 +17,11 @@ public struct Settings: Codable, Sendable {
     public var customPrompt: String?
     public var appLanguage: String?
     public var promptLanguage: String?
+    /// When true, the GUI auto-starts processing the queue when the Mac
+    /// locks (screen lock / screensaver start) and auto-pauses when it
+    /// unlocks. Defaults to false — opt-in feature for desktop users who
+    /// leave the machine running for weeks.
+    public var autoStartWhenLocked: Bool
 
     public init(version: Int = 1,
                 model: String = "gemma4:31b",
@@ -24,7 +29,8 @@ public struct Settings: Codable, Sendable {
                 ollama: OllamaConnection = .default,
                 customPrompt: String? = nil,
                 appLanguage: String? = nil,
-                promptLanguage: String? = nil) {
+                promptLanguage: String? = nil,
+                autoStartWhenLocked: Bool = false) {
         self.version = version
         self.model = model
         self.sentinel = sentinel
@@ -32,6 +38,26 @@ public struct Settings: Codable, Sendable {
         self.customPrompt = customPrompt
         self.appLanguage = appLanguage
         self.promptLanguage = promptLanguage
+        self.autoStartWhenLocked = autoStartWhenLocked
+    }
+
+    // Custom Codable so older settings.json files (without
+    // autoStartWhenLocked) decode cleanly with the default `false`.
+    private enum CodingKeys: String, CodingKey {
+        case version, model, sentinel, ollama, customPrompt
+        case appLanguage, promptLanguage, autoStartWhenLocked
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        self.model = try c.decodeIfPresent(String.self, forKey: .model) ?? "gemma4:31b"
+        self.sentinel = try c.decodeIfPresent(String.self, forKey: .sentinel) ?? "ai:gemma4-v1"
+        self.ollama = try c.decodeIfPresent(OllamaConnection.self, forKey: .ollama) ?? .default
+        self.customPrompt = try c.decodeIfPresent(String.self, forKey: .customPrompt)
+        self.appLanguage = try c.decodeIfPresent(String.self, forKey: .appLanguage)
+        self.promptLanguage = try c.decodeIfPresent(String.self, forKey: .promptLanguage)
+        self.autoStartWhenLocked = try c.decodeIfPresent(Bool.self, forKey: .autoStartWhenLocked) ?? false
     }
 
     public static let `default` = Settings()

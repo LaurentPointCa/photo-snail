@@ -1289,6 +1289,21 @@ struct RunnerDock: View {
             if engine.state == .idle || engine.state == .finished {
                 addToQueueMenu
             }
+
+            // Auto-start-when-locked toggle — persisted in Settings.
+            // Desktop users who leave the Mac running for weeks can flip
+            // this on and the queue advances only while the screen is
+            // locked, staying out of the way during active use.
+            Toggle(isOn: Binding(
+                get: { engine.autoStartWhenLocked },
+                set: { engine.setAutoStartWhenLocked($0) }
+            )) {
+                Text(loc.t("setting.auto_start_when_locked"))
+                    .font(AppFont.label)
+            }
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .help(loc.t("setting.auto_start_when_locked.help"))
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
