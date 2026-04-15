@@ -1,6 +1,6 @@
 import Foundation
 
-/// Localization string catalog for Photo Snail.
+/// Localization string catalog for PhotoSnail.
 ///
 /// English and French are complete. Other languages have full translations for
 /// common UI terms.
@@ -81,7 +81,7 @@ enum Strings {
         "button.add_header": "Add header",
         "button.requeue_selected": "Re-queue selected",
         "button.clear_descriptions": "Clear descriptions",
-        "button.about": "About Photo Snail",
+        "button.about": "About PhotoSnail",
 
         // Section headers
         "section.library": "Library",
@@ -162,8 +162,6 @@ enum Strings {
         // Confirmation dialogs
         "dialog.clear_title": "Clear descriptions?",
         "dialog.clear_message": "This removes the photo-snail-written description from Photos.app and resets each queue row to pending. Original photos are not modified. This cannot be undone.",
-        "dialog.reprocess_title": "Re-process?",
-        "dialog.reprocess_message": "Queued photos will be processed on the next Start.",
 
         // Empty states
         "empty.nothing_tagged": "Nothing tagged yet",
@@ -333,9 +331,7 @@ enum Strings {
         "error.asset_not_found": "Asset not found",
         "error.settings_error": "Settings error",
         "error.save_failed": "Save failed",
-        "error.requeue_failed": "Re-queue failed",
         "error.retry_error": "Retry error",
-        "status.requeued_photos": "Re-queued %d photo(s) for processing",
         "status.clearing_descriptions": "Clearing %d description(s)",
         "status.cancelled_after": "Cancelled after %d/%d photos",
         "status.cleared_with_failures": "Cleared %d/%d (%d failed)",
@@ -369,7 +365,6 @@ enum Strings {
         "button.revert": "R\u{00E9}tablir",
         "button.deselect": "D\u{00E9}s\u{00E9}lectionner",
         "button.export": "Exporter",
-        "button.reprocess": "Retraiter",
         "button.start_editing": "Modifier",
         "button.reset_to_default": "R\u{00E9}initialiser",
         "button.refresh_model_list": "Actualiser la liste",
@@ -377,7 +372,7 @@ enum Strings {
         "button.add_header": "Ajouter un en-t\u{00EA}te",
         "button.requeue_selected": "Remettre en file",
         "button.clear_descriptions": "Effacer les descriptions",
-        "button.about": "\u{00C0} propos de Photo Snail",
+        "button.about": "\u{00C0} propos de PhotoSnail",
 
         // Section headers
         "section.library": "Biblioth\u{00E8}que",
@@ -398,7 +393,7 @@ enum Strings {
         "filter.all": "Tout",
         "filter.tagged": "\u{00C9}tiquet\u{00E9}",
         "filter.untouched": "Non trait\u{00E9}",
-        "filter.pending": "En attente",
+        "filter.pending": "En file",
         "filter.failed": "\u{00C9}chou\u{00E9}",
 
         // Sort orders
@@ -458,8 +453,6 @@ enum Strings {
         // Confirmation dialogs
         "dialog.clear_title": "Effacer les descriptions ?",
         "dialog.clear_message": "Ceci supprime la description \u{00E9}crite par photo-snail de Photos.app et r\u{00E9}initialise chaque rang\u{00E9}e \u{00E0} \u{00AB} en attente \u{00BB}. Les photos originales ne sont pas modifi\u{00E9}es. Cette action est irr\u{00E9}versible.",
-        "dialog.reprocess_title": "Retraiter ?",
-        "dialog.reprocess_message": "Les photos en file seront trait\u{00E9}es au prochain d\u{00E9}marrage.",
 
         // Empty states
         "empty.nothing_tagged": "Rien d\u{2019}\u{00E9}tiquet\u{00E9} pour l\u{2019}instant",
@@ -544,7 +537,7 @@ enum Strings {
         // Legend
         "legend.status_badges": "Badges de statut",
         "legend.tagged": "La photo a une description dans Photos.app.",
-        "legend.pending": "En file de traitement. Anneau anim\u{00E9} pendant le traitement.",
+        "legend.pending": "En file",
         "legend.failed": "Le traitement a \u{00E9}chou\u{00E9}. R\u{00E9}essayez via Retraiter en lot.",
         "legend.untouched": "Pas encore \u{00E9}num\u{00E9}r\u{00E9} dans la file.",
         "legend.keyboard_shortcuts": "Raccourcis clavier",
@@ -558,11 +551,9 @@ enum Strings {
         "legend.toggle_sel": "Basculer la s\u{00E9}lection",
         "legend.range_sel": "S\u{00E9}lection par plage",
         "legend.escape": "Effacer la s\u{00E9}lection / fermer l\u{2019}aper\u{00E7}u",
-        "legend.reprocess_sel": "Retraiter la s\u{00E9}lection",
         "legend.clear_sel": "Effacer les descriptions de la s\u{00E9}lection",
 
         // Bulk actions help
-        "bulk.reprocess_help": "Retraiter \u{2014} remettre ces photos dans la file d\u{2019}attente",
         "bulk.clear_help": "Effacer la description \u{2014} supprimer les descriptions photo-snail de Photos.app",
         "bulk.export_help": "Exporter JSON \u{2014} enregistrer chaque rang\u{00E9}e s\u{00E9}lectionn\u{00E9}e dans un fichier",
         "bulk.deselect_help": "Tout d\u{00E9}s\u{00E9}lectionner",
@@ -586,7 +577,7 @@ enum Strings {
         "status.all_processed": "Toutes les photos sont trait\u{00E9}es",
         "status.settings_saved": "R\u{00E9}glages enregistr\u{00E9}s",
         "status.dryrun_complete": "Essai termin\u{00E9} (file non modifi\u{00E9}e)",
-        "button.start": "D\u{00E9}marrer",
+        "button.start": "D\u{00E9}marrer la file",
         "button.pause": "Pause",
         "button.resume": "Reprendre",
         "button.ok": "OK",
@@ -603,9 +594,7 @@ enum Strings {
         "error.asset_not_found": "\u{00C9}l\u{00E9}ment introuvable",
         "error.settings_error": "Erreur de r\u{00E9}glages",
         "error.save_failed": "\u{00C9}chec de la sauvegarde",
-        "error.requeue_failed": "\u{00C9}chec de la remise en file",
         "error.retry_error": "Erreur de nouvelle tentative",
-        "status.requeued_photos": "%d photo(s) remise(s) en file pour traitement",
         "status.clearing_descriptions": "Effacement de %d description(s)",
         "status.cancelled_after": "Annul\u{00E9} apr\u{00E8}s %d/%d photos",
         "status.cleared_with_failures": "%d/%d effac\u{00E9}(s) (%d \u{00E9}chou\u{00E9})",
@@ -624,6 +613,36 @@ enum Strings {
         "lang.translate_message": "Ceci mettra en file toutes les photos d\u{00E9}j\u{00E0} trait\u{00E9}es pour traduction dans la nouvelle langue via le mod\u{00E8}le IA. La traduction est textuelle et beaucoup plus rapide que le retraitement.",
         "lang.translate": "Traduire",
         "status.translation_queued": "%d photos en file d'attente pour traduction",
+
+        // Add-to-queue / bulk
+        "button.add_to_queue": "Ajouter \u{00E0} la file",
+        "button.process_now": "Traiter maintenant",
+        "menu.add_all_unprocessed": "Toutes les photos non trait\u{00E9}es",
+        "menu.add_selected": "Photos s\u{00E9}lectionn\u{00E9}es (%d)",
+        "bulk.add_to_queue_help": "Ajouter la s\u{00E9}lection \u{00E0} la file \u{2014} les nouvelles photos sont ajout\u{00E9}es, les photos d\u{00E9}j\u{00E0} trait\u{00E9}es sont remises en file",
+        "bulk.process_now_help": "Traiter cette photo en premier \u{2014} passe devant tout ce qui est d\u{00E9}j\u{00E0} en file",
+        "legend.add_to_queue_sel": "Ajouter la s\u{00E9}lection \u{00E0} la file",
+        "status.queue_empty_hint": "La file est vide. Utilisez \u{00AB} Ajouter \u{00E0} la file \u{00BB} pour commencer.",
+        "status.added_to_queue": "%d photo(s) ajout\u{00E9}e(s) \u{00E0} la file",
+        "status.process_now_queued": "Traitement prioritaire programm\u{00E9}",
+        "status.already_processing": "D\u{00E9}j\u{00E0} en cours de traitement \u{2014} modification ignor\u{00E9}e",
+        "status.loading_from_photos": "Chargement des donn\u{00E9}es depuis Photos.app\u{2026}",
+
+        // Preflight sheet
+        "preflight.title": "\u{00C9}chec de la v\u{00E9}rification Ollama",
+        "preflight.ok": "Ollama est accessible.",
+        "preflight.unreachable_heading": "Impossible de joindre le d\u{00E9}mon Ollama.",
+        "preflight.unreachable_body": "Tentative de connexion \u{00E0} %@ : %@\n\nPhotoSnail a besoin qu'Ollama tourne localement pour annoter les photos.",
+        "preflight.model_missing_heading": "Le mod\u{00E8}le \u{00AB} %@ \u{00BB} n'est pas install\u{00E9}.",
+        "preflight.model_missing_none_installed": "Ollama fonctionne, mais aucun mod\u{00E8}le n'est install\u{00E9}.",
+        "preflight.model_missing_installed_list": "Ollama fonctionne. Mod\u{00E8}les install\u{00E9}s :",
+        "preflight.retry": "R\u{00E9}essayer",
+        "preflight.continue_anyway": "Continuer quand m\u{00EA}me",
+        "preflight.open_settings": "Ouvrir les r\u{00E9}glages\u{2026}",
+
+        // Auto-start-when-locked toggle
+        "setting.auto_start_when_locked": "D\u{00E9}marrer automatiquement quand le Mac est verrouill\u{00E9}",
+        "setting.auto_start_when_locked.help": "D\u{00E9}marrer le traitement au verrouillage de l'\u{00E9}cran et le mettre en pause au d\u{00E9}verrouillage. Utile pour les Mac de bureau laiss\u{00E9}s allum\u{00E9}s durant de longs traitements.",
     ]
 
     // MARK: - Spanish
@@ -639,7 +658,6 @@ enum Strings {
         "button.revert": "Revertir",
         "button.deselect": "Deseleccionar",
         "button.export": "Exportar",
-        "button.reprocess": "Reprocesar",
         "button.start_editing": "Editar",
         "button.reset_to_default": "Restablecer",
         "button.refresh_model_list": "Actualizar lista",
@@ -647,7 +665,7 @@ enum Strings {
         "button.add_header": "A\u{00F1}adir encabezado",
         "button.requeue_selected": "Reencolar selecci\u{00F3}n",
         "button.clear_descriptions": "Borrar descripciones",
-        "button.about": "Acerca de Photo Snail",
+        "button.about": "Acerca de PhotoSnail",
 
         // Section headers
         "section.library": "Biblioteca",
@@ -668,7 +686,7 @@ enum Strings {
         "filter.all": "Todo",
         "filter.tagged": "Etiquetado",
         "filter.untouched": "Sin tratar",
-        "filter.pending": "Pendiente",
+        "filter.pending": "En cola",
         "filter.failed": "Fallido",
 
         // Sort orders
@@ -728,8 +746,6 @@ enum Strings {
         // Confirmation dialogs
         "dialog.clear_title": "\u{00BF}Borrar descripciones?",
         "dialog.clear_message": "Esto elimina la descripci\u{00F3}n escrita por photo-snail de Photos.app y restablece cada fila a pendiente. Las fotos originales no se modifican. No se puede deshacer.",
-        "dialog.reprocess_title": "\u{00BF}Reprocesar?",
-        "dialog.reprocess_message": "Las fotos en cola ser\u{00E1}n procesadas en el pr\u{00F3}ximo inicio.",
 
         // Empty states
         "empty.nothing_tagged": "Nada etiquetado a\u{00FA}n",
@@ -808,7 +824,7 @@ enum Strings {
         // Legend
         "legend.status_badges": "Badges de estado",
         "legend.tagged": "La foto tiene una descripci\u{00F3}n en Photos.app.",
-        "legend.pending": "En cola para procesamiento. Anillo animado durante el proceso.",
+        "legend.pending": "En cola",
         "legend.failed": "El procesamiento fall\u{00F3}. Reintente con Reprocesar en lote.",
         "legend.untouched": "A\u{00FA}n no enumerado en la cola.",
         "legend.keyboard_shortcuts": "Atajos de teclado",
@@ -822,11 +838,9 @@ enum Strings {
         "legend.toggle_sel": "Alternar selecci\u{00F3}n",
         "legend.range_sel": "Selecci\u{00F3}n por rango",
         "legend.escape": "Borrar selecci\u{00F3}n / cerrar vista previa",
-        "legend.reprocess_sel": "Reprocesar selecci\u{00F3}n",
         "legend.clear_sel": "Borrar descripciones de la selecci\u{00F3}n",
 
         // Bulk actions help
-        "bulk.reprocess_help": "Reprocesar \u{2014} devolver estas fotos a la cola pendiente",
         "bulk.clear_help": "Borrar descripci\u{00F3}n \u{2014} eliminar descripciones de photo-snail de Photos.app",
         "bulk.export_help": "Exportar JSON \u{2014} guardar cada fila seleccionada en un archivo",
         "bulk.deselect_help": "Deseleccionar todo",
@@ -850,7 +864,7 @@ enum Strings {
         "status.all_processed": "Todas las fotos procesadas",
         "status.settings_saved": "Ajustes guardados",
         "status.dryrun_complete": "Prueba completada (cola no modificada)",
-        "button.start": "Iniciar",
+        "button.start": "Iniciar cola",
         "button.pause": "Pausar",
         "button.resume": "Reanudar",
         "button.ok": "OK",
@@ -867,9 +881,7 @@ enum Strings {
         "error.asset_not_found": "Elemento no encontrado",
         "error.settings_error": "Error de ajustes",
         "error.save_failed": "Error al guardar",
-        "error.requeue_failed": "Error al reencolar",
         "error.retry_error": "Error de reintento",
-        "status.requeued_photos": "%d foto(s) reencolada(s) para procesamiento",
         "status.clearing_descriptions": "Borrando %d descripci\u{00F3}n(es)",
         "status.cancelled_after": "Cancelado tras %d/%d fotos",
         "status.cleared_with_failures": "%d/%d borrado(s) (%d fallido)",
@@ -888,6 +900,36 @@ enum Strings {
         "lang.translate_message": "Esto pondr\u{00E1} en cola todas las fotos ya procesadas para traducci\u{00F3}n al nuevo idioma usando el modelo IA. La traducci\u{00F3}n es solo texto y mucho m\u{00E1}s r\u{00E1}pida que reprocesar.",
         "lang.translate": "Traducir",
         "status.translation_queued": "%d fotos en cola para traducción",
+
+        // Add-to-queue / bulk
+        "button.add_to_queue": "A\u{00F1}adir a la cola",
+        "button.process_now": "Procesar ahora",
+        "menu.add_all_unprocessed": "Todas las fotos no procesadas",
+        "menu.add_selected": "Fotos seleccionadas (%d)",
+        "bulk.add_to_queue_help": "A\u{00F1}adir la selecci\u{00F3}n a la cola \u{2014} las fotos nuevas se a\u{00F1}aden, las ya procesadas se reenv\u{00ED}an a la cola",
+        "bulk.process_now_help": "Procesar esta foto a continuaci\u{00F3}n \u{2014} se adelanta a cualquier otra pendiente",
+        "legend.add_to_queue_sel": "A\u{00F1}adir la selecci\u{00F3}n a la cola",
+        "status.queue_empty_hint": "La cola est\u{00E1} vac\u{00ED}a. Usa \u{00AB}A\u{00F1}adir a la cola\u{00BB} para empezar.",
+        "status.added_to_queue": "%d foto(s) a\u{00F1}adida(s) a la cola",
+        "status.process_now_queued": "Procesamiento inmediato en cola",
+        "status.already_processing": "Ya se est\u{00E1} procesando \u{2014} cambio ignorado",
+        "status.loading_from_photos": "Cargando datos desde Photos.app\u{2026}",
+
+        // Preflight sheet
+        "preflight.title": "Fallo en la comprobaci\u{00F3}n de Ollama",
+        "preflight.ok": "Ollama es accesible.",
+        "preflight.unreachable_heading": "No se puede conectar con el demonio de Ollama.",
+        "preflight.unreachable_body": "Se intent\u{00F3} conectar a %@ pero se obtuvo: %@\n\nPhotoSnail necesita Ollama en local para subtitular fotos.",
+        "preflight.model_missing_heading": "El modelo \u{00AB}%@\u{00BB} no est\u{00E1} instalado.",
+        "preflight.model_missing_none_installed": "Ollama est\u{00E1} en ejecuci\u{00F3}n, pero a\u{00FA}n no hay modelos instalados.",
+        "preflight.model_missing_installed_list": "Ollama est\u{00E1} en ejecuci\u{00F3}n. Modelos instalados:",
+        "preflight.retry": "Reintentar",
+        "preflight.continue_anyway": "Continuar de todos modos",
+        "preflight.open_settings": "Abrir ajustes\u{2026}",
+
+        // Auto-start-when-locked toggle
+        "setting.auto_start_when_locked": "Iniciar autom\u{00E1}ticamente cuando el Mac est\u{00E1} bloqueado",
+        "setting.auto_start_when_locked.help": "Comienza el procesamiento al bloquearse la pantalla y se pausa al desbloquearla. \u{00DA}til para Macs de escritorio que quedan encendidos durante procesos largos.",
     ]
 
     // MARK: - German
@@ -903,7 +945,6 @@ enum Strings {
         "button.revert": "Zur\u{00FC}cksetzen",
         "button.deselect": "Auswahl aufheben",
         "button.export": "Exportieren",
-        "button.reprocess": "Erneut verarbeiten",
         "button.start_editing": "Bearbeiten",
         "button.reset_to_default": "Standard wiederherstellen",
         "button.refresh_model_list": "Modellliste aktualisieren",
@@ -911,7 +952,7 @@ enum Strings {
         "button.add_header": "Header hinzuf\u{00FC}gen",
         "button.requeue_selected": "Ausgew\u{00E4}hlte erneut einreihen",
         "button.clear_descriptions": "Beschreibungen l\u{00F6}schen",
-        "button.about": "\u{00DC}ber Photo Snail",
+        "button.about": "\u{00DC}ber PhotoSnail",
 
         // Section headers
         "section.library": "Mediathek",
@@ -932,7 +973,7 @@ enum Strings {
         "filter.all": "Alle",
         "filter.tagged": "Getaggt",
         "filter.untouched": "Unber\u{00FC}hrt",
-        "filter.pending": "Ausstehend",
+        "filter.pending": "In Warteschlange",
         "filter.failed": "Fehlgeschlagen",
 
         // Sort orders
@@ -992,8 +1033,6 @@ enum Strings {
         // Confirmation dialogs
         "dialog.clear_title": "Beschreibungen l\u{00F6}schen?",
         "dialog.clear_message": "Dies entfernt die von photo-snail geschriebene Beschreibung aus Photos.app und setzt jede Zeile auf ausstehend zur\u{00FC}ck. Originalfotos werden nicht ver\u{00E4}ndert. Dies kann nicht r\u{00FC}ckg\u{00E4}ngig gemacht werden.",
-        "dialog.reprocess_title": "Erneut verarbeiten?",
-        "dialog.reprocess_message": "Fotos in der Warteschlange werden beim n\u{00E4}chsten Start verarbeitet.",
 
         // Empty states
         "empty.nothing_tagged": "Noch nichts getaggt",
@@ -1072,7 +1111,7 @@ enum Strings {
         // Legend
         "legend.status_badges": "Status-Badges",
         "legend.tagged": "Das Foto hat eine Beschreibung in Photos.app.",
-        "legend.pending": "In der Warteschlange. Animierter Ring w\u{00E4}hrend der Verarbeitung.",
+        "legend.pending": "In Warteschlange",
         "legend.failed": "Verarbeitung fehlgeschlagen. Erneut versuchen \u{00FC}ber Massen-Verarbeitung.",
         "legend.untouched": "Noch nicht in die Warteschlange aufgenommen.",
         "legend.keyboard_shortcuts": "Tastaturk\u{00FC}rzel",
@@ -1086,11 +1125,9 @@ enum Strings {
         "legend.toggle_sel": "Auswahl umschalten",
         "legend.range_sel": "Bereichsauswahl",
         "legend.escape": "Auswahl aufheben / Vorschau schlie\u{00DF}en",
-        "legend.reprocess_sel": "Auswahl erneut verarbeiten",
         "legend.clear_sel": "Beschreibungen der Auswahl l\u{00F6}schen",
 
         // Bulk actions help
-        "bulk.reprocess_help": "Erneut verarbeiten \u{2014} diese Fotos zur\u{00FC}ck in die Warteschlange",
         "bulk.clear_help": "Beschreibung l\u{00F6}schen \u{2014} photo-snail-Beschreibungen aus Photos.app entfernen",
         "bulk.export_help": "JSON exportieren \u{2014} jede ausgew\u{00E4}hlte Zeile in eine Datei speichern",
         "bulk.deselect_help": "Alle abw\u{00E4}hlen",
@@ -1114,7 +1151,7 @@ enum Strings {
         "status.all_processed": "Alle Fotos verarbeitet",
         "status.settings_saved": "Einstellungen gespeichert",
         "status.dryrun_complete": "Testlauf abgeschlossen (Warteschlange unver\u{00E4}ndert)",
-        "button.start": "Starten",
+        "button.start": "Warteschlange starten",
         "button.pause": "Pause",
         "button.resume": "Fortsetzen",
         "button.ok": "OK",
@@ -1131,9 +1168,7 @@ enum Strings {
         "error.asset_not_found": "Element nicht gefunden",
         "error.settings_error": "Einstellungsfehler",
         "error.save_failed": "Speichern fehlgeschlagen",
-        "error.requeue_failed": "Erneutes Einreihen fehlgeschlagen",
         "error.retry_error": "Wiederholungsfehler",
-        "status.requeued_photos": "%d Foto(s) erneut zur Verarbeitung eingereiht",
         "status.clearing_descriptions": "%d Beschreibung(en) werden gel\u{00F6}scht",
         "status.cancelled_after": "Abgebrochen nach %d/%d Fotos",
         "status.cleared_with_failures": "%d/%d gel\u{00F6}scht (%d fehlgeschlagen)",
@@ -1151,6 +1186,36 @@ enum Strings {
         "lang.translate_title": "Bestehende Beschreibungen \u{00FC}bersetzen?",
         "lang.translate_message": "Dies reiht alle bereits verarbeiteten Fotos zur \u{00DC}bersetzung in die neue Sprache ein. Die \u{00DC}bersetzung ist nur Text und viel schneller als erneutes Verarbeiten.",
         "lang.translate": "\u{00DC}bersetzen",
+
+        // Add-to-queue / bulk
+        "button.add_to_queue": "Zur Warteschlange hinzuf\u{00FC}gen",
+        "button.process_now": "Jetzt verarbeiten",
+        "menu.add_all_unprocessed": "Alle nicht verarbeiteten Fotos",
+        "menu.add_selected": "Ausgew\u{00E4}hlte Fotos (%d)",
+        "bulk.add_to_queue_help": "Auswahl zur Warteschlange hinzuf\u{00FC}gen \u{2014} neue Fotos werden hinzugef\u{00FC}gt, bereits verarbeitete erneut eingereiht",
+        "bulk.process_now_help": "Dieses Foto als n\u{00E4}chstes verarbeiten \u{2014} \u{00FC}berspringt alles andere in der Warteschlange",
+        "legend.add_to_queue_sel": "Auswahl zur Warteschlange hinzuf\u{00FC}gen",
+        "status.queue_empty_hint": "Die Warteschlange ist leer. Verwende \u{201E}Zur Warteschlange hinzuf\u{00FC}gen\u{201C}, um zu beginnen.",
+        "status.added_to_queue": "%d Foto(s) zur Warteschlange hinzugef\u{00FC}gt",
+        "status.process_now_queued": "Sofortverarbeitung eingereiht",
+        "status.already_processing": "Wird bereits verarbeitet \u{2014} \u{00C4}nderung ignoriert",
+        "status.loading_from_photos": "Lade Daten aus Photos.app\u{2026}",
+
+        // Preflight sheet
+        "preflight.title": "Ollama-Pr\u{00FC}fung fehlgeschlagen",
+        "preflight.ok": "Ollama ist erreichbar.",
+        "preflight.unreachable_heading": "Der Ollama-D\u{00E4}mon ist nicht erreichbar.",
+        "preflight.unreachable_body": "Verbindung zu %@ versucht, erhalten: %@\n\nPhotoSnail ben\u{00F6}tigt Ollama lokal, um Fotos zu beschriften.",
+        "preflight.model_missing_heading": "Das Modell \u{201E}%@\u{201C} ist nicht installiert.",
+        "preflight.model_missing_none_installed": "Ollama l\u{00E4}uft, aber es sind noch keine Modelle installiert.",
+        "preflight.model_missing_installed_list": "Ollama l\u{00E4}uft. Installierte Modelle:",
+        "preflight.retry": "Erneut versuchen",
+        "preflight.continue_anyway": "Trotzdem fortfahren",
+        "preflight.open_settings": "Einstellungen \u{00F6}ffnen\u{2026}",
+
+        // Auto-start-when-locked toggle
+        "setting.auto_start_when_locked": "Automatisch starten, wenn der Mac gesperrt ist",
+        "setting.auto_start_when_locked.help": "Verarbeitung beginnt, wenn der Bildschirm gesperrt wird, und pausiert beim Entsperren. N\u{00FC}tzlich f\u{00FC}r Desktop-Macs, die w\u{00E4}hrend langer Durchl\u{00E4}ufe laufen bleiben.",
     ]
 
     // MARK: - Portuguese
@@ -1166,7 +1231,6 @@ enum Strings {
         "button.revert": "Reverter",
         "button.deselect": "Desmarcar",
         "button.export": "Exportar",
-        "button.reprocess": "Reprocessar",
         "button.start_editing": "Editar",
         "button.reset_to_default": "Restaurar padr\u{00E3}o",
         "button.refresh_model_list": "Atualizar lista",
@@ -1174,7 +1238,7 @@ enum Strings {
         "button.add_header": "Adicionar cabe\u{00E7}alho",
         "button.requeue_selected": "Reenfileirar sele\u{00E7}\u{00E3}o",
         "button.clear_descriptions": "Limpar descri\u{00E7}\u{00F5}es",
-        "button.about": "Sobre o Photo Snail",
+        "button.about": "Sobre o PhotoSnail",
 
         // Section headers
         "section.library": "Biblioteca",
@@ -1195,7 +1259,7 @@ enum Strings {
         "filter.all": "Tudo",
         "filter.tagged": "Marcado",
         "filter.untouched": "N\u{00E3}o processado",
-        "filter.pending": "Pendente",
+        "filter.pending": "Na fila",
         "filter.failed": "Falhou",
 
         // Sort orders
@@ -1255,8 +1319,6 @@ enum Strings {
         // Confirmation dialogs
         "dialog.clear_title": "Limpar descri\u{00E7}\u{00F5}es?",
         "dialog.clear_message": "Isto remove a descri\u{00E7}\u{00E3}o escrita pelo photo-snail do Photos.app e redefine cada linha para pendente. As fotos originais n\u{00E3}o s\u{00E3}o modificadas. N\u{00E3}o pode ser desfeito.",
-        "dialog.reprocess_title": "Reprocessar?",
-        "dialog.reprocess_message": "As fotos na fila ser\u{00E3}o processadas no pr\u{00F3}ximo in\u{00ED}cio.",
 
         // Empty states
         "empty.nothing_tagged": "Nada marcado ainda",
@@ -1335,7 +1397,7 @@ enum Strings {
         // Legend
         "legend.status_badges": "Badges de status",
         "legend.tagged": "A foto tem uma descri\u{00E7}\u{00E3}o no Photos.app.",
-        "legend.pending": "Na fila para processamento. Anel animado durante o processo.",
+        "legend.pending": "Na fila",
         "legend.failed": "O processamento falhou. Tente novamente com Reprocessar em lote.",
         "legend.untouched": "Ainda n\u{00E3}o enumerado na fila.",
         "legend.keyboard_shortcuts": "Atalhos de teclado",
@@ -1349,11 +1411,9 @@ enum Strings {
         "legend.toggle_sel": "Alternar sele\u{00E7}\u{00E3}o",
         "legend.range_sel": "Sele\u{00E7}\u{00E3}o por intervalo",
         "legend.escape": "Limpar sele\u{00E7}\u{00E3}o / fechar pr\u{00E9}-visualiza\u{00E7}\u{00E3}o",
-        "legend.reprocess_sel": "Reprocessar sele\u{00E7}\u{00E3}o",
         "legend.clear_sel": "Limpar descri\u{00E7}\u{00F5}es da sele\u{00E7}\u{00E3}o",
 
         // Bulk actions help
-        "bulk.reprocess_help": "Reprocessar \u{2014} devolver estas fotos para a fila pendente",
         "bulk.clear_help": "Limpar descri\u{00E7}\u{00E3}o \u{2014} remover descri\u{00E7}\u{00F5}es do photo-snail do Photos.app",
         "bulk.export_help": "Exportar JSON \u{2014} salvar cada linha selecionada em um arquivo",
         "bulk.deselect_help": "Desmarcar tudo",
@@ -1377,7 +1437,7 @@ enum Strings {
         "status.all_processed": "Todas as fotos processadas",
         "status.settings_saved": "Configura\u{00E7}\u{00F5}es salvas",
         "status.dryrun_complete": "Teste conclu\u{00ED}do (fila n\u{00E3}o modificada)",
-        "button.start": "Iniciar",
+        "button.start": "Iniciar fila",
         "button.pause": "Pausar",
         "button.resume": "Retomar",
         "button.ok": "OK",
@@ -1394,9 +1454,7 @@ enum Strings {
         "error.asset_not_found": "Elemento n\u{00E3}o encontrado",
         "error.settings_error": "Erro de configura\u{00E7}\u{00F5}es",
         "error.save_failed": "Falha ao salvar",
-        "error.requeue_failed": "Falha ao reencaminhar para a fila",
         "error.retry_error": "Erro de nova tentativa",
-        "status.requeued_photos": "%d foto(s) reenfileirada(s) para processamento",
         "status.clearing_descriptions": "Apagando %d descri\u{00E7}\u{00E3}o(\u{00F5}es)",
         "status.cancelled_after": "Cancelado ap\u{00F3}s %d/%d fotos",
         "status.cleared_with_failures": "%d/%d apagado(s) (%d falharam)",
@@ -1415,6 +1473,36 @@ enum Strings {
         "lang.translate_message": "Isto colocar\u{00E1} na fila todas as fotos j\u{00E1} processadas para tradu\u{00E7}\u{00E3}o no novo idioma usando o modelo IA. A tradu\u{00E7}\u{00E3}o \u{00E9} somente texto e muito mais r\u{00E1}pida que reprocessar.",
         "lang.translate": "Traduzir",
         "status.translation_queued": "%d fotos na fila para tradução",
+
+        // Add-to-queue / bulk
+        "button.add_to_queue": "Adicionar \u{00E0} fila",
+        "button.process_now": "Processar agora",
+        "menu.add_all_unprocessed": "Todas as fotos n\u{00E3}o processadas",
+        "menu.add_selected": "Fotos selecionadas (%d)",
+        "bulk.add_to_queue_help": "Adicionar sele\u{00E7}\u{00E3}o \u{00E0} fila \u{2014} fotos novas entram, fotos j\u{00E1} processadas voltam para a fila",
+        "bulk.process_now_help": "Processar esta foto em seguida \u{2014} passa \u{00E0} frente de tudo que j\u{00E1} est\u{00E1} pendente",
+        "legend.add_to_queue_sel": "Adicionar sele\u{00E7}\u{00E3}o \u{00E0} fila",
+        "status.queue_empty_hint": "A fila est\u{00E1} vazia. Use \u{00AB}Adicionar \u{00E0} fila\u{00BB} para come\u{00E7}ar.",
+        "status.added_to_queue": "%d foto(s) adicionada(s) \u{00E0} fila",
+        "status.process_now_queued": "Processamento imediato na fila",
+        "status.already_processing": "J\u{00E1} est\u{00E1} sendo processado \u{2014} altera\u{00E7}\u{00E3}o ignorada",
+        "status.loading_from_photos": "Carregando dados do Photos.app\u{2026}",
+
+        // Preflight sheet
+        "preflight.title": "Falha na verifica\u{00E7}\u{00E3}o do Ollama",
+        "preflight.ok": "Ollama est\u{00E1} acess\u{00ED}vel.",
+        "preflight.unreachable_heading": "N\u{00E3}o foi poss\u{00ED}vel alcan\u{00E7}ar o daemon do Ollama.",
+        "preflight.unreachable_body": "Tentativa de conex\u{00E3}o com %@ retornou: %@\n\nPhotoSnail precisa do Ollama rodando localmente para descrever fotos.",
+        "preflight.model_missing_heading": "O modelo \u{00AB}%@\u{00BB} n\u{00E3}o est\u{00E1} instalado.",
+        "preflight.model_missing_none_installed": "O Ollama est\u{00E1} em execu\u{00E7}\u{00E3}o, mas ainda n\u{00E3}o h\u{00E1} modelos instalados.",
+        "preflight.model_missing_installed_list": "O Ollama est\u{00E1} em execu\u{00E7}\u{00E3}o. Modelos instalados:",
+        "preflight.retry": "Tentar novamente",
+        "preflight.continue_anyway": "Continuar mesmo assim",
+        "preflight.open_settings": "Abrir ajustes\u{2026}",
+
+        // Auto-start-when-locked toggle
+        "setting.auto_start_when_locked": "Iniciar automaticamente quando o Mac est\u{00E1} bloqueado",
+        "setting.auto_start_when_locked.help": "Come\u{00E7}a o processamento ao bloquear a tela e pausa ao desbloquear. \u{00DA}til para Macs de mesa que ficam ligados durante processamentos longos.",
     ]
 
     // MARK: - Japanese
@@ -1430,7 +1518,6 @@ enum Strings {
         "button.revert": "\u{5143}\u{306B}\u{623B}\u{3059}",
         "button.deselect": "\u{9078}\u{629E}\u{89E3}\u{9664}",
         "button.export": "\u{30A8}\u{30AF}\u{30B9}\u{30DD}\u{30FC}\u{30C8}",
-        "button.reprocess": "\u{518D}\u{51E6}\u{7406}",
         "button.start_editing": "\u{7DE8}\u{96C6}\u{958B}\u{59CB}",
         "button.reset_to_default": "\u{30C7}\u{30D5}\u{30A9}\u{30EB}\u{30C8}\u{306B}\u{623B}\u{3059}",
         "button.refresh_model_list": "\u{30E2}\u{30C7}\u{30EB}\u{30EA}\u{30B9}\u{30C8}\u{3092}\u{66F4}\u{65B0}",
@@ -1438,7 +1525,7 @@ enum Strings {
         "button.add_header": "\u{30D8}\u{30C3}\u{30C0}\u{30FC}\u{3092}\u{8FFD}\u{52A0}",
         "button.requeue_selected": "\u{9078}\u{629E}\u{3092}\u{518D}\u{30AD}\u{30E5}\u{30FC}",
         "button.clear_descriptions": "\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30A2}",
-        "button.about": "Photo Snail\u{306B}\u{3064}\u{3044}\u{3066}",
+        "button.about": "PhotoSnail\u{306B}\u{3064}\u{3044}\u{3066}",
 
         // Section headers
         "section.library": "\u{30E9}\u{30A4}\u{30D6}\u{30E9}\u{30EA}",
@@ -1459,7 +1546,7 @@ enum Strings {
         "filter.all": "\u{3059}\u{3079}\u{3066}",
         "filter.tagged": "\u{30BF}\u{30B0}\u{4ED8}\u{304D}",
         "filter.untouched": "\u{672A}\u{51E6}\u{7406}",
-        "filter.pending": "\u{4FDD}\u{7559}\u{4E2D}",
+        "filter.pending": "\u{30AD}\u{30E5}\u{30FC}\u{5F85}\u{3061}",
         "filter.failed": "\u{5931}\u{6557}",
 
         // Sort orders
@@ -1519,8 +1606,6 @@ enum Strings {
         // Confirmation dialogs
         "dialog.clear_title": "\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30A2}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
         "dialog.clear_message": "photo-snail\u{304C}\u{66F8}\u{304D}\u{8FBC}\u{3093}\u{3060}\u{8AAC}\u{660E}\u{3092}Photos.app\u{304B}\u{3089}\u{524A}\u{9664}\u{3057}\u{3001}\u{5404}\u{884C}\u{3092}\u{4FDD}\u{7559}\u{306B}\u{30EA}\u{30BB}\u{30C3}\u{30C8}\u{3057}\u{307E}\u{3059}\u{3002}\u{5143}\u{306E}\u{5199}\u{771F}\u{306F}\u{5909}\u{66F4}\u{3055}\u{308C}\u{307E}\u{305B}\u{3093}\u{3002}\u{3053}\u{306E}\u{64CD}\u{4F5C}\u{306F}\u{53D6}\u{308A}\u{6D88}\u{305B}\u{307E}\u{305B}\u{3093}\u{3002}",
-        "dialog.reprocess_title": "\u{518D}\u{51E6}\u{7406}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
-        "dialog.reprocess_message": "\u{30AD}\u{30E5}\u{30FC}\u{5185}\u{306E}\u{5199}\u{771F}\u{306F}\u{6B21}\u{306E}\u{958B}\u{59CB}\u{6642}\u{306B}\u{51E6}\u{7406}\u{3055}\u{308C}\u{307E}\u{3059}\u{3002}",
 
         // Empty states
         "empty.nothing_tagged": "\u{307E}\u{3060}\u{30BF}\u{30B0}\u{4ED8}\u{3051}\u{306A}\u{3057}",
@@ -1599,7 +1684,7 @@ enum Strings {
         // Legend
         "legend.status_badges": "\u{30B9}\u{30C6}\u{30FC}\u{30BF}\u{30B9}\u{30D0}\u{30C3}\u{30B8}",
         "legend.tagged": "\u{5199}\u{771F}\u{306B}Photos.app\u{3067}\u{306E}\u{8AAC}\u{660E}\u{304C}\u{3042}\u{308A}\u{307E}\u{3059}\u{3002}",
-        "legend.pending": "\u{51E6}\u{7406}\u{5F85}\u{3061}\u{3002}\u{51E6}\u{7406}\u{4E2D}\u{306F}\u{30A2}\u{30CB}\u{30E1}\u{30FC}\u{30B7}\u{30E7}\u{30F3}\u{30EA}\u{30F3}\u{30B0}\u{304C}\u{8868}\u{793A}\u{3055}\u{308C}\u{307E}\u{3059}\u{3002}",
+        "legend.pending": "\u{30AD}\u{30E5}\u{30FC}\u{5F85}\u{3061}",
         "legend.failed": "\u{51E6}\u{7406}\u{304C}\u{5931}\u{6557}\u{3057}\u{307E}\u{3057}\u{305F}\u{3002}\u{4E00}\u{62EC}\u{518D}\u{51E6}\u{7406}\u{3067}\u{30EA}\u{30C8}\u{30E9}\u{30A4}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}",
         "legend.untouched": "\u{307E}\u{3060}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{5217}\u{6319}\u{3055}\u{308C}\u{3066}\u{3044}\u{307E}\u{305B}\u{3093}\u{3002}",
         "legend.keyboard_shortcuts": "\u{30AD}\u{30FC}\u{30DC}\u{30FC}\u{30C9}\u{30B7}\u{30E7}\u{30FC}\u{30C8}\u{30AB}\u{30C3}\u{30C8}",
@@ -1613,11 +1698,9 @@ enum Strings {
         "legend.toggle_sel": "\u{9078}\u{629E}\u{5207}\u{308A}\u{66FF}\u{3048}",
         "legend.range_sel": "\u{7BC4}\u{56F2}\u{9078}\u{629E}",
         "legend.escape": "\u{9078}\u{629E}\u{89E3}\u{9664} / \u{30D7}\u{30EC}\u{30D3}\u{30E5}\u{30FC}\u{3092}\u{9589}\u{3058}\u{308B}",
-        "legend.reprocess_sel": "\u{9078}\u{629E}\u{3092}\u{518D}\u{51E6}\u{7406}",
         "legend.clear_sel": "\u{9078}\u{629E}\u{306E}\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30A2}",
 
         // Bulk actions help
-        "bulk.reprocess_help": "\u{518D}\u{51E6}\u{7406} \u{2014} \u{3053}\u{308C}\u{3089}\u{306E}\u{5199}\u{771F}\u{3092}\u{4FDD}\u{7559}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{623B}\u{3059}",
         "bulk.clear_help": "\u{8AAC}\u{660E}\u{3092}\u{30AF}\u{30EA}\u{30A2} \u{2014} Photos.app\u{304B}\u{3089}photo-snail\u{306E}\u{8AAC}\u{660E}\u{3092}\u{524A}\u{9664}",
         "bulk.export_help": "JSON\u{30A8}\u{30AF}\u{30B9}\u{30DD}\u{30FC}\u{30C8} \u{2014} \u{9078}\u{629E}\u{3057}\u{305F}\u{5404}\u{884C}\u{3092}\u{30D5}\u{30A1}\u{30A4}\u{30EB}\u{306B}\u{4FDD}\u{5B58}",
         "bulk.deselect_help": "\u{3059}\u{3079}\u{3066}\u{9078}\u{629E}\u{89E3}\u{9664}",
@@ -1641,7 +1724,7 @@ enum Strings {
         "status.all_processed": "\u{3059}\u{3079}\u{3066}\u{306E}\u{5199}\u{771F}\u{3092}\u{51E6}\u{7406}\u{6E08}\u{307F}",
         "status.settings_saved": "\u{8A2D}\u{5B9A}\u{3092}\u{4FDD}\u{5B58}\u{3057}\u{307E}\u{3057}\u{305F}",
         "status.dryrun_complete": "\u{30C6}\u{30B9}\u{30C8}\u{5B9F}\u{884C}\u{5B8C}\u{4E86}\u{FF08}\u{30AD}\u{30E5}\u{30FC}\u{672A}\u{5909}\u{66F4}\u{FF09}",
-        "button.start": "\u{958B}\u{59CB}",
+        "button.start": "\u{30AD}\u{30E5}\u{30FC}\u{3092}\u{958B}\u{59CB}",
         "button.pause": "\u{4E00}\u{6642}\u{505C}\u{6B62}",
         "button.resume": "\u{518D}\u{958B}",
         "button.ok": "OK",
@@ -1658,9 +1741,7 @@ enum Strings {
         "error.asset_not_found": "\u{30A2}\u{30BB}\u{30C3}\u{30C8}\u{304C}\u{898B}\u{3064}\u{304B}\u{308A}\u{307E}\u{305B}\u{3093}",
         "error.settings_error": "\u{8A2D}\u{5B9A}\u{30A8}\u{30E9}\u{30FC}",
         "error.save_failed": "\u{4FDD}\u{5B58}\u{5931}\u{6557}",
-        "error.requeue_failed": "\u{518D}\u{30AD}\u{30E5}\u{30FC}\u{5931}\u{6557}",
         "error.retry_error": "\u{30EA}\u{30C8}\u{30E9}\u{30A4}\u{30A8}\u{30E9}\u{30FC}",
-        "status.requeued_photos": "%d\u{4EF6}\u{306E}\u{5199}\u{771F}\u{3092}\u{51E6}\u{7406}\u{7528}\u{306B}\u{518D}\u{30AD}\u{30E5}\u{30FC}\u{3057}\u{307E}\u{3057}\u{305F}",
         "status.clearing_descriptions": "%d\u{4EF6}\u{306E}\u{8AAC}\u{660E}\u{3092}\u{524A}\u{9664}\u{4E2D}",
         "status.cancelled_after": "%d/%d\u{4EF6}\u{5F8C}\u{306B}\u{30AD}\u{30E3}\u{30F3}\u{30BB}\u{30EB}",
         "status.cleared_with_failures": "%d/%d\u{4EF6}\u{524A}\u{9664}\u{FF08}%d\u{4EF6}\u{5931}\u{6557}\u{FF09}",
@@ -1678,6 +1759,36 @@ enum Strings {
         "lang.translate_title": "\u{65E2}\u{5B58}\u{306E}\u{8AAC}\u{660E}\u{3092}\u{7FFB}\u{8A33}\u{3057}\u{307E}\u{3059}\u{304B}\u{FF1F}",
         "lang.translate_message": "AI\u{30E2}\u{30C7}\u{30EB}\u{3092}\u{4F7F}\u{7528}\u{3057}\u{3066}\u{3001}\u{51E6}\u{7406}\u{6E08}\u{307F}\u{306E}\u{3059}\u{3079}\u{3066}\u{306E}\u{5199}\u{771F}\u{3092}\u{65B0}\u{3057}\u{3044}\u{8A00}\u{8A9E}\u{306B}\u{7FFB}\u{8A33}\u{3059}\u{308B}\u{305F}\u{3081}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{5165}\u{308C}\u{307E}\u{3059}\u{3002}\u{7FFB}\u{8A33}\u{306F}\u{30C6}\u{30AD}\u{30B9}\u{30C8}\u{306E}\u{307F}\u{3067}\u{3001}\u{518D}\u{51E6}\u{7406}\u{3088}\u{308A}\u{306F}\u{308B}\u{304B}\u{306B}\u{9AD8}\u{901F}\u{3067}\u{3059}\u{3002}",
         "lang.translate": "\u{7FFB}\u{8A33}",
+
+        // Add-to-queue / bulk
+        "button.add_to_queue": "\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0}",
+        "button.process_now": "\u{4ECA}\u{3059}\u{3050}\u{51E6}\u{7406}",
+        "menu.add_all_unprocessed": "\u{672A}\u{51E6}\u{7406}\u{306E}\u{5199}\u{771F}\u{3059}\u{3079}\u{3066}",
+        "menu.add_selected": "\u{9078}\u{629E}\u{3057}\u{305F}\u{5199}\u{771F} (%d)",
+        "bulk.add_to_queue_help": "\u{9078}\u{629E}\u{9805}\u{76EE}\u{3092}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0} \u{2014} \u{65B0}\u{3057}\u{3044}\u{5199}\u{771F}\u{306F}\u{8FFD}\u{52A0}\u{3055}\u{308C}\u{3001}\u{51E6}\u{7406}\u{6E08}\u{307F}\u{306E}\u{5199}\u{771F}\u{306F}\u{518D}\u{5EA6}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{5165}\u{308A}\u{307E}\u{3059}",
+        "bulk.process_now_help": "\u{3053}\u{306E}\u{5199}\u{771F}\u{3092}\u{6B21}\u{306B}\u{51E6}\u{7406} \u{2014} \u{4ED6}\u{306E}\u{5F85}\u{6A5F}\u{4E2D}\u{306E}\u{9805}\u{76EE}\u{3088}\u{308A}\u{3082}\u{5148}\u{306B}\u{51E6}\u{7406}\u{3055}\u{308C}\u{307E}\u{3059}",
+        "legend.add_to_queue_sel": "\u{9078}\u{629E}\u{9805}\u{76EE}\u{3092}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0}",
+        "status.queue_empty_hint": "\u{30AD}\u{30E5}\u{30FC}\u{304C}\u{7A7A}\u{3067}\u{3059}\u{3002}\u{300C}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0}\u{300D}\u{3092}\u{4F7F}\u{3063}\u{3066}\u{958B}\u{59CB}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}",
+        "status.added_to_queue": "%d \u{679A}\u{306E}\u{5199}\u{771F}\u{3092}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0}\u{3057}\u{307E}\u{3057}\u{305F}",
+        "status.process_now_queued": "\u{512A}\u{5148}\u{51E6}\u{7406}\u{3092}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0}\u{3057}\u{307E}\u{3057}\u{305F}",
+        "status.already_processing": "\u{51E6}\u{7406}\u{4E2D}\u{306E}\u{305F}\u{3081}\u{5909}\u{66F4}\u{306F}\u{7121}\u{8996}\u{3055}\u{308C}\u{307E}\u{3057}\u{305F}",
+        "status.loading_from_photos": "Photos.app \u{304B}\u{3089}\u{30C7}\u{30FC}\u{30BF}\u{3092}\u{8AAD}\u{307F}\u{8FBC}\u{307F}\u{4E2D}\u{2026}",
+
+        // Preflight sheet
+        "preflight.title": "Ollama \u{306E}\u{30C1}\u{30A7}\u{30C3}\u{30AF}\u{306B}\u{5931}\u{6557}\u{3057}\u{307E}\u{3057}\u{305F}",
+        "preflight.ok": "Ollama \u{306B}\u{63A5}\u{7D9A}\u{3067}\u{304D}\u{307E}\u{3059}\u{3002}",
+        "preflight.unreachable_heading": "Ollama \u{30C7}\u{30FC}\u{30E2}\u{30F3}\u{306B}\u{63A5}\u{7D9A}\u{3067}\u{304D}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "preflight.unreachable_body": "%@ \u{3078}\u{306E}\u{63A5}\u{7D9A}\u{3092}\u{8A66}\u{307F}\u{307E}\u{3057}\u{305F}\u{304C}\u{30A8}\u{30E9}\u{30FC}: %@\n\nPhotoSnail \u{304C}\u{5199}\u{771F}\u{306B}\u{30AD}\u{30E3}\u{30D7}\u{30B7}\u{30E7}\u{30F3}\u{3092}\u{4ED8}\u{3051}\u{308B}\u{306B}\u{306F} Ollama \u{304C}\u{30ED}\u{30FC}\u{30AB}\u{30EB}\u{3067}\u{52D5}\u{4F5C}\u{3057}\u{3066}\u{3044}\u{308B}\u{5FC5}\u{8981}\u{304C}\u{3042}\u{308A}\u{307E}\u{3059}\u{3002}",
+        "preflight.model_missing_heading": "\u{30E2}\u{30C7}\u{30EB}\u{300C}%@\u{300D}\u{306F}\u{30A4}\u{30F3}\u{30B9}\u{30C8}\u{30FC}\u{30EB}\u{3055}\u{308C}\u{3066}\u{3044}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "preflight.model_missing_none_installed": "Ollama \u{306F}\u{8D77}\u{52D5}\u{3057}\u{3066}\u{3044}\u{307E}\u{3059}\u{304C}\u{3001}\u{30E2}\u{30C7}\u{30EB}\u{304C}\u{307E}\u{3060}\u{30A4}\u{30F3}\u{30B9}\u{30C8}\u{30FC}\u{30EB}\u{3055}\u{308C}\u{3066}\u{3044}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "preflight.model_missing_installed_list": "Ollama \u{306F}\u{8D77}\u{52D5}\u{4E2D}\u{3067}\u{3059}\u{3002}\u{30A4}\u{30F3}\u{30B9}\u{30C8}\u{30FC}\u{30EB}\u{6E08}\u{307F}\u{30E2}\u{30C7}\u{30EB}:",
+        "preflight.retry": "\u{518D}\u{8A66}\u{884C}",
+        "preflight.continue_anyway": "\u{305D}\u{308C}\u{3067}\u{3082}\u{7D9A}\u{884C}",
+        "preflight.open_settings": "\u{8A2D}\u{5B9A}\u{3092}\u{958B}\u{304F}\u{2026}",
+
+        // Auto-start-when-locked toggle
+        "setting.auto_start_when_locked": "Mac \u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{3066}\u{3044}\u{308B}\u{3068}\u{304D}\u{306B}\u{81EA}\u{52D5}\u{958B}\u{59CB}",
+        "setting.auto_start_when_locked.help": "\u{753B}\u{9762}\u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{308B}\u{3068}\u{51E6}\u{7406}\u{3092}\u{958B}\u{59CB}\u{3057}\u{3001}\u{30ED}\u{30C3}\u{30AF}\u{89E3}\u{9664}\u{3067}\u{4E00}\u{6642}\u{505C}\u{6B62}\u{3057}\u{307E}\u{3059}\u{3002}\u{9577}\u{6642}\u{9593}\u{306E}\u{30D0}\u{30C3}\u{30C1}\u{4E2D}\u{306B}\u{8D77}\u{52D5}\u{3057}\u{305F}\u{307E}\u{307E}\u{306E}\u{30C7}\u{30B9}\u{30AF}\u{30C8}\u{30C3}\u{30D7} Mac \u{306B}\u{4FBF}\u{5229}\u{3067}\u{3059}\u{3002}",
     ]
 
     // MARK: - Chinese (Simplified)
@@ -1693,7 +1804,6 @@ enum Strings {
         "button.revert": "\u{8FD8}\u{539F}",
         "button.deselect": "\u{53D6}\u{6D88}\u{9009}\u{62E9}",
         "button.export": "\u{5BFC}\u{51FA}",
-        "button.reprocess": "\u{91CD}\u{65B0}\u{5904}\u{7406}",
         "button.start_editing": "\u{5F00}\u{59CB}\u{7F16}\u{8F91}",
         "button.reset_to_default": "\u{6062}\u{590D}\u{9ED8}\u{8BA4}",
         "button.refresh_model_list": "\u{5237}\u{65B0}\u{6A21}\u{578B}\u{5217}\u{8868}",
@@ -1701,7 +1811,7 @@ enum Strings {
         "button.add_header": "\u{6DFB}\u{52A0}\u{5934}\u{90E8}",
         "button.requeue_selected": "\u{91CD}\u{65B0}\u{6392}\u{961F}\u{9009}\u{4E2D}\u{9879}",
         "button.clear_descriptions": "\u{6E05}\u{9664}\u{63CF}\u{8FF0}",
-        "button.about": "\u{5173}\u{4E8E} Photo Snail",
+        "button.about": "\u{5173}\u{4E8E} PhotoSnail",
 
         // Section headers
         "section.library": "\u{56FE}\u{5E93}",
@@ -1722,7 +1832,7 @@ enum Strings {
         "filter.all": "\u{5168}\u{90E8}",
         "filter.tagged": "\u{5DF2}\u{6807}\u{8BB0}",
         "filter.untouched": "\u{672A}\u{5904}\u{7406}",
-        "filter.pending": "\u{7B49}\u{5F85}\u{4E2D}",
+        "filter.pending": "\u{5DF2}\u{5165}\u{961F}",
         "filter.failed": "\u{5931}\u{8D25}",
 
         // Sort orders
@@ -1782,8 +1892,6 @@ enum Strings {
         // Confirmation dialogs
         "dialog.clear_title": "\u{6E05}\u{9664}\u{63CF}\u{8FF0}\u{FF1F}",
         "dialog.clear_message": "\u{8FD9}\u{5C06}\u{4ECE} Photos.app \u{4E2D}\u{5220}\u{9664} photo-snail \u{5199}\u{5165}\u{7684}\u{63CF}\u{8FF0}\u{FF0C}\u{5E76}\u{5C06}\u{6BCF}\u{884C}\u{91CD}\u{7F6E}\u{4E3A}\u{7B49}\u{5F85}\u{3002}\u{539F}\u{59CB}\u{7167}\u{7247}\u{4E0D}\u{4F1A}\u{88AB}\u{4FEE}\u{6539}\u{3002}\u{6B64}\u{64CD}\u{4F5C}\u{65E0}\u{6CD5}\u{64A4}\u{9500}\u{3002}",
-        "dialog.reprocess_title": "\u{91CD}\u{65B0}\u{5904}\u{7406}\u{FF1F}",
-        "dialog.reprocess_message": "\u{961F}\u{5217}\u{4E2D}\u{7684}\u{7167}\u{7247}\u{5C06}\u{5728}\u{4E0B}\u{6B21}\u{542F}\u{52A8}\u{65F6}\u{5904}\u{7406}\u{3002}",
 
         // Empty states
         "empty.nothing_tagged": "\u{5C1A}\u{672A}\u{6807}\u{8BB0}\u{4EFB}\u{4F55}\u{5185}\u{5BB9}",
@@ -1862,7 +1970,7 @@ enum Strings {
         // Legend
         "legend.status_badges": "\u{72B6}\u{6001}\u{5FBD}\u{7AE0}",
         "legend.tagged": "\u{7167}\u{7247}\u{5728} Photos.app \u{4E2D}\u{6709}\u{63CF}\u{8FF0}\u{3002}",
-        "legend.pending": "\u{7B49}\u{5F85}\u{5904}\u{7406}\u{3002}\u{5904}\u{7406}\u{65F6}\u{663E}\u{793A}\u{52A8}\u{753B}\u{5708}\u{3002}",
+        "legend.pending": "\u{5DF2}\u{5165}\u{961F}",
         "legend.failed": "\u{5904}\u{7406}\u{5931}\u{8D25}\u{3002}\u{901A}\u{8FC7}\u{6279}\u{91CF}\u{91CD}\u{65B0}\u{5904}\u{7406}\u{91CD}\u{8BD5}\u{3002}",
         "legend.untouched": "\u{5C1A}\u{672A}\u{679A}\u{4E3E}\u{5230}\u{961F}\u{5217}\u{3002}",
         "legend.keyboard_shortcuts": "\u{952E}\u{76D8}\u{5FEB}\u{6377}\u{952E}",
@@ -1876,11 +1984,9 @@ enum Strings {
         "legend.toggle_sel": "\u{5207}\u{6362}\u{9009}\u{62E9}",
         "legend.range_sel": "\u{8303}\u{56F4}\u{9009}\u{62E9}",
         "legend.escape": "\u{6E05}\u{9664}\u{9009}\u{62E9} / \u{5173}\u{95ED}\u{9884}\u{89C8}",
-        "legend.reprocess_sel": "\u{91CD}\u{65B0}\u{5904}\u{7406}\u{9009}\u{4E2D}\u{9879}",
         "legend.clear_sel": "\u{6E05}\u{9664}\u{9009}\u{4E2D}\u{9879}\u{7684}\u{63CF}\u{8FF0}",
 
         // Bulk actions help
-        "bulk.reprocess_help": "\u{91CD}\u{65B0}\u{5904}\u{7406} \u{2014} \u{5C06}\u{8FD9}\u{4E9B}\u{7167}\u{7247}\u{653E}\u{56DE}\u{7B49}\u{5F85}\u{961F}\u{5217}",
         "bulk.clear_help": "\u{6E05}\u{9664}\u{63CF}\u{8FF0} \u{2014} \u{4ECE} Photos.app \u{4E2D}\u{5220}\u{9664} photo-snail \u{63CF}\u{8FF0}",
         "bulk.export_help": "\u{5BFC}\u{51FA} JSON \u{2014} \u{5C06}\u{6BCF}\u{4E2A}\u{9009}\u{4E2D}\u{884C}\u{4FDD}\u{5B58}\u{5230}\u{6587}\u{4EF6}",
         "bulk.deselect_help": "\u{53D6}\u{6D88}\u{5168}\u{90E8}\u{9009}\u{62E9}",
@@ -1904,7 +2010,7 @@ enum Strings {
         "status.all_processed": "\u{6240}\u{6709}\u{7167}\u{7247}\u{5DF2}\u{5904}\u{7406}",
         "status.settings_saved": "\u{8BBE}\u{7F6E}\u{5DF2}\u{4FDD}\u{5B58}",
         "status.dryrun_complete": "\u{8BD5}\u{8FD0}\u{884C}\u{5B8C}\u{6210}\u{FF08}\u{961F}\u{5217}\u{672A}\u{4FEE}\u{6539}\u{FF09}",
-        "button.start": "\u{5F00}\u{59CB}",
+        "button.start": "\u{5F00}\u{59CB}\u{961F}\u{5217}",
         "button.pause": "\u{6682}\u{505C}",
         "button.resume": "\u{7EE7}\u{7EED}",
         "button.ok": "OK",
@@ -1921,9 +2027,7 @@ enum Strings {
         "error.asset_not_found": "\u{672A}\u{627E}\u{5230}\u{8D44}\u{6E90}",
         "error.settings_error": "\u{8BBE}\u{7F6E}\u{9519}\u{8BEF}",
         "error.save_failed": "\u{4FDD}\u{5B58}\u{5931}\u{8D25}",
-        "error.requeue_failed": "\u{91CD}\u{65B0}\u{5165}\u{961F}\u{5931}\u{8D25}",
         "error.retry_error": "\u{91CD}\u{8BD5}\u{9519}\u{8BEF}",
-        "status.requeued_photos": "\u{5DF2}\u{5C06}%d\u{5F20}\u{7167}\u{7247}\u{91CD}\u{65B0}\u{52A0}\u{5165}\u{5904}\u{7406}\u{961F}\u{5217}",
         "status.clearing_descriptions": "\u{6B63}\u{5728}\u{6E05}\u{9664}%d\u{6761}\u{63CF}\u{8FF0}",
         "status.cancelled_after": "\u{5728}%d/%d\u{5F20}\u{7167}\u{7247}\u{540E}\u{53D6}\u{6D88}",
         "status.cleared_with_failures": "\u{5DF2}\u{6E05}\u{9664}%d/%d\u{FF08}%d\u{5931}\u{8D25}\u{FF09}",
@@ -1941,6 +2045,36 @@ enum Strings {
         "lang.translate_title": "\u{7FFB}\u{8BD1}\u{73B0}\u{6709}\u{63CF}\u{8FF0}\u{FF1F}",
         "lang.translate_message": "\u{8FD9}\u{5C06}\u{4F7F}\u{7528} AI \u{6A21}\u{578B}\u{5C06}\u{6240}\u{6709}\u{5DF2}\u{5904}\u{7406}\u{7684}\u{7167}\u{7247}\u{6392}\u{961F}\u{7FFB}\u{8BD1}\u{4E3A}\u{65B0}\u{8BED}\u{8A00}\u{3002}\u{7FFB}\u{8BD1}\u{4EC5}\u{4E3A}\u{6587}\u{672C}\u{FF0C}\u{6BD4}\u{91CD}\u{65B0}\u{5904}\u{7406}\u{5FEB}\u{5F97}\u{591A}\u{3002}",
         "lang.translate": "\u{7FFB}\u{8BD1}",
+
+        // Add-to-queue / bulk
+        "button.add_to_queue": "\u{52A0}\u{5165}\u{961F}\u{5217}",
+        "button.process_now": "\u{7ACB}\u{5373}\u{5904}\u{7406}",
+        "menu.add_all_unprocessed": "\u{6240}\u{6709}\u{672A}\u{5904}\u{7406}\u{7684}\u{7167}\u{7247}",
+        "menu.add_selected": "\u{5DF2}\u{9009}\u{7167}\u{7247} (%d)",
+        "bulk.add_to_queue_help": "\u{5C06}\u{9009}\u{62E9}\u{52A0}\u{5165}\u{961F}\u{5217} \u{2014} \u{65B0}\u{7167}\u{7247}\u{52A0}\u{5165}\u{FF0C}\u{5DF2}\u{5904}\u{7406}\u{7684}\u{7167}\u{7247}\u{91CD}\u{65B0}\u{6392}\u{961F}",
+        "bulk.process_now_help": "\u{4E0B}\u{4E00}\u{4E2A}\u{5904}\u{7406}\u{6B64}\u{7167}\u{7247} \u{2014} \u{5C06}\u{63D2}\u{5230}\u{6240}\u{6709}\u{5F85}\u{5904}\u{7406}\u{9879}\u{76EE}\u{4E4B}\u{524D}",
+        "legend.add_to_queue_sel": "\u{5C06}\u{9009}\u{62E9}\u{52A0}\u{5165}\u{961F}\u{5217}",
+        "status.queue_empty_hint": "\u{961F}\u{5217}\u{4E3A}\u{7A7A}\u{3002}\u{4F7F}\u{7528}\u{201C}\u{52A0}\u{5165}\u{961F}\u{5217}\u{201D}\u{5F00}\u{59CB}\u{3002}",
+        "status.added_to_queue": "\u{5DF2}\u{5C06} %d \u{5F20}\u{7167}\u{7247}\u{52A0}\u{5165}\u{961F}\u{5217}",
+        "status.process_now_queued": "\u{5DF2}\u{5B89}\u{6392}\u{7ACB}\u{5373}\u{5904}\u{7406}",
+        "status.already_processing": "\u{6B63}\u{5728}\u{5904}\u{7406}\u{4E2D} \u{2014} \u{5FFD}\u{7565}\u{66F4}\u{6539}",
+        "status.loading_from_photos": "\u{6B63}\u{5728}\u{4ECE} Photos.app \u{52A0}\u{8F7D}\u{6570}\u{636E}\u{2026}",
+
+        // Preflight sheet
+        "preflight.title": "Ollama \u{68C0}\u{67E5}\u{5931}\u{8D25}",
+        "preflight.ok": "Ollama \u{53EF}\u{8BBF}\u{95EE}\u{3002}",
+        "preflight.unreachable_heading": "\u{65E0}\u{6CD5}\u{8FDE}\u{63A5} Ollama \u{5B88}\u{62A4}\u{8FDB}\u{7A0B}\u{3002}",
+        "preflight.unreachable_body": "\u{5C1D}\u{8BD5}\u{8FDE}\u{63A5} %@\u{FF0C}\u{8FD4}\u{56DE}\u{FF1A}%@\n\nPhotoSnail \u{9700}\u{8981}\u{672C}\u{5730}\u{8FD0}\u{884C} Ollama \u{624D}\u{80FD}\u{4E3A}\u{7167}\u{7247}\u{751F}\u{6210}\u{63CF}\u{8FF0}\u{3002}",
+        "preflight.model_missing_heading": "\u{6A21}\u{578B}\u{201C}%@\u{201D}\u{672A}\u{5B89}\u{88C5}\u{3002}",
+        "preflight.model_missing_none_installed": "Ollama \u{6B63}\u{5728}\u{8FD0}\u{884C}\u{FF0C}\u{4F46}\u{5C1A}\u{672A}\u{5B89}\u{88C5}\u{4EFB}\u{4F55}\u{6A21}\u{578B}\u{3002}",
+        "preflight.model_missing_installed_list": "Ollama \u{6B63}\u{5728}\u{8FD0}\u{884C}\u{3002}\u{5DF2}\u{5B89}\u{88C5}\u{7684}\u{6A21}\u{578B}\u{FF1A}",
+        "preflight.retry": "\u{91CD}\u{8BD5}",
+        "preflight.continue_anyway": "\u{4ECD}\u{7136}\u{7EE7}\u{7EED}",
+        "preflight.open_settings": "\u{6253}\u{5F00}\u{8BBE}\u{7F6E}\u{2026}",
+
+        // Auto-start-when-locked toggle
+        "setting.auto_start_when_locked": "Mac \u{9501}\u{5B9A}\u{65F6}\u{81EA}\u{52A8}\u{5F00}\u{59CB}",
+        "setting.auto_start_when_locked.help": "\u{5C4F}\u{5E55}\u{9501}\u{5B9A}\u{65F6}\u{5F00}\u{59CB}\u{5904}\u{7406}\u{FF0C}\u{89E3}\u{9501}\u{65F6}\u{6682}\u{505C}\u{3002}\u{9002}\u{7528}\u{4E8E}\u{957F}\u{65F6}\u{95F4}\u{6279}\u{5904}\u{7406}\u{671F}\u{95F4}\u{4FDD}\u{6301}\u{8FD0}\u{884C}\u{7684}\u{53F0}\u{5F0F} Mac\u{3002}",
     ]
 
     // MARK: - Korean
@@ -1956,7 +2090,6 @@ enum Strings {
         "button.revert": "\u{B418}\u{B3CC}\u{B9AC}\u{AE30}",
         "button.deselect": "\u{C120}\u{D0DD} \u{D574}\u{C81C}",
         "button.export": "\u{B0B4}\u{BCF4}\u{B0B4}\u{AE30}",
-        "button.reprocess": "\u{C7AC}\u{CC98}\u{B9AC}",
         "button.start_editing": "\u{D3B8}\u{C9D1} \u{C2DC}\u{C791}",
         "button.reset_to_default": "\u{AE30}\u{BCF8}\u{AC12}\u{C73C}\u{B85C} \u{C7AC}\u{C124}\u{C815}",
         "button.refresh_model_list": "\u{BAA8}\u{B378} \u{BAA9}\u{B85D} \u{C0C8}\u{B85C}\u{ACE0}\u{CE68}",
@@ -1964,7 +2097,7 @@ enum Strings {
         "button.add_header": "\u{D5E4}\u{B354} \u{CD94}\u{AC00}",
         "button.requeue_selected": "\u{C120}\u{D0DD}\u{D56D}\u{BAA9} \u{C7AC}\u{B300}\u{AE30}\u{C5F4}",
         "button.clear_descriptions": "\u{C124}\u{BA85} \u{C9C0}\u{C6B0}\u{AE30}",
-        "button.about": "Photo Snail \u{C815}\u{BCF4}",
+        "button.about": "PhotoSnail \u{C815}\u{BCF4}",
 
         // Section headers
         "section.library": "\u{B77C}\u{C774}\u{BE0C}\u{B7EC}\u{B9AC}",
@@ -1985,7 +2118,7 @@ enum Strings {
         "filter.all": "\u{C804}\u{CCB4}",
         "filter.tagged": "\u{D0DC}\u{ADF8} \u{C644}\u{B8CC}",
         "filter.untouched": "\u{BBF8}\u{CC98}\u{B9AC}",
-        "filter.pending": "\u{B300}\u{AE30} \u{C911}",
+        "filter.pending": "\u{B300}\u{AE30}\u{C5F4}",
         "filter.failed": "\u{C2E4}\u{D328}",
 
         // Sort orders
@@ -2045,8 +2178,6 @@ enum Strings {
         // Confirmation dialogs
         "dialog.clear_title": "\u{C124}\u{BA85}\u{C744} \u{C9C0}\u{C6B0}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
         "dialog.clear_message": "Photos.app\u{C5D0}\u{C11C} photo-snail\u{C774} \u{C791}\u{C131}\u{D55C} \u{C124}\u{BA85}\u{C744} \u{C81C}\u{AC70}\u{D558}\u{ACE0} \u{AC01} \u{D589}\u{C744} \u{B300}\u{AE30}\u{B85C} \u{C7AC}\u{C124}\u{C815}\u{D569}\u{B2C8}\u{B2E4}. \u{C6D0}\u{BCF8} \u{C0AC}\u{C9C4}\u{C740} \u{C218}\u{C815}\u{B418}\u{C9C0} \u{C54A}\u{C2B5}\u{B2C8}\u{B2E4}. \u{C774} \u{C791}\u{C5C5}\u{C740} \u{CDE8}\u{C18C}\u{D560} \u{C218} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
-        "dialog.reprocess_title": "\u{C7AC}\u{CC98}\u{B9AC}\u{D558}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
-        "dialog.reprocess_message": "\u{B300}\u{AE30}\u{C5F4}\u{C758} \u{C0AC}\u{C9C4}\u{C740} \u{B2E4}\u{C74C} \u{C2DC}\u{C791} \u{C2DC} \u{CC98}\u{B9AC}\u{B429}\u{B2C8}\u{B2E4}.",
 
         // Empty states
         "empty.nothing_tagged": "\u{C544}\u{C9C1} \u{D0DC}\u{ADF8}\u{B41C} \u{D56D}\u{BAA9} \u{C5C6}\u{C74C}",
@@ -2125,7 +2256,7 @@ enum Strings {
         // Legend
         "legend.status_badges": "\u{C0C1}\u{D0DC} \u{BC43}\u{C9C0}",
         "legend.tagged": "\u{C0AC}\u{C9C4}\u{C5D0} Photos.app \u{C124}\u{BA85}\u{C774} \u{C788}\u{C2B5}\u{B2C8}\u{B2E4}.",
-        "legend.pending": "\u{CC98}\u{B9AC} \u{B300}\u{AE30} \u{C911}. \u{CC98}\u{B9AC} \u{C911} \u{C560}\u{B2C8}\u{BA54}\u{C774}\u{C158} \u{B9C1} \u{D45C}\u{C2DC}.",
+        "legend.pending": "\u{B300}\u{AE30}\u{C5F4}",
         "legend.failed": "\u{CC98}\u{B9AC} \u{C2E4}\u{D328}. \u{C77C}\u{AD04} \u{C7AC}\u{CC98}\u{B9AC}\u{B85C} \u{C7AC}\u{C2DC}\u{B3C4}\u{D558}\u{C138}\u{C694}.",
         "legend.untouched": "\u{C544}\u{C9C1} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{C5F4}\u{AC70}\u{B418}\u{C9C0} \u{C54A}\u{C558}\u{C2B5}\u{B2C8}\u{B2E4}.",
         "legend.keyboard_shortcuts": "\u{D0A4}\u{BCF4}\u{B4DC} \u{B2E8}\u{CD95}\u{D0A4}",
@@ -2139,11 +2270,9 @@ enum Strings {
         "legend.toggle_sel": "\u{C120}\u{D0DD} \u{C804}\u{D658}",
         "legend.range_sel": "\u{BC94}\u{C704} \u{C120}\u{D0DD}",
         "legend.escape": "\u{C120}\u{D0DD} \u{D574}\u{C81C} / \u{BBF8}\u{B9AC}\u{BCF4}\u{AE30} \u{B2EB}\u{AE30}",
-        "legend.reprocess_sel": "\u{C120}\u{D0DD}\u{D56D}\u{BAA9} \u{C7AC}\u{CC98}\u{B9AC}",
         "legend.clear_sel": "\u{C120}\u{D0DD}\u{D56D}\u{BAA9} \u{C124}\u{BA85} \u{C9C0}\u{C6B0}\u{AE30}",
 
         // Bulk actions help
-        "bulk.reprocess_help": "\u{C7AC}\u{CC98}\u{B9AC} \u{2014} \u{C774} \u{C0AC}\u{C9C4}\u{B4E4}\u{C744} \u{B300}\u{AE30} \u{B300}\u{AE30}\u{C5F4}\u{B85C} \u{B3CC}\u{B824}\u{BCF4}\u{B0B4}\u{AE30}",
         "bulk.clear_help": "\u{C124}\u{BA85} \u{C9C0}\u{C6B0}\u{AE30} \u{2014} Photos.app\u{C5D0}\u{C11C} photo-snail \u{C124}\u{BA85} \u{C81C}\u{AC70}",
         "bulk.export_help": "JSON \u{B0B4}\u{BCF4}\u{B0B4}\u{AE30} \u{2014} \u{C120}\u{D0DD}\u{B41C} \u{AC01} \u{D589}\u{C744} \u{D30C}\u{C77C}\u{B85C} \u{C800}\u{C7A5}",
         "bulk.deselect_help": "\u{BAA8}\u{B450} \u{C120}\u{D0DD} \u{D574}\u{C81C}",
@@ -2167,7 +2296,7 @@ enum Strings {
         "status.all_processed": "\u{BAA8}\u{B4E0} \u{C0AC}\u{C9C4} \u{CC98}\u{B9AC} \u{C644}\u{B8CC}",
         "status.settings_saved": "\u{C124}\u{C815}\u{C774} \u{C800}\u{C7A5}\u{B428}",
         "status.dryrun_complete": "\u{D14C}\u{C2A4}\u{D2B8} \u{C2E4}\u{D589} \u{C644}\u{B8CC} (\u{B300}\u{AE30}\u{C5F4} \u{BCC0}\u{ACBD} \u{C5C6}\u{C74C})",
-        "button.start": "\u{C2DC}\u{C791}",
+        "button.start": "\u{B300}\u{AE30}\u{C5F4} \u{C2DC}\u{C791}",
         "button.pause": "\u{C77C}\u{C2DC} \u{C815}\u{C9C0}",
         "button.resume": "\u{C7AC}\u{AC1C}",
         "button.ok": "OK",
@@ -2184,9 +2313,7 @@ enum Strings {
         "error.asset_not_found": "\u{C790}\u{C0B0}\u{C744} \u{CC3E}\u{C744} \u{C218} \u{C5C6}\u{C74C}",
         "error.settings_error": "\u{C124}\u{C815} \u{C624}\u{B958}",
         "error.save_failed": "\u{C800}\u{C7A5} \u{C2E4}\u{D328}",
-        "error.requeue_failed": "\u{C7AC}\u{B300}\u{AE30}\u{C5F4} \u{C2E4}\u{D328}",
         "error.retry_error": "\u{C7AC}\u{C2DC}\u{B3C4} \u{C624}\u{B958}",
-        "status.requeued_photos": "\u{CC98}\u{B9AC}\u{B97C} \u{C704}\u{D574} %d\u{AC1C}\u{C758} \u{C0AC}\u{C9C4}\u{C744} \u{C7AC}\u{B300}\u{AE30}\u{C5F4}\u{D568}",
         "status.clearing_descriptions": "%d\u{AC1C}\u{C758} \u{C124}\u{BA85} \u{C0AD}\u{C81C} \u{C911}",
         "status.cancelled_after": "%d/%d\u{C7A5}\u{C758} \u{C0AC}\u{C9C4} \u{D6C4} \u{CDE8}\u{C18C}",
         "status.cleared_with_failures": "%d/%d \u{C0AD}\u{C81C}\u{B428} (%d \u{C2E4}\u{D328})",
@@ -2204,5 +2331,35 @@ enum Strings {
         "lang.translate_title": "\u{AE30}\u{C874} \u{C124}\u{BA85}\u{C744} \u{BC88}\u{C5ED}\u{D558}\u{C2DC}\u{ACA0}\u{C2B5}\u{B2C8}\u{AE4C}?",
         "lang.translate_message": "AI \u{BAA8}\u{B378}\u{C744} \u{C0AC}\u{C6A9}\u{D558}\u{C5EC} \u{CC98}\u{B9AC}\u{B41C} \u{BAA8}\u{B4E0} \u{C0AC}\u{C9C4}\u{C744} \u{C0C8} \u{C5B8}\u{C5B4}\u{B85C} \u{BC88}\u{C5ED}\u{D558}\u{AE30} \u{C704}\u{D574} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{B123}\u{C2B5}\u{B2C8}\u{B2E4}. \u{BC88}\u{C5ED}\u{C740} \u{D14D}\u{C2A4}\u{D2B8}\u{B9CC} \u{CC98}\u{B9AC}\u{D558}\u{BA70} \u{C7AC}\u{CC98}\u{B9AC}\u{BCF4}\u{B2E4} \u{D6E8}\u{C52C} \u{BE60}\u{B985}\u{B2C8}\u{B2E4}.",
         "lang.translate": "\u{BC88}\u{C5ED}",
+
+        // Add-to-queue / bulk
+        "button.add_to_queue": "\u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CD94}\u{AC00}",
+        "button.process_now": "\u{C9C0}\u{AE08} \u{CC98}\u{B9AC}",
+        "menu.add_all_unprocessed": "\u{CC98}\u{B9AC}\u{B418}\u{C9C0} \u{C54A}\u{C740} \u{BAA8}\u{B4E0} \u{C0AC}\u{C9C4}",
+        "menu.add_selected": "\u{C120}\u{D0DD}\u{D55C} \u{C0AC}\u{C9C4} (%d)",
+        "bulk.add_to_queue_help": "\u{C120}\u{D0DD} \u{D56D}\u{BAA9}\u{C744} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CD94}\u{AC00} \u{2014} \u{C0C8} \u{C0AC}\u{C9C4}\u{C740} \u{CD94}\u{AC00}\u{B418}\u{ACE0}, \u{C774}\u{BBF8} \u{CC98}\u{B9AC}\u{B41C} \u{C0AC}\u{C9C4}\u{C740} \u{B2E4}\u{C2DC} \u{B300}\u{AE30}\u{C5F4}\u{B85C} \u{B3CC}\u{C544}\u{AC11}\u{B2C8}\u{B2E4}",
+        "bulk.process_now_help": "\u{C774} \u{C0AC}\u{C9C4}\u{C744} \u{B2E4}\u{C74C}\u{C5D0} \u{CC98}\u{B9AC} \u{2014} \u{B300}\u{AE30} \u{C911}\u{C778} \u{B2E4}\u{B978} \u{D56D}\u{BAA9}\u{BCF4}\u{B2E4} \u{BA3C}\u{C800} \u{CC98}\u{B9AC}\u{B429}\u{B2C8}\u{B2E4}",
+        "legend.add_to_queue_sel": "\u{C120}\u{D0DD} \u{D56D}\u{BAA9}\u{C744} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CD94}\u{AC00}",
+        "status.queue_empty_hint": "\u{B300}\u{AE30}\u{C5F4}\u{C774} \u{BE44}\u{C5B4} \u{C788}\u{C2B5}\u{B2C8}\u{B2E4}. '\u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CD94}\u{AC00}'\u{B97C} \u{C0AC}\u{C6A9}\u{D574} \u{C2DC}\u{C791}\u{D558}\u{C138}\u{C694}.",
+        "status.added_to_queue": "%d\u{C7A5}\u{C758} \u{C0AC}\u{C9C4}\u{C744} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CD94}\u{AC00}\u{D588}\u{C2B5}\u{B2C8}\u{B2E4}",
+        "status.process_now_queued": "\u{C990}\u{C2DC} \u{CC98}\u{B9AC} \u{C608}\u{C57D}\u{B428}",
+        "status.already_processing": "\u{C774}\u{BBF8} \u{CC98}\u{B9AC} \u{C911}\u{C785}\u{B2C8}\u{B2E4} \u{2014} \u{BCC0}\u{ACBD} \u{C0AC}\u{D56D} \u{BB34}\u{C2DC}\u{B428}",
+        "status.loading_from_photos": "Photos.app\u{C5D0}\u{C11C} \u{B370}\u{C774}\u{D130} \u{B85C}\u{B4DC} \u{C911}\u{2026}",
+
+        // Preflight sheet
+        "preflight.title": "Ollama \u{D655}\u{C778} \u{C2E4}\u{D328}",
+        "preflight.ok": "Ollama\u{C5D0} \u{C811}\u{ADFC}\u{D560} \u{C218} \u{C788}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "preflight.unreachable_heading": "Ollama \u{B370}\u{BAAC}\u{C5D0} \u{C5F0}\u{ACB0}\u{D560} \u{C218} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "preflight.unreachable_body": "%@\u{C5D0} \u{C5F0}\u{ACB0}\u{C744} \u{C2DC}\u{B3C4}\u{D588}\u{C73C}\u{B098} \u{C624}\u{B958}: %@\n\nPhotoSnail\u{C740} \u{C0AC}\u{C9C4} \u{CE90}\u{C158} \u{C0DD}\u{C131}\u{C744} \u{C704}\u{D574} Ollama\u{AC00} \u{B85C}\u{CEEC}\u{C5D0}\u{C11C} \u{C2E4}\u{D589}\u{B418}\u{C5B4}\u{C57C} \u{D569}\u{B2C8}\u{B2E4}.",
+        "preflight.model_missing_heading": "\u{BAA8}\u{B378} \"%@\"\u{C774}(\u{AC00}) \u{C124}\u{CE58}\u{B418}\u{C5B4} \u{C788}\u{C9C0} \u{C54A}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "preflight.model_missing_none_installed": "Ollama\u{B294} \u{C2E4}\u{D589} \u{C911}\u{C774}\u{C9C0}\u{B9CC} \u{C544}\u{C9C1} \u{C124}\u{CE58}\u{B41C} \u{BAA8}\u{B378}\u{C774} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "preflight.model_missing_installed_list": "Ollama\u{AC00} \u{C2E4}\u{D589} \u{C911}\u{C785}\u{B2C8}\u{B2E4}. \u{C124}\u{CE58}\u{B41C} \u{BAA8}\u{B378}:",
+        "preflight.retry": "\u{B2E4}\u{C2DC} \u{C2DC}\u{B3C4}",
+        "preflight.continue_anyway": "\u{ACC4}\u{C18D} \u{C9C4}\u{D589}",
+        "preflight.open_settings": "\u{C124}\u{C815} \u{C5F4}\u{AE30}\u{2026}",
+
+        // Auto-start-when-locked toggle
+        "setting.auto_start_when_locked": "Mac \u{C7A0}\u{AE08} \u{C2DC} \u{C790}\u{B3D9} \u{C2DC}\u{C791}",
+        "setting.auto_start_when_locked.help": "\u{D654}\u{BA74}\u{C774} \u{C7A0}\u{AE30}\u{BA74} \u{CC98}\u{B9AC}\u{B97C} \u{C2DC}\u{C791}\u{D558}\u{ACE0}, \u{C7A0}\u{AE08}\u{C774} \u{D574}\u{C81C}\u{B418}\u{BA74} \u{C77C}\u{C2DC} \u{C815}\u{C9C0}\u{D569}\u{B2C8}\u{B2E4}. \u{AE34} \u{BC30}\u{CE58} \u{C791}\u{C5C5} \u{C911} \u{ACC4}\u{C18D} \u{CF1C} \u{B450}\u{B294} \u{B370}\u{C2A4}\u{D06C}\u{D1B1} Mac\u{C5D0} \u{C720}\u{C6A9}\u{D569}\u{B2C8}\u{B2E4}.",
     ]
 }

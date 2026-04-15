@@ -110,12 +110,12 @@ codesign --verify --deep --strict "${APP_DIR}" 2>&1 | head -5 || true
 # Strips the quarantine flag, moves the app to /Applications, and launches it.
 cat > "${BUILD_DIR}/install.sh" <<'INSTALLER'
 #!/bin/bash
-# Photo Snail installer — strips quarantine and moves the app to /Applications.
+# PhotoSnail installer — strips quarantine and moves the app to /Applications.
 #
 # Run from the unzipped download folder:
 #   ./install.sh
 #
-# Photo Snail is not signed with an Apple Developer ID (the developer chose
+# PhotoSnail is not signed with an Apple Developer ID (the developer chose
 # not to pay the $99/year Apple Developer Program fee). macOS Gatekeeper
 # therefore flags it as "damaged" on first launch. This script removes the
 # quarantine attribute that triggers that dialog.
@@ -143,7 +143,7 @@ cp -R "${SRC}" "${DEST}"
 echo "Removing quarantine attribute (so macOS will launch it)"
 xattr -cr "${DEST}"
 
-echo "Launching Photo Snail"
+echo "Launching PhotoSnail"
 open "${DEST}"
 
 echo ""
