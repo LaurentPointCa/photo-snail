@@ -384,7 +384,6 @@ struct LibraryGrid: View {
     private let gridSpacing: CGFloat = 10
 
     @State private var showingKeyboardClearConfirm: Bool = false
-    @State private var showingKeyboardReprocessConfirm: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -431,18 +430,6 @@ struct LibraryGrid: View {
             Button(loc.t("button.cancel"), role: .cancel) {}
         } message: {
             Text(loc.t("dialog.clear_message"))
-        }
-        .confirmationDialog(
-            "\(loc.t("dialog.reprocess_title").replacingOccurrences(of: "?", with: "")) \(store.selection.count) photo\(store.selection.count == 1 ? "" : "s")?",
-            isPresented: $showingKeyboardReprocessConfirm,
-            titleVisibility: .visible
-        ) {
-            Button(loc.t("button.reprocess")) {
-                Task { await store.requeueSelection() }
-            }
-            Button(loc.t("button.cancel"), role: .cancel) {}
-        } message: {
-            Text(loc.t("dialog.reprocess_message"))
         }
     }
 
@@ -508,14 +495,12 @@ struct LibraryGrid: View {
             }
             return .ignored
         }
-        // R → bulk re-process (with confirmation when >10)
+        // R → bulk Add to Queue (any size selection). Re-adding a done
+        // photo is a requeue under the covers — users think of both as
+        // "add to queue," so no confirmation dialog.
         if press.characters == "r" && press.modifiers.isEmpty {
             guard !store.selection.isEmpty else { return .ignored }
-            if store.selection.count > 10 {
-                showingKeyboardReprocessConfirm = true
-            } else {
-                Task { await store.requeueSelection() }
-            }
+            Task { await store.addSelectionToQueue() }
             return .handled
         }
         // Delete / Backspace → bulk clear descriptions (always confirmed)
@@ -863,12 +848,20 @@ struct BulkActionBar: View {
             Spacer()
 
             Button {
-                Task { await store.requeueSelection() }
+                Task { await store.addSelectionToQueue() }
             } label: {
-                Label(loc.t("button.reprocess"), systemImage: "arrow.clockwise")
+                Label(loc.t("button.add_to_queue"), systemImage: "plus.circle")
             }
-            .help(loc.t("bulk.reprocess_help"))
+            .help(loc.t("bulk.add_to_queue_help"))
             .disabled(!hasSelection)
+
+            Button {
+                Task { await store.processNowSingleSelection() }
+            } label: {
+                Label(loc.t("button.process_now"), systemImage: "bolt.fill")
+            }
+            .help(loc.t("bulk.process_now_help"))
+            .disabled(store.singleSelection == nil)
 
             Button(role: .destructive) {
                 showingClearConfirm = true
@@ -978,7 +971,7 @@ struct LegendPopover: View {
                 keyRow("⌘-click", loc.t("legend.toggle_sel"))
                 keyRow("⇧-click", loc.t("legend.range_sel"))
                 keyRow("Esc", loc.t("legend.escape"))
-                keyRow("R", loc.t("legend.reprocess_sel"))
+                keyRow("R", loc.t("legend.add_to_queue_sel"))
                 keyRow("⌫", loc.t("legend.clear_sel"))
             }
         }
@@ -1260,6 +1253,14 @@ struct RunnerDock: View {
 
             // Primary action — always visible.
             primaryButton
+
+            // "Add to Queue" menu sits below the primary button. Only rendered
+            // when idle/finished because during a run the user isn't usually
+            // extending the queue; enumerating + starting a worker concurrently
+            // would race on the queue state machine anyway.
+            if engine.state == .idle || engine.state == .finished {
+                addToQueueMenu
+            }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
@@ -1309,6 +1310,33 @@ struct RunnerDock: View {
     private var progressFraction: Double {
         guard engine.totalCount > 0 else { return 0 }
         return Double(engine.doneCount) / Double(engine.totalCount)
+    }
+
+    @ViewBuilder
+    private var addToQueueMenu: some View {
+        Menu {
+            Button {
+                Task { await engine.addAllUnprocessedToQueue() }
+            } label: {
+                Label(loc.t("menu.add_all_unprocessed"), systemImage: "photo.on.rectangle.angled")
+            }
+            Button {
+                Task { await store.addSelectionToQueue() }
+            } label: {
+                Label(
+                    String(format: loc.t("menu.add_selected"), store.selection.count),
+                    systemImage: "square.stack.3d.up"
+                )
+            }
+            .disabled(store.selection.isEmpty)
+        } label: {
+            Label(loc.t("button.add_to_queue"), systemImage: "plus.circle")
+                .font(AppFont.bodyEmphasized)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 2)
+        }
+        .menuStyle(.borderlessButton)
+        .controlSize(.large)
     }
 
     @ViewBuilder

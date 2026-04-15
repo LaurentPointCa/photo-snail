@@ -6,7 +6,7 @@ import Foundation
 /// by sweeping any `in_progress` rows back to `pending` on init, and bounds retries on
 /// transient failures (the worker checks `Claim.attempts` against its retry cap).
 ///
-/// Schema, schema_version = 2:
+/// Schema, schema_version = 3:
 ///   assets(
 ///     id, status, attempts, error, processed_at, description, tags_json,
 ///     -- Added in v1 (Library revamp) for the inspector's processing-provenance section:
@@ -20,7 +20,9 @@ import Foundation
 ///     -- Added in v2 (Localization) for custom prompts and translation:
 ///     task_type,            -- 'caption' (default) or 'translate'
 ///     original_description, -- Pre-translation description (preserved for rollback)
-///     original_tags_json    -- Pre-translation tags JSON (preserved for rollback)
+///     original_tags_json,   -- Pre-translation tags JSON (preserved for rollback)
+///     -- Added in v3 (Queue semantics) for the "Process now" action:
+///     priority              -- 0 for normal FIFO, 1 for "process next" jumpers
 ///   )
 ///
 /// Status transitions:
@@ -101,10 +103,10 @@ public actor AssetQueue {
             .appendingPathComponent("queue.sqlite")
     }
 
-    /// Current schema version. Bumped to 2 for translation/localization columns.
-    /// Incrementing this again in the future means writing a new migration
-    /// branch in `migrateIfNeeded`.
-    public static let currentSchemaVersion: Int64 = 2
+    /// Current schema version. Bumped to 3 for the priority column that
+    /// backs the "Process now" action (priority=1 rows jump ahead of the
+    /// FIFO order in claimNext).
+    public static let currentSchemaVersion: Int64 = 3
 
     private let db: SQLiteDB
     private let encoder: JSONEncoder
@@ -193,6 +195,15 @@ public actor AssetQueue {
             }
             try db.exec("PRAGMA user_version = 2;")
         }
+
+        // v2 → v3: priority column for "Process now" — claimNext orders by
+        // priority DESC, so rows at priority=1 jump ahead of priority=0 FIFO.
+        if current < 3 {
+            try db.transaction {
+                try db.exec("ALTER TABLE assets ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;")
+            }
+            try db.exec("PRAGMA user_version = 3;")
+        }
     }
 
     private static func readUserVersion(db: SQLiteDB) throws -> Int64 {
@@ -273,12 +284,99 @@ public actor AssetQueue {
         broadcast(.inserted(ids))
     }
 
-    /// Atomically claim the lowest-rowid pending row: bump attempts, set status='in_progress',
-    /// stamp processed_at. Returns nil if there are no pending rows.
+    /// "Add to queue" upsert: new ids get a fresh pending row; existing rows
+    /// (regardless of status) are reset to pending with priority=0 and a
+    /// cleared error. Previous generation data (description, tags, model,
+    /// sentinel, vision) is kept in place until the worker replaces it —
+    /// same pattern as `requeue`.
+    ///
+    /// Used by the "Add to Queue > Selected photos" action, which needs to
+    /// work uniformly whether the photos have been processed before or not.
+    public func addOrRequeue(_ ids: [String]) throws {
+        guard !ids.isEmpty else { return }
+        let now = Self.now()
+        try db.transaction {
+            let insert = try db.prepare("INSERT OR IGNORE INTO assets (id, status, attempts, priority) VALUES (?, 'pending', 0, 0)")
+            defer { insert.finalize() }
+            let update = try db.prepare("""
+                UPDATE assets SET
+                  status     = 'pending',
+                  attempts   = 0,
+                  error      = NULL,
+                  priority   = 0,
+                  updated_at = ?
+                WHERE id = ?
+                """)
+            defer { update.finalize() }
+            for id in ids {
+                try insert.bind(id, at: 1)
+                _ = try insert.step()
+                try insert.reset()
+
+                try update.bind(now, at: 1)
+                try update.bind(id, at: 2)
+                _ = try update.step()
+                try update.reset()
+            }
+        }
+        broadcast(.inserted(ids))
+        for id in ids { broadcast(.updated(id)) }
+    }
+
+    /// "Process now" upsert: insert the row if missing, then reset status to
+    /// pending with priority=1. `claimNext` orders by priority DESC first, so
+    /// a priority=1 row is the very next one the worker picks up.
+    ///
+    /// Returns `true` if the row was reset, `false` if it was already
+    /// `in_progress` (meaning the worker has it and a reset would race with
+    /// the in-flight write-back). The caller should surface this to the UI
+    /// as "already processing".
+    @discardableResult
+    public func processNow(id: String) throws -> Bool {
+        var wasReset = false
+        let now = Self.now()
+        try db.transaction {
+            let insert = try db.prepare("INSERT OR IGNORE INTO assets (id, status, attempts, priority) VALUES (?, 'pending', 0, 1)")
+            defer { insert.finalize() }
+            try insert.bind(id, at: 1)
+            _ = try insert.step()
+
+            let check = try db.prepare("SELECT status FROM assets WHERE id = ? LIMIT 1")
+            defer { check.finalize() }
+            try check.bind(id, at: 1)
+            guard try check.step() == .row, let status = check.columnText(0) else {
+                return
+            }
+            if status == "in_progress" {
+                // Don't race with the worker — leave it alone.
+                return
+            }
+            let update = try db.prepare("""
+                UPDATE assets SET
+                  status     = 'pending',
+                  attempts   = 0,
+                  error      = NULL,
+                  priority   = 1,
+                  updated_at = ?
+                WHERE id = ?
+                """)
+            defer { update.finalize() }
+            try update.bind(now, at: 1)
+            try update.bind(id, at: 2)
+            _ = try update.step()
+            wasReset = true
+        }
+        if wasReset { broadcast(.updated(id)) }
+        return wasReset
+    }
+
+    /// Atomically claim the next pending row: priority DESC first (so Process-now
+    /// rows jump ahead), then FIFO by rowid. Bumps attempts, sets status='in_progress',
+    /// stamps processed_at. Returns nil if there are no pending rows.
     public func claimNext() throws -> Claim? {
         var result: Claim? = nil
         try db.transaction {
-            let select = try db.prepare("SELECT id, attempts, task_type FROM assets WHERE status = 'pending' ORDER BY rowid LIMIT 1")
+            let select = try db.prepare("SELECT id, attempts, task_type FROM assets WHERE status = 'pending' ORDER BY priority DESC, rowid LIMIT 1")
             defer { select.finalize() }
             guard try select.step() == .row, let id = select.columnText(0) else {
                 return

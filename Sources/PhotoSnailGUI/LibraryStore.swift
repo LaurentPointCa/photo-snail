@@ -553,39 +553,28 @@ final class LibraryStore {
 
     // MARK: - Bulk operations
 
-    /// Re-queue every selected asset for reprocessing. Rows that already
-    /// exist in the queue are pushed back to `pending`; ids without a
-    /// queue row (untouched new photos) are enqueued first. This is a
-    /// single SQL transaction plus a broadcast — fast enough that we
-    /// don't need a progress sheet.
-    ///
-    /// The actual pipeline run happens when the batch runner is started;
-    /// this method only marks the queue.
-    func requeueSelection() async {
-        guard let queue = queue, !selection.isEmpty else { return }
+    /// Add every selected asset to the queue. Rows that already exist
+    /// (regardless of status) are reset to pending with priority=0; new
+    /// ids get a fresh pending row. Replaces the old `requeueSelection`
+    /// — same effect, but the UI now calls it "Add to Queue" because the
+    /// user doesn't distinguish between first-time and reprocess.
+    func addSelectionToQueue() async {
+        guard let engine = engine, !selection.isEmpty else { return }
+        let ids = Array(selection)
+        await engine.addSelectedToQueue(ids)
+        let n = ids.count
+        bulkStatusMessage = String(format: Localizer.shared.t("status.added_to_queue"), n)
+    }
 
-        var idsWithRow: [String] = []
-        var idsWithoutRow: [String] = []
-        for id in selection {
-            if rows[id] != nil {
-                idsWithRow.append(id)
-            } else {
-                idsWithoutRow.append(id)
-            }
-        }
-
-        do {
-            if !idsWithoutRow.isEmpty {
-                try await queue.enqueue(idsWithoutRow)
-            }
-            if !idsWithRow.isEmpty {
-                try await queue.requeue(idsWithRow)
-            }
-            let n = selection.count
-            bulkStatusMessage = String(format: Localizer.shared.t("status.requeued_photos"), n)
-        } catch {
-            bulkStatusMessage = "\(Localizer.shared.t("error.requeue_failed")): \(error)"
-        }
+    /// "Process now" on the single selected asset: marks it priority=1 and
+    /// starts the worker if it isn't running. No-op when the selection is
+    /// empty or has more than one asset. UI disables the button in those
+    /// cases, but we double-check here so callers can't accidentally
+    /// process the wrong target.
+    func processNowSingleSelection() async {
+        guard let engine = engine, let id = singleSelection else { return }
+        await engine.processNow(id: id)
+        bulkStatusMessage = Localizer.shared.t("status.process_now_queued")
     }
 
     /// Clear the description in Photos.app and reset the queue row to

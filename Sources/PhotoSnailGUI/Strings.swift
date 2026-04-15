@@ -72,7 +72,8 @@ enum Strings {
         "button.revert": "Revert",
         "button.deselect": "Deselect",
         "button.export": "Export",
-        "button.reprocess": "Re-process",
+        "button.add_to_queue": "Add to Queue",
+        "button.process_now": "Process now",
         "button.start_editing": "Start editing",
         "button.reset_to_default": "Reset to default",
         "button.refresh_model_list": "Refresh model list",
@@ -261,14 +262,19 @@ enum Strings {
         "legend.toggle_sel": "Toggle selection",
         "legend.range_sel": "Range-select",
         "legend.escape": "Clear selection / close preview",
-        "legend.reprocess_sel": "Re-process selection",
+        "legend.add_to_queue_sel": "Add selection to queue",
         "legend.clear_sel": "Clear descriptions for selection",
 
         // Bulk actions help
-        "bulk.reprocess_help": "Re-process -- push these photos back into the pending queue",
+        "bulk.add_to_queue_help": "Add selection to queue — new photos go in, previously processed photos get requeued",
+        "bulk.process_now_help": "Process this photo next — jumps ahead of anything else already pending",
         "bulk.clear_help": "Clear description -- remove photo-snail descriptions from Photos.app",
         "bulk.export_help": "Export JSON -- save every selected row to a file",
         "bulk.deselect_help": "Deselect all",
+
+        // Add-to-queue menu
+        "menu.add_all_unprocessed": "All unprocessed photos",
+        "menu.add_selected": "Selected photos (%d)",
 
         // About
         "about.description": "Local-first photo tagging tool for macOS.\nGenerates descriptions and tags for your Photos library using Apple Vision and a local LLM, fully on-device.",
@@ -287,6 +293,10 @@ enum Strings {
         "status.requesting_photos": "Requesting Photos access...",
         "status.enumerating": "Enumerating library...",
         "status.all_processed": "All photos processed",
+        "status.queue_empty_hint": "Queue is empty. Use \"Add to Queue\" to start.",
+        "status.added_to_queue": "Added %d photo(s) to queue",
+        "status.process_now_queued": "Process now queued",
+        "status.already_processing": "Already processing — change ignored",
         "status.settings_saved": "Settings saved",
         "status.dryrun_complete": "Dry-run complete (queue not mutated)",
         "button.start": "Start",
