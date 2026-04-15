@@ -660,6 +660,47 @@ public actor AssetQueue {
         }
     }
 
+    /// Delete a set of pending rows from the queue. Untouched / done /
+    /// failed / in_progress rows are NOT removed — only `status='pending'`
+    /// rows match the WHERE clause. This is the "Remove from queue"
+    /// action: the user wants the photo out of the work list, not out of
+    /// the historical record. Returns the number of rows actually deleted.
+    @discardableResult
+    public func removeFromQueue(_ ids: [String]) throws -> Int {
+        guard !ids.isEmpty else { return 0 }
+        var deleted = 0
+        try db.transaction {
+            let stmt = try db.prepare("DELETE FROM assets WHERE id = ? AND status = 'pending'")
+            defer { stmt.finalize() }
+            for id in ids {
+                try stmt.bind(id, at: 1)
+                _ = try stmt.step()
+                deleted += Int(db.changes())
+                try stmt.reset()
+            }
+        }
+        for id in ids { broadcast(.updated(id)) }
+        return deleted
+    }
+
+    /// Delete every pending row. Same `status='pending'` guard as
+    /// `removeFromQueue`: in-progress rows belong to the worker, done /
+    /// failed rows belong to the history. Returns the number of rows
+    /// actually deleted so the caller can surface a confirmation toast.
+    @discardableResult
+    public func clearQueue() throws -> Int {
+        let stmt = try db.prepare("SELECT id FROM assets WHERE status = 'pending'")
+        var ids: [String] = []
+        defer { stmt.finalize() }
+        while try stmt.step() == .row, let id = stmt.columnText(0) {
+            ids.append(id)
+        }
+        guard !ids.isEmpty else { return 0 }
+        try db.exec("DELETE FROM assets WHERE status = 'pending'")
+        for id in ids { broadcast(.updated(id)) }
+        return ids.count
+    }
+
     /// Wipe all generation data for a row and reset it to pending. Called after
     /// a successful bulk "Clear description" operation — the Photos.app side has
     /// already been cleared via AppleScript, and the queue row should now look

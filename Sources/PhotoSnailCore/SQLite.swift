@@ -53,6 +53,13 @@ public final class SQLiteDB {
         }
     }
 
+    /// Number of rows changed by the most recent INSERT / UPDATE / DELETE
+    /// on this connection. Wraps `sqlite3_changes`. Per-statement, not
+    /// cumulative — pull it immediately after the step that did the work.
+    public func changes() -> Int {
+        return Int(sqlite3_changes(handle))
+    }
+
     public func exec(_ sql: String) throws {
         var errPtr: UnsafeMutablePointer<CChar>?
         let rc = sqlite3_exec(handle, sql, nil, nil, &errPtr)

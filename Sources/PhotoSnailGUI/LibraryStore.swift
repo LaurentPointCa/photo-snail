@@ -566,6 +566,23 @@ final class LibraryStore {
         bulkStatusMessage = String(format: Localizer.shared.t("status.added_to_queue"), n)
     }
 
+    /// Remove every selected asset from the queue (only pending rows are
+    /// actually deleted; done / failed / in-progress are preserved).
+    /// Used by the "Remove from queue" button shown in the queue view.
+    func removeSelectionFromQueue() async {
+        guard let engine = engine, !selection.isEmpty else { return }
+        let ids = Array(selection)
+        await engine.removeFromQueue(ids)
+        clearSelection()
+    }
+
+    /// Drop every pending row from the queue. The caller is responsible
+    /// for the confirmation dialog — this method just triggers the action.
+    func clearEntireQueue() async {
+        guard let engine = engine else { return }
+        await engine.clearQueue()
+    }
+
     /// "Process now" on the single selected asset: marks it priority=1 and
     /// starts the worker if it isn't running. No-op when the selection is
     /// empty or has more than one asset. UI disables the button in those

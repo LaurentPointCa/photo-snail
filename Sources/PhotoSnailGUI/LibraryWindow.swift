@@ -853,9 +853,15 @@ struct BulkActionBar: View {
     @Bindable var store: LibraryStore
 
     @State private var showingClearConfirm = false
+    @State private var showingClearQueueConfirm = false
     @State private var showingExportError: String? = nil
 
     private var hasSelection: Bool { !store.selection.isEmpty }
+    /// True when the user is looking at the Queue filter — flips the
+    /// selection actions from "Add to queue" to "Remove from queue" and
+    /// surfaces the Clear-queue button. Other filters (.all, .tagged,
+    /// .untouched, .failed) keep the regular Add/Process/Clear/Export set.
+    private var isQueueView: Bool { store.filter == .pending }
 
     var body: some View {
         // Two rows so the action set isn't cramped into a single line:
@@ -880,6 +886,19 @@ struct BulkActionBar: View {
                 .disabled(store.engine == nil
                           || store.engine?.state == .running
                           || store.engine?.state == .enumerating)
+
+                // Clear-queue is only meaningful (and only shown) when
+                // looking at the Queue view; everywhere else it'd be an
+                // out-of-context destructive action.
+                if isQueueView {
+                    Button(role: .destructive) {
+                        showingClearQueueConfirm = true
+                    } label: {
+                        Label(loc.t("button.clear_queue"), systemImage: "trash")
+                    }
+                    .help(loc.t("bulk.clear_queue_help"))
+                    .disabled(store.pendingCount == 0)
+                }
 
                 Divider().frame(height: 16)
 
@@ -909,12 +928,24 @@ struct BulkActionBar: View {
 
             if hasSelection {
                 HStack(spacing: Spacing.md) {
-                    Button {
-                        Task { await store.addSelectionToQueue() }
-                    } label: {
-                        Label(loc.t("button.add_to_queue"), systemImage: "plus.circle")
+                    // In the Queue view "Add to queue" is redundant
+                    // (everything visible IS in the queue) — show
+                    // "Remove from queue" instead.
+                    if isQueueView {
+                        Button(role: .destructive) {
+                            Task { await store.removeSelectionFromQueue() }
+                        } label: {
+                            Label(loc.t("button.remove_from_queue"), systemImage: "minus.circle")
+                        }
+                        .help(loc.t("bulk.remove_from_queue_help"))
+                    } else {
+                        Button {
+                            Task { await store.addSelectionToQueue() }
+                        } label: {
+                            Label(loc.t("button.add_to_queue"), systemImage: "plus.circle")
+                        }
+                        .help(loc.t("bulk.add_to_queue_help"))
                     }
-                    .help(loc.t("bulk.add_to_queue_help"))
 
                     Button {
                         Task { await store.processNowSingleSelection() }
@@ -965,6 +996,18 @@ struct BulkActionBar: View {
             Button(loc.t("button.cancel"), role: .cancel) {}
         } message: {
             Text(loc.t("dialog.clear_message"))
+        }
+        .confirmationDialog(
+            String(format: loc.t("dialog.clear_queue_title"), store.pendingCount),
+            isPresented: $showingClearQueueConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(loc.t("button.clear_queue"), role: .destructive) {
+                Task { await store.clearEntireQueue() }
+            }
+            Button(loc.t("button.cancel"), role: .cancel) {}
+        } message: {
+            Text(loc.t("dialog.clear_queue_message"))
         }
         .alert(loc.t("error.export_failed"), isPresented: Binding(
             get: { showingExportError != nil },

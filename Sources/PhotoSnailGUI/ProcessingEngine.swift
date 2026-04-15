@@ -419,6 +419,36 @@ final class ProcessingEngine {
         }
     }
 
+    /// Remove the given asset ids from the queue (only deletes rows whose
+    /// status is currently `pending`; in-progress / done / failed are
+    /// preserved). Refreshes stats and reports the deletion count.
+    func removeFromQueue(_ ids: [String]) async {
+        guard !ids.isEmpty else { return }
+        do {
+            let n = try await queue.removeFromQueue(ids)
+            try? await refreshStats()
+            statusMessage = String(format: Localizer.shared.t("status.removed_from_queue"), n)
+            log.append(.info, "Removed \(n) photo(s) from queue")
+        } catch {
+            statusMessage = "\(Localizer.shared.t("label.error")): \(error)"
+            log.append(.error, "Remove-from-queue failed: \(error)")
+        }
+    }
+
+    /// Drop every pending row from the queue. Same `status='pending'` guard
+    /// as `removeFromQueue` — done / failed / in-progress rows survive.
+    func clearQueue() async {
+        do {
+            let n = try await queue.clearQueue()
+            try? await refreshStats()
+            statusMessage = String(format: Localizer.shared.t("status.cleared_queue"), n)
+            log.append(.info, "Cleared queue (\(n) pending rows deleted)")
+        } catch {
+            statusMessage = "\(Localizer.shared.t("label.error")): \(error)"
+            log.append(.error, "Clear-queue failed: \(error)")
+        }
+    }
+
     /// Called by the worker (on MainActor) after a successful markDone
     /// so Process now's one-shot semantics can trigger a pause without
     /// the worker having direct access to `isPausedFlag`. Returns true
