@@ -101,7 +101,7 @@ private struct MultiSelectionSummary: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Spacing.sm) {
                 ForEach(ids, id: \.self) { id in
-                    ThumbnailCell(id: id, row: store.rows[id], isSelected: true, size: 72)
+                    ThumbnailCell(id: id, row: store.rows[id], isSelected: true, size: 72, store: store)
                 }
                 if remaining > 0 {
                     Text("+\(remaining)")

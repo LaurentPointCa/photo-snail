@@ -102,7 +102,7 @@ enum Strings {
         "filter.all": "All",
         "filter.tagged": "Tagged",
         "filter.untouched": "Untouched",
-        "filter.pending": "Pending",
+        "filter.pending": "Queue",
         "filter.failed": "Failed",
 
         // Sort orders
@@ -272,6 +272,8 @@ enum Strings {
 
         // Add-to-queue menu
         "menu.add_all_unprocessed": "All unprocessed photos",
+        "button.add_all_unprocessed": "Add all unprocessed to queue",
+        "button.waiting_for_lock": "Waiting for lock…",
         "menu.add_selected": "Selected photos (%d)",
 
         // About
@@ -316,7 +318,7 @@ enum Strings {
         "setting.auto_start_when_locked.help": "Start processing when the screen locks and pause when it unlocks. Useful for desktop Macs left running during long batches.",
         "status.settings_saved": "Settings saved",
         "status.dryrun_complete": "Dry-run complete (queue not mutated)",
-        "button.start": "Start",
+        "button.start": "Start Queue",
         "button.pause": "Pause",
         "button.resume": "Resume",
         "button.ok": "OK",
@@ -395,7 +397,7 @@ enum Strings {
         "filter.all": "Tout",
         "filter.tagged": "\u{00C9}tiquet\u{00E9}",
         "filter.untouched": "Non trait\u{00E9}",
-        "filter.pending": "En file",
+        "filter.pending": "File",
         "filter.failed": "\u{00C9}chou\u{00E9}",
 
         // Sort orders
@@ -620,6 +622,8 @@ enum Strings {
         "button.add_to_queue": "Ajouter \u{00E0} la file",
         "button.process_now": "Traiter maintenant",
         "menu.add_all_unprocessed": "Toutes les photos non trait\u{00E9}es",
+        "button.add_all_unprocessed": "Ajouter toutes les non trait\u{00E9}es \u{00E0} la file",
+        "button.waiting_for_lock": "En attente du verrouillage\u{2026}",
         "menu.add_selected": "Photos s\u{00E9}lectionn\u{00E9}es (%d)",
         "bulk.add_to_queue_help": "Ajouter la s\u{00E9}lection \u{00E0} la file \u{2014} les nouvelles photos sont ajout\u{00E9}es, les photos d\u{00E9}j\u{00E0} trait\u{00E9}es sont remises en file",
         "bulk.process_now_help": "Traiter cette photo en premier \u{2014} passe devant tout ce qui est d\u{00E9}j\u{00E0} en file",
@@ -690,7 +694,7 @@ enum Strings {
         "filter.all": "Todo",
         "filter.tagged": "Etiquetado",
         "filter.untouched": "Sin tratar",
-        "filter.pending": "En cola",
+        "filter.pending": "Cola",
         "filter.failed": "Fallido",
 
         // Sort orders
@@ -909,6 +913,8 @@ enum Strings {
         "button.add_to_queue": "A\u{00F1}adir a la cola",
         "button.process_now": "Procesar ahora",
         "menu.add_all_unprocessed": "Todas las fotos no procesadas",
+        "button.add_all_unprocessed": "A\u{00F1}adir todas las no procesadas a la cola",
+        "button.waiting_for_lock": "Esperando el bloqueo\u{2026}",
         "menu.add_selected": "Fotos seleccionadas (%d)",
         "bulk.add_to_queue_help": "A\u{00F1}adir la selecci\u{00F3}n a la cola \u{2014} las fotos nuevas se a\u{00F1}aden, las ya procesadas se reenv\u{00ED}an a la cola",
         "bulk.process_now_help": "Procesar esta foto a continuaci\u{00F3}n \u{2014} se adelanta a cualquier otra pendiente",
@@ -979,7 +985,7 @@ enum Strings {
         "filter.all": "Alle",
         "filter.tagged": "Getaggt",
         "filter.untouched": "Unber\u{00FC}hrt",
-        "filter.pending": "In Warteschlange",
+        "filter.pending": "Warteschlange",
         "filter.failed": "Fehlgeschlagen",
 
         // Sort orders
@@ -1197,6 +1203,8 @@ enum Strings {
         "button.add_to_queue": "Zur Warteschlange hinzuf\u{00FC}gen",
         "button.process_now": "Jetzt verarbeiten",
         "menu.add_all_unprocessed": "Alle nicht verarbeiteten Fotos",
+        "button.add_all_unprocessed": "Alle unverarbeiteten zur Warteschlange hinzuf\u{00FC}gen",
+        "button.waiting_for_lock": "Warten auf Sperre\u{2026}",
         "menu.add_selected": "Ausgew\u{00E4}hlte Fotos (%d)",
         "bulk.add_to_queue_help": "Auswahl zur Warteschlange hinzuf\u{00FC}gen \u{2014} neue Fotos werden hinzugef\u{00FC}gt, bereits verarbeitete erneut eingereiht",
         "bulk.process_now_help": "Dieses Foto als n\u{00E4}chstes verarbeiten \u{2014} \u{00FC}berspringt alles andere in der Warteschlange",
@@ -1267,7 +1275,7 @@ enum Strings {
         "filter.all": "Tudo",
         "filter.tagged": "Marcado",
         "filter.untouched": "N\u{00E3}o processado",
-        "filter.pending": "Na fila",
+        "filter.pending": "Fila",
         "filter.failed": "Falhou",
 
         // Sort orders
@@ -1486,6 +1494,8 @@ enum Strings {
         "button.add_to_queue": "Adicionar \u{00E0} fila",
         "button.process_now": "Processar agora",
         "menu.add_all_unprocessed": "Todas as fotos n\u{00E3}o processadas",
+        "button.add_all_unprocessed": "Adicionar todas n\u{00E3}o processadas \u{00E0} fila",
+        "button.waiting_for_lock": "Aguardando bloqueio\u{2026}",
         "menu.add_selected": "Fotos selecionadas (%d)",
         "bulk.add_to_queue_help": "Adicionar sele\u{00E7}\u{00E3}o \u{00E0} fila \u{2014} fotos novas entram, fotos j\u{00E1} processadas voltam para a fila",
         "bulk.process_now_help": "Processar esta foto em seguida \u{2014} passa \u{00E0} frente de tudo que j\u{00E1} est\u{00E1} pendente",
@@ -1556,7 +1566,7 @@ enum Strings {
         "filter.all": "\u{3059}\u{3079}\u{3066}",
         "filter.tagged": "\u{30BF}\u{30B0}\u{4ED8}\u{304D}",
         "filter.untouched": "\u{672A}\u{51E6}\u{7406}",
-        "filter.pending": "\u{30AD}\u{30E5}\u{30FC}\u{5F85}\u{3061}",
+        "filter.pending": "\u{30AD}\u{30E5}\u{30FC}",
         "filter.failed": "\u{5931}\u{6557}",
 
         // Sort orders
@@ -1774,6 +1784,8 @@ enum Strings {
         "button.add_to_queue": "\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0}",
         "button.process_now": "\u{4ECA}\u{3059}\u{3050}\u{51E6}\u{7406}",
         "menu.add_all_unprocessed": "\u{672A}\u{51E6}\u{7406}\u{306E}\u{5199}\u{771F}\u{3059}\u{3079}\u{3066}",
+        "button.add_all_unprocessed": "\u{672A}\u{51E6}\u{7406}\u{306E}\u{5199}\u{771F}\u{3092}\u{3059}\u{3079}\u{3066}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0}",
+        "button.waiting_for_lock": "\u{30ED}\u{30C3}\u{30AF}\u{5F85}\u{3061}\u{2026}",
         "menu.add_selected": "\u{9078}\u{629E}\u{3057}\u{305F}\u{5199}\u{771F} (%d)",
         "bulk.add_to_queue_help": "\u{9078}\u{629E}\u{9805}\u{76EE}\u{3092}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{8FFD}\u{52A0} \u{2014} \u{65B0}\u{3057}\u{3044}\u{5199}\u{771F}\u{306F}\u{8FFD}\u{52A0}\u{3055}\u{308C}\u{3001}\u{51E6}\u{7406}\u{6E08}\u{307F}\u{306E}\u{5199}\u{771F}\u{306F}\u{518D}\u{5EA6}\u{30AD}\u{30E5}\u{30FC}\u{306B}\u{5165}\u{308A}\u{307E}\u{3059}",
         "bulk.process_now_help": "\u{3053}\u{306E}\u{5199}\u{771F}\u{3092}\u{6B21}\u{306B}\u{51E6}\u{7406} \u{2014} \u{4ED6}\u{306E}\u{5F85}\u{6A5F}\u{4E2D}\u{306E}\u{9805}\u{76EE}\u{3088}\u{308A}\u{3082}\u{5148}\u{306B}\u{51E6}\u{7406}\u{3055}\u{308C}\u{307E}\u{3059}",
@@ -1844,7 +1856,7 @@ enum Strings {
         "filter.all": "\u{5168}\u{90E8}",
         "filter.tagged": "\u{5DF2}\u{6807}\u{8BB0}",
         "filter.untouched": "\u{672A}\u{5904}\u{7406}",
-        "filter.pending": "\u{5DF2}\u{5165}\u{961F}",
+        "filter.pending": "\u{961F}\u{5217}",
         "filter.failed": "\u{5931}\u{8D25}",
 
         // Sort orders
@@ -2062,6 +2074,8 @@ enum Strings {
         "button.add_to_queue": "\u{52A0}\u{5165}\u{961F}\u{5217}",
         "button.process_now": "\u{7ACB}\u{5373}\u{5904}\u{7406}",
         "menu.add_all_unprocessed": "\u{6240}\u{6709}\u{672A}\u{5904}\u{7406}\u{7684}\u{7167}\u{7247}",
+        "button.add_all_unprocessed": "\u{5C06}\u{6240}\u{6709}\u{672A}\u{5904}\u{7406}\u{7684}\u{7167}\u{7247}\u{52A0}\u{5165}\u{961F}\u{5217}",
+        "button.waiting_for_lock": "\u{7B49}\u{5F85}\u{9501}\u{5B9A}\u{2026}",
         "menu.add_selected": "\u{5DF2}\u{9009}\u{7167}\u{7247} (%d)",
         "bulk.add_to_queue_help": "\u{5C06}\u{9009}\u{62E9}\u{52A0}\u{5165}\u{961F}\u{5217} \u{2014} \u{65B0}\u{7167}\u{7247}\u{52A0}\u{5165}\u{FF0C}\u{5DF2}\u{5904}\u{7406}\u{7684}\u{7167}\u{7247}\u{91CD}\u{65B0}\u{6392}\u{961F}",
         "bulk.process_now_help": "\u{4E0B}\u{4E00}\u{4E2A}\u{5904}\u{7406}\u{6B64}\u{7167}\u{7247} \u{2014} \u{5C06}\u{63D2}\u{5230}\u{6240}\u{6709}\u{5F85}\u{5904}\u{7406}\u{9879}\u{76EE}\u{4E4B}\u{524D}",
@@ -2350,6 +2364,8 @@ enum Strings {
         "button.add_to_queue": "\u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CD94}\u{AC00}",
         "button.process_now": "\u{C9C0}\u{AE08} \u{CC98}\u{B9AC}",
         "menu.add_all_unprocessed": "\u{CC98}\u{B9AC}\u{B418}\u{C9C0} \u{C54A}\u{C740} \u{BAA8}\u{B4E0} \u{C0AC}\u{C9C4}",
+        "button.add_all_unprocessed": "\u{CC98}\u{B9AC}\u{B418}\u{C9C0} \u{C54A}\u{C740} \u{C0AC}\u{C9C4}\u{C744} \u{BAA8}\u{B450} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CD94}\u{AC00}",
+        "button.waiting_for_lock": "\u{C7A0}\u{AE08} \u{B300}\u{AE30} \u{C911}\u{2026}",
         "menu.add_selected": "\u{C120}\u{D0DD}\u{D55C} \u{C0AC}\u{C9C4} (%d)",
         "bulk.add_to_queue_help": "\u{C120}\u{D0DD} \u{D56D}\u{BAA9}\u{C744} \u{B300}\u{AE30}\u{C5F4}\u{C5D0} \u{CD94}\u{AC00} \u{2014} \u{C0C8} \u{C0AC}\u{C9C4}\u{C740} \u{CD94}\u{AC00}\u{B418}\u{ACE0}, \u{C774}\u{BBF8} \u{CC98}\u{B9AC}\u{B41C} \u{C0AC}\u{C9C4}\u{C740} \u{B2E4}\u{C2DC} \u{B300}\u{AE30}\u{C5F4}\u{B85C} \u{B3CC}\u{C544}\u{AC11}\u{B2C8}\u{B2E4}",
         "bulk.process_now_help": "\u{C774} \u{C0AC}\u{C9C4}\u{C744} \u{B2E4}\u{C74C}\u{C5D0} \u{CC98}\u{B9AC} \u{2014} \u{B300}\u{AE30} \u{C911}\u{C778} \u{B2E4}\u{B978} \u{D56D}\u{BAA9}\u{BCF4}\u{B2E4} \u{BA3C}\u{C800} \u{CC98}\u{B9AC}\u{B429}\u{B2C8}\u{B2E4}",
