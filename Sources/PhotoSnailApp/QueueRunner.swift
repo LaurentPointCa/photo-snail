@@ -22,6 +22,43 @@ enum QueueRunner {
     }
 
     static func run(config: Config) async {
+        // 0. Ollama preflight — fail loud before any PhotoKit auth prompts
+        //    or library enumeration, since the whole run depends on Ollama
+        //    being reachable with the configured model.
+        let preflightClient = OllamaClient(connection: config.connection)
+        let preflight = await preflightClient.preflight(model: config.model)
+        switch preflight {
+        case .ok:
+            eprint("ollama preflight: ok (\(config.model) @ \(config.connection.baseURL.absoluteString))")
+        case .unreachable(let reason):
+            eprint("""
+                ERROR: Ollama is not reachable at \(config.connection.baseURL.absoluteString)
+                reason: \(reason)
+
+                Fix:
+                  brew install ollama     # if not installed
+                  ollama serve            # start the daemon
+                  ollama pull \(config.model)    # pull the model
+
+                Or use --ollama-url to point at a different Ollama instance.
+                """)
+            exit(2)
+        case .modelMissing(let installed):
+            let installedList = installed.isEmpty ? "  (none installed)" : installed.map { "  \($0)" }.joined(separator: "\n")
+            eprint("""
+                ERROR: Ollama is reachable but model "\(config.model)" is not installed.
+
+                Installed models:
+                \(installedList)
+
+                Fix:
+                  ollama pull \(config.model)
+
+                Or pass --model <name> to use a different model.
+                """)
+            exit(2)
+        }
+
         // 1. PhotoKit auth
         let status = await PhotoLibrary.requestAuth()
         guard status == .authorized else {

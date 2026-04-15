@@ -64,6 +64,19 @@ final class ProcessingEngine {
     var availableModels: [OllamaModel] = []
     var modelsLoadError: String? = nil
 
+    /// Startup Ollama preflight status. The UI surfaces a blocking sheet when
+    /// this is `.failed(...)`. `.dismissed` means the user chose "Continue
+    /// anyway" and further failures should NOT re-present the sheet this
+    /// session (the user has acknowledged). A successful retry flips back to
+    /// `.ok`.
+    enum PreflightStatus: Sendable, Equatable {
+        case checking
+        case ok
+        case failed(OllamaClient.PreflightResult)
+        case dismissed
+    }
+    var preflightStatus: PreflightStatus = .checking
+
     // MARK: - Private
 
     /// Shared with `LibraryStore` — both observe the same actor instance
@@ -111,6 +124,43 @@ final class ProcessingEngine {
 
         // 3. Kick off Ollama model discovery in the background — non-blocking.
         Task { await refreshAvailableModels() }
+
+        // 4. Run the startup Ollama preflight. Non-blocking from this
+        //    method's perspective (so the library view renders immediately),
+        //    but the UI surfaces a modal sheet as soon as the result comes
+        //    back if it's a failure.
+        Task { await self.runPreflight() }
+    }
+
+    /// Re-run the Ollama preflight. Invoked at startup and when the user
+    /// clicks "Retry" in the preflight failure sheet. Clears `.dismissed`
+    /// if the retry succeeds so a subsequent failure can surface again.
+    func runPreflight() async {
+        await MainActor.run { self.preflightStatus = .checking }
+        let client = OllamaClient(connection: self.connection)
+        let result = await client.preflight(model: self.model)
+        await MainActor.run {
+            switch result {
+            case .ok:
+                self.preflightStatus = .ok
+                self.log.append(.info, "Ollama preflight: ok (\(self.model))")
+            case .unreachable, .modelMissing:
+                // If the user already dismissed this session, don't pester.
+                if case .dismissed = self.preflightStatus {
+                    self.log.append(.warning, "Ollama preflight failed (dismissed): \(result)")
+                } else {
+                    self.preflightStatus = .failed(result)
+                    self.log.append(.error, "Ollama preflight failed: \(result.shortLabel)")
+                }
+            }
+        }
+    }
+
+    /// "Continue anyway" from the preflight sheet: acknowledge the failure
+    /// and stop surfacing the sheet until next app launch.
+    func dismissPreflight() {
+        self.preflightStatus = .dismissed
+        self.log.append(.warning, "Ollama preflight dismissed by user")
     }
 
     /// Probe Ollama and update `availableModels`. Safe to call repeatedly
@@ -209,7 +259,7 @@ final class ProcessingEngine {
         }
 
         do {
-            statusMessage = Localizer.shared.t("status.enumerating")
+            statusMessage = Localizer.shared.t("status.loading_from_photos")
             log.append(.info, "Enumerating library...")
             _ = try await PhotoLibraryEnumerator.fetchUnprocessedIdentifiers(
                 queue: queue,

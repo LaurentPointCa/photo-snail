@@ -11,11 +11,19 @@ enum PhotoLibraryEnumerator {
         sentinel: String,
         log: @escaping (String) -> Void = { _ in }
     ) async throws -> Int {
-        let allAssets = PhotoLibrary.fetchAllImageAssets()
-        var allIds: [String] = []
-        allAssets.enumerateObjects { asset, _, _ in
-            allIds.append(asset.localIdentifier)
-        }
+        // Move the synchronous PhotoKit walk off the main thread. On a 39k-
+        // photo library the enumeration takes multiple minutes and pegs a
+        // single core, so doing it on main (via an @MainActor async caller)
+        // freezes the UI the whole time. PHFetchResult.enumerateObjects is
+        // thread-safe per Apple's docs.
+        let allIds: [String] = await Task.detached(priority: .userInitiated) {
+            let allAssets = PhotoLibrary.fetchAllImageAssets()
+            var ids: [String] = []
+            allAssets.enumerateObjects { asset, _, _ in
+                ids.append(asset.localIdentifier)
+            }
+            return ids
+        }.value
         log("Library: \(allIds.count) image assets")
 
         try await queue.enqueue(allIds)
