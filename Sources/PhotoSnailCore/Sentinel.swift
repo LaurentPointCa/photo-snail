@@ -89,4 +89,20 @@ public enum Sentinel {
         }
         return make(family: newFamily, version: 1)
     }
+
+    /// Return `true` if `text` contains at least one PhotoSnail-shaped sentinel
+    /// (`ai:<family>-v<N>`), regardless of which model family wrote it. Used by
+    /// the write-back path to decide whether an existing description belongs to
+    /// us (overwrite freely) or to the user (preserve, append ours after a
+    /// separator). The pattern mirrors `family(of:)`'s sanitization rule
+    /// (alphanumeric runs separated by single dashes) so every sentinel we
+    /// could have written matches.
+    public static func containsAnySentinel(_ text: String) -> Bool {
+        let pattern = "ai:[a-z0-9]+(-[a-z0-9]+)*-v[0-9]+"
+        guard let re = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return false
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        return re.firstMatch(in: text, options: [], range: range) != nil
+    }
 }
