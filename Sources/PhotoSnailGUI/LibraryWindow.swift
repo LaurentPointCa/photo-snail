@@ -571,8 +571,7 @@ struct LibraryGrid: View {
                                 id: id,
                                 row: store.rows[id],
                                 isSelected: store.selection.contains(id),
-                                size: thumbnailSize,
-                                store: store
+                                size: thumbnailSize
                             )
                             .id(id)
                             .onTapGesture {
@@ -667,12 +666,10 @@ struct LibraryGrid: View {
 /// and the request re-fires — acceptable for a skeleton; Phase 7 will add a
 /// store-level image cache if needed.
 struct ThumbnailCell: View {
-    private let loc = Localizer.shared
     let id: String
     let row: AssetQueue.Row?
     let isSelected: Bool
     let size: CGFloat
-    let store: LibraryStore
 
     @State private var image: NSImage? = nil
     @State private var loadTask: Task<Void, Never>? = nil
@@ -701,40 +698,6 @@ struct ThumbnailCell: View {
 
             StatusBadge(row: row)
                 .padding(6)
-
-            // Per-thumbnail hover actions: Add to queue / Process now /
-            // Clear. Shown only while the mouse is over the cell so they
-            // don't steal attention from the thumbnail when idle. Stops
-            // propagation so clicking an action doesn't also toggle
-            // selection.
-            if isHovering {
-                VStack {
-                    Spacer()
-                    HStack(spacing: 6) {
-                        hoverAction(systemImage: "plus.circle.fill",
-                                    help: loc.t("button.add_to_queue")) {
-                            Task { await store.addPhotoToQueue(id: id) }
-                        }
-                        hoverAction(systemImage: "bolt.fill",
-                                    help: loc.t("button.process_now")) {
-                            Task { await store.processNowForPhoto(id: id) }
-                        }
-                        hoverAction(systemImage: "eraser.fill",
-                                    help: loc.t("button.clear"),
-                                    destructive: true) {
-                            Task { await store.clearDescriptionForPhoto(id: id) }
-                        }
-                    }
-                    .padding(6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .padding(6)
-                }
-                .frame(width: size, height: size, alignment: .bottom)
-                .transition(.opacity)
-            }
         }
         .frame(width: size, height: size)
         .contentShape(Rectangle())
@@ -767,23 +730,6 @@ struct ThumbnailCell: View {
         .onDisappear {
             loadTask?.cancel()
         }
-    }
-
-    @ViewBuilder
-    private func hoverAction(systemImage: String, help: String,
-                             destructive: Bool = false,
-                             action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(destructive ? Color.red : Color.accentColor)
-                .frame(width: 28, height: 28)
-                .background(
-                    Circle().fill(Color.black.opacity(0.45))
-                )
-        }
-        .buttonStyle(.plain)
-        .help(help)
     }
 
     private func loadThumbnail() async {
@@ -912,67 +858,89 @@ struct BulkActionBar: View {
     private var hasSelection: Bool { !store.selection.isEmpty }
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
-            // Always-visible enqueue-everything button — the primary
-            // "start a fresh batch" entry point now that the RunnerDock
-            // no longer carries an Add-to-Queue menu.
-            Button {
-                Task { await store.engine?.addAllUnprocessedToQueue() }
-            } label: {
-                Label(loc.t("button.add_all_unprocessed"), systemImage: "photo.on.rectangle.angled")
+        // Two rows so the action set isn't cramped into a single line:
+        //   row 1 — Add-all-unprocessed primary action + selection
+        //           summary + transient status + Deselect on the right
+        //   row 2 — selection-scoped actions (Add to Queue, Process now,
+        //           Clear, Export) — only rendered when something is
+        //           actually selected so the bar collapses to a single
+        //           row at rest
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack(spacing: Spacing.md) {
+                // Always-visible enqueue-everything button — the primary
+                // "start a fresh batch" entry point now that the
+                // RunnerDock no longer carries an Add-to-Queue menu.
+                Button {
+                    Task { await store.engine?.addAllUnprocessedToQueue() }
+                } label: {
+                    Label(loc.t("button.add_all_unprocessed"), systemImage: "photo.on.rectangle.angled")
+                }
+                .buttonStyle(.borderedProminent)
+                .help(loc.t("button.add_all_unprocessed"))
+                .disabled(store.engine == nil
+                          || store.engine?.state == .running
+                          || store.engine?.state == .enumerating)
+
+                Divider().frame(height: 16)
+
+                Text(hasSelection ? String(format: loc.t("status.n_selected"), store.selection.count) : loc.t("status.no_selection"))
+                    .font(AppFont.bodyEmphasized)
+                    .monospacedDigit()
+                    .foregroundStyle(hasSelection ? AppColor.textPrimary : AppColor.textSecondary)
+
+                if let msg = store.bulkStatusMessage {
+                    Text(msg)
+                        .font(AppFont.label)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer()
+
+                Button {
+                    store.clearSelection()
+                } label: {
+                    Label(loc.t("button.deselect"), systemImage: "xmark.circle")
+                }
+                .help(loc.t("bulk.deselect_help"))
+                .disabled(!hasSelection)
             }
-            .buttonStyle(.borderedProminent)
-            .help(loc.t("button.add_all_unprocessed"))
-            .disabled(store.engine == nil
-                      || store.engine?.state == .running
-                      || store.engine?.state == .enumerating)
 
-            Divider().frame(height: 16)
+            if hasSelection {
+                HStack(spacing: Spacing.md) {
+                    Button {
+                        Task { await store.addSelectionToQueue() }
+                    } label: {
+                        Label(loc.t("button.add_to_queue"), systemImage: "plus.circle")
+                    }
+                    .help(loc.t("bulk.add_to_queue_help"))
 
-            Text(hasSelection ? String(format: loc.t("status.n_selected"), store.selection.count) : loc.t("status.no_selection"))
-                .font(AppFont.bodyEmphasized)
-                .monospacedDigit()
-                .foregroundStyle(hasSelection ? AppColor.textPrimary : AppColor.textSecondary)
+                    Button {
+                        Task { await store.processNowSingleSelection() }
+                    } label: {
+                        Label(loc.t("button.process_now"), systemImage: "bolt.fill")
+                    }
+                    .help(loc.t("bulk.process_now_help"))
+                    .disabled(store.singleSelection == nil)
 
-            // Transient status message from the most recent bulk op.
-            if let msg = store.bulkStatusMessage {
-                Text(msg)
-                    .font(AppFont.label)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                    Button(role: .destructive) {
+                        showingClearConfirm = true
+                    } label: {
+                        Label(loc.t("button.clear"), systemImage: "eraser")
+                    }
+                    .help(loc.t("bulk.clear_help"))
+
+                    Button {
+                        runExport()
+                    } label: {
+                        Label(loc.t("button.export"), systemImage: "square.and.arrow.up")
+                    }
+                    .help(loc.t("bulk.export_help"))
+
+                    Spacer()
+                }
             }
-
-            Spacer()
-
-            // Bulk-only actions — per-photo actions (Process now, Clear,
-            // Add to queue) live on the thumbnails themselves on hover.
-            Button {
-                Task { await store.addSelectionToQueue() }
-            } label: {
-                Label(loc.t("button.add_to_queue"), systemImage: "plus.circle")
-            }
-            .help(loc.t("bulk.add_to_queue_help"))
-            .disabled(!hasSelection)
-
-            Button {
-                runExport()
-            } label: {
-                Label(loc.t("button.export"), systemImage: "square.and.arrow.up")
-            }
-            .help(loc.t("bulk.export_help"))
-            .disabled(!hasSelection)
-
-            Divider()
-                .frame(height: 16)
-
-            Button {
-                store.clearSelection()
-            } label: {
-                Label(loc.t("button.deselect"), systemImage: "xmark.circle")
-            }
-            .help(loc.t("bulk.deselect_help"))
-            .disabled(!hasSelection)
         }
         .labelStyle(.titleAndIcon)
         .buttonStyle(.bordered)
@@ -1451,22 +1419,42 @@ struct RunnerDock: View {
                 Spacer()
             }
         case .running:
-            Button {
-                engine.pause()
-            } label: {
+            if engine.isPausing {
+                // User has hit Pause — worker will park at its next
+                // checkpoint (after the current photo's markDone). Show
+                // a disabled "Waiting to finish…" so they don't click
+                // Pause again expecting an immediate stop.
                 HStack(spacing: Spacing.sm) {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(.primary)
-                    Image(systemName: "pause.fill")
-                    Text(loc.t("button.pause"))
+                    ProgressView().controlSize(.small)
+                    Text(loc.t("button.waiting_to_finish"))
+                        .font(AppFont.bodyEmphasized)
+                        .foregroundStyle(.secondary)
+                    Spacer()
                 }
-                .font(AppFont.bodyEmphasized)
+                .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.secondary.opacity(0.12))
+                )
+            } else {
+                Button {
+                    engine.pause()
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.primary)
+                        Image(systemName: "pause.fill")
+                        Text(loc.t("button.pause"))
+                    }
+                    .font(AppFont.bodyEmphasized)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
         case .paused:
             Button {
                 engine.resume()

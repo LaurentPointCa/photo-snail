@@ -577,38 +577,6 @@ final class LibraryStore {
         bulkStatusMessage = Localizer.shared.t("status.process_now_queued")
     }
 
-    /// Per-thumbnail "Process now" triggered from the grid hover actions.
-    /// Acts on exactly one asset regardless of selection state.
-    func processNowForPhoto(id: String) async {
-        guard let engine = engine else { return }
-        await engine.processNow(id: id)
-        bulkStatusMessage = Localizer.shared.t("status.process_now_queued")
-    }
-
-    /// Per-thumbnail "Clear description" triggered from the grid hover
-    /// actions. Wipes Photos.app's description for exactly one asset and
-    /// resets the queue row to untouched. Separate from the bulk
-    /// `clearSelectionDescriptions` path because a single-photo clear
-    /// doesn't need the progress sheet.
-    func clearDescriptionForPhoto(id: String) async {
-        guard let queue = queue else { return }
-        let uuid = PhotoLibrary.uuidPrefix(id)
-        do {
-            _ = try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: "")
-            try await queue.clearResult(id)
-            bulkStatusMessage = String(format: Localizer.shared.t("status.cleared_descriptions"), 1)
-        } catch {
-            bulkStatusMessage = "\(Localizer.shared.t("label.error")): \(error)"
-        }
-    }
-
-    /// Per-thumbnail "Add to queue" triggered from the grid hover actions.
-    /// Upserts exactly one asset into the queue (new → pending, existing →
-    /// reset to pending at priority=0).
-    func addPhotoToQueue(id: String) async {
-        guard let engine = engine else { return }
-        await engine.addSelectedToQueue([id])
-    }
 
     /// Clear the description in Photos.app and reset the queue row to
     /// pending for every selected asset. Destructive — the caller should

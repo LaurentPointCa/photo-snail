@@ -99,6 +99,18 @@ final class ProcessingEngine {
     private var isPausedFlag = false
     private var pauseContinuation: CheckedContinuation<Void, Never>?
 
+    /// Exposed for the UI: true from the moment the user hits Pause until
+    /// the worker actually reaches its next pause checkpoint. Lets the
+    /// RunnerDock swap the Pause button for a disabled "Waiting to
+    /// finish…" label so double-clicks don't do anything weird.
+    var isPausing: Bool { isPausedFlag && state == .running }
+
+    /// "Process now" target. When the worker finishes processing an asset
+    /// whose id matches this, it flips `isPausedFlag` so the next loop
+    /// iteration parks in the pause continuation. Cleared as part of the
+    /// pause so subsequent Resume / Start runs aren't also one-shot.
+    private var stopAfterPhotoID: String? = nil
+
     /// Lives for the engine's lifetime. Instantiated in `loadInitialStats`
     /// (after settings are loaded) and forwards screen lock/unlock events
     /// to `handleScreenLocked` / `handleScreenUnlocked`.
@@ -378,8 +390,15 @@ final class ProcessingEngine {
     }
 
     /// "Process now" on a single asset: bumps it to priority=1 so it's the
-    /// very next row claimNext picks. If the worker isn't running, starts it.
-    /// No-op if the asset is currently in-flight (the worker already owns it).
+    /// very next row claimNext picks, arms the stop-after-this-photo flag
+    /// so the worker pauses right after finishing, and (if idle) starts
+    /// the worker. Net effect: user clicks Process now → exactly one
+    /// photo is processed → queue returns to paused/finished. No drain
+    /// of the rest of the queue.
+    ///
+    /// No-op if the asset is currently in-flight (the worker already owns
+    /// it — the stop flag would fire on its natural completion anyway,
+    /// but we don't want to pretend we scheduled anything new).
     func processNow(id: String) async {
         do {
             let wasReset = try await queue.processNow(id: id)
@@ -389,7 +408,8 @@ final class ProcessingEngine {
                 log.append(.info, "Process now: \(String(id.prefix(8))) is already in-flight")
                 return
             }
-            log.append(.info, "Process now: \(String(id.prefix(8))) queued at priority=1")
+            stopAfterPhotoID = id
+            log.append(.info, "Process now: \(String(id.prefix(8))) queued at priority=1; worker will pause after")
             if state == .idle || state == .finished {
                 await start()
             }
@@ -397,6 +417,20 @@ final class ProcessingEngine {
             statusMessage = "\(Localizer.shared.t("label.error")): \(error)"
             log.append(.error, "Process-now failed: \(error)")
         }
+    }
+
+    /// Called by the worker (on MainActor) after a successful markDone
+    /// so Process now's one-shot semantics can trigger a pause without
+    /// the worker having direct access to `isPausedFlag`. Returns true
+    /// if we just triggered a stop so the caller can update state.
+    @discardableResult
+    fileprivate func consumeStopAfterIfMatches(_ id: String) -> Bool {
+        guard stopAfterPhotoID == id else { return false }
+        stopAfterPhotoID = nil
+        isPausedFlag = true
+        statusMessage = Localizer.shared.t("status.pausing")
+        log.append(.info, "Process now done — pausing worker")
+        return true
     }
 
     func pause() {
@@ -696,6 +730,14 @@ final class ProcessingEngine {
                     // markDone only in real mode — dry-run leaves the queue untouched.
                     if !dryRun {
                         try? await queue.markDone(id, result: result, sentinel: sentinel)
+                    }
+
+                    // "Process now" one-shot: if this photo was the
+                    // explicit Process-now target, arm the pause flag so
+                    // the next loop iteration parks instead of draining
+                    // the rest of the queue.
+                    await MainActor.run {
+                        self?.consumeStopAfterIfMatches(id)
                     }
 
                     await MainActor.run {
