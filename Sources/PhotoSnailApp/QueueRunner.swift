@@ -147,12 +147,16 @@ enum QueueRunner {
 
                             // Write back to Photos.app (unless dry-run)
                             if !dryRun {
+                                let uuid = PhotoLibrary.uuidPrefix(id)
+                                let preDesc = try await MainActor.run {
+                                    try PhotosScripter.readDescription(uuid: uuid)
+                                }
                                 let payload = Pipeline.formatDescription(
                                     description: result.caption.description,
                                     tags: result.mergedTags,
-                                    sentinel: sentinel
+                                    sentinel: sentinel,
+                                    existingDescription: preDesc
                                 )
-                                let uuid = PhotoLibrary.uuidPrefix(id)
                                 let batchResult = try await MainActor.run {
                                     try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
                                 }

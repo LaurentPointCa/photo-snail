@@ -99,13 +99,31 @@ public final class Pipeline {
     }
 
     /// Format the description payload for Photos.app write-back.
-    /// Output: `<description>. Tags: tag1, tag2, ..., <sentinel>`
-    public static func formatDescription(description: String, tags: [String], sentinel: String = "ai:gemma4-v1") -> String {
+    ///
+    /// Base output: `<description>. Tags: tag1, tag2, ..., <sentinel>`
+    ///
+    /// When `existingDescription` is non-empty AND does NOT contain any
+    /// PhotoSnail sentinel (per `Sentinel.containsAnySentinel`), the user's
+    /// existing text is preserved and our payload is appended after a
+    /// `\n\n---\n\n` separator. If the existing description is empty or
+    /// already carries a sentinel, we overwrite cleanly.
+    public static func formatDescription(
+        description: String,
+        tags: [String],
+        sentinel: String = "ai:gemma4-v1",
+        existingDescription: String? = nil
+    ) -> String {
         var allTags = tags
         if !allTags.contains(sentinel) {
             allTags.append(sentinel)
         }
-        return "\(description). Tags: \(allTags.joined(separator: ", "))"
+        let ours = "\(description). Tags: \(allTags.joined(separator: ", "))"
+
+        let pre = (existingDescription ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if pre.isEmpty || Sentinel.containsAnySentinel(pre) {
+            return ours
+        }
+        return "\(pre)\n\n---\n\n\(ours)"
     }
 
     /// Merge strategy (v3):

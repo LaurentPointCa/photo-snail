@@ -746,16 +746,17 @@ final class LibraryStore {
         // sentinel (best available proxy for "what would we write today").
         let sentinel = rows[id]?.sentinel ?? currentSentinel
 
-        let payload = Pipeline.formatDescription(
-            description: description,
-            tags: tags,
-            sentinel: sentinel
-        )
-
-        // The enclosing class is @MainActor, so this call is already on the
+        // The enclosing class is @MainActor, so these calls are already on the
         // main thread — no `MainActor.run` hop needed. NSAppleScript requires
         // main thread per Phase F.1 findings.
         let uuid = PhotoLibrary.uuidPrefix(id)
+        let preDesc = try PhotosScripter.readDescription(uuid: uuid)
+        let payload = Pipeline.formatDescription(
+            description: description,
+            tags: tags,
+            sentinel: sentinel,
+            existingDescription: preDesc
+        )
         _ = try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
 
         // Update the queue row. This broadcasts `.updated(id)`, which our

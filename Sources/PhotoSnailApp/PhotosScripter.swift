@@ -115,6 +115,38 @@ enum PhotosScripter {
         )
     }
 
+    // MARK: - Read-only description fetch
+
+    /// Return the current description of a single media item (by UUID prefix).
+    /// Returns the empty string when the description is missing value.
+    /// MUST be called on the main thread (NSAppleScript constraint).
+    ///
+    /// Used by the write-back path to decide whether to preserve a
+    /// user-written description before overwriting.
+    static func readDescription(uuid: String) throws -> String {
+        let source = """
+        tell application "Photos"
+            try
+                set the_item to media item id "\(escape(uuid))"
+                set preDesc to description of the_item
+                if preDesc is missing value then set preDesc to ""
+                return preDesc
+            on error errMsg number errNum
+                return "ERROR|" & errMsg & "|" & (errNum as text)
+            end try
+        end tell
+        """
+        let (desc, _) = try runScript(source)
+        let value = desc.stringValue ?? ""
+        if value.hasPrefix("ERROR|") {
+            let parts = value.split(separator: "|", maxSplits: 2, omittingEmptySubsequences: false)
+            let message = parts.count > 1 ? String(parts[1]) : value
+            let code = parts.count > 2 ? (Int(parts[2]) ?? 0) : 0
+            throw ScripterError.executionFailed(code: code, message: message, briefMessage: "")
+        }
+        return value
+    }
+
     // MARK: - Sentinel filter via description text
 
     /// Return media-item ids whose description contains the given marker.

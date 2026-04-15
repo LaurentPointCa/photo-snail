@@ -55,5 +55,10 @@ let package = Package(
                 ]),
             ]
         ),
+        .testTarget(
+            name: "PhotoSnailCoreTests",
+            dependencies: ["PhotoSnailCore"],
+            path: "Tests/PhotoSnailCoreTests"
+        ),
     ]
 )

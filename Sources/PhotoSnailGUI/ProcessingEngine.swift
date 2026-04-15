@@ -402,12 +402,16 @@ final class ProcessingEngine {
                         let ollamaMs = Int64(Date().timeIntervalSince(t0) * 1000)
                         let parsed = CaptionParser.parse(textResult.response)
 
+                        let uuid = PhotoLibrary.uuidPrefix(id)
+                        let preDesc = try await MainActor.run {
+                            try PhotosScripter.readDescription(uuid: uuid)
+                        }
                         let payload = Pipeline.formatDescription(
                             description: parsed.description,
                             tags: parsed.tags,
-                            sentinel: sentinel
+                            sentinel: sentinel,
+                            existingDescription: preDesc
                         )
-                        let uuid = PhotoLibrary.uuidPrefix(id)
                         _ = try await MainActor.run {
                             try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
                         }
@@ -467,12 +471,16 @@ final class ProcessingEngine {
                     }
 
                     if !dryRun {
+                        let uuid = PhotoLibrary.uuidPrefix(id)
+                        let preDesc = try await MainActor.run {
+                            try PhotosScripter.readDescription(uuid: uuid)
+                        }
                         let payload = Pipeline.formatDescription(
                             description: result.caption.description,
                             tags: result.mergedTags,
-                            sentinel: sentinel
+                            sentinel: sentinel,
+                            existingDescription: preDesc
                         )
-                        let uuid = PhotoLibrary.uuidPrefix(id)
                         _ = try await MainActor.run {
                             try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
                         }
