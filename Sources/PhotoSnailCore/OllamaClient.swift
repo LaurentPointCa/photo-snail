@@ -238,6 +238,28 @@ public final class OllamaClient {
         return .modelMissing(installed: names)
     }
 
+    /// Try to start the local Ollama daemon by launching `Ollama.app`, which
+    /// both installs the menubar icon and boots the HTTP daemon.
+    ///
+    /// Returns `true` if `open -a Ollama` exited 0. A zero exit only means
+    /// "the open command succeeded" — it takes ~1–2 seconds for the daemon
+    /// to start accepting connections, so the caller should wait before
+    /// re-running `preflight(model:)`. Returns `false` if `Ollama.app` is
+    /// not installed, in which case the user needs to `brew install ollama`
+    /// or download the .dmg first.
+    public static func tryStartLocalOllama() -> Bool {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        proc.arguments = ["-a", "Ollama"]
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+            return proc.terminationStatus == 0
+        } catch {
+            return false
+        }
+    }
+
     // MARK: - Text-only generation (no image)
 
     /// Result from a text-only Ollama generation (translation, summarization, etc.).

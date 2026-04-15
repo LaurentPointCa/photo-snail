@@ -308,6 +308,8 @@ enum Strings {
         "preflight.retry": "Retry",
         "preflight.continue_anyway": "Continue anyway",
         "preflight.open_settings": "Open Settings…",
+        "preflight.start_ollama": "Start Ollama",
+        "preflight.starting_ollama": "Starting Ollama…",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Auto-start when Mac is locked",
@@ -639,6 +641,8 @@ enum Strings {
         "preflight.retry": "R\u{00E9}essayer",
         "preflight.continue_anyway": "Continuer quand m\u{00EA}me",
         "preflight.open_settings": "Ouvrir les r\u{00E9}glages\u{2026}",
+        "preflight.start_ollama": "D\u{00E9}marrer Ollama",
+        "preflight.starting_ollama": "D\u{00E9}marrage d\u{2019}Ollama\u{2026}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "D\u{00E9}marrer automatiquement quand le Mac est verrouill\u{00E9}",
@@ -926,6 +930,8 @@ enum Strings {
         "preflight.retry": "Reintentar",
         "preflight.continue_anyway": "Continuar de todos modos",
         "preflight.open_settings": "Abrir ajustes\u{2026}",
+        "preflight.start_ollama": "Iniciar Ollama",
+        "preflight.starting_ollama": "Iniciando Ollama\u{2026}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Iniciar autom\u{00E1}ticamente cuando el Mac est\u{00E1} bloqueado",
@@ -1212,6 +1218,8 @@ enum Strings {
         "preflight.retry": "Erneut versuchen",
         "preflight.continue_anyway": "Trotzdem fortfahren",
         "preflight.open_settings": "Einstellungen \u{00F6}ffnen\u{2026}",
+        "preflight.start_ollama": "Ollama starten",
+        "preflight.starting_ollama": "Ollama wird gestartet\u{2026}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Automatisch starten, wenn der Mac gesperrt ist",
@@ -1499,6 +1507,8 @@ enum Strings {
         "preflight.retry": "Tentar novamente",
         "preflight.continue_anyway": "Continuar mesmo assim",
         "preflight.open_settings": "Abrir ajustes\u{2026}",
+        "preflight.start_ollama": "Iniciar Ollama",
+        "preflight.starting_ollama": "Iniciando Ollama\u{2026}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Iniciar automaticamente quando o Mac est\u{00E1} bloqueado",
@@ -1785,6 +1795,8 @@ enum Strings {
         "preflight.retry": "\u{518D}\u{8A66}\u{884C}",
         "preflight.continue_anyway": "\u{305D}\u{308C}\u{3067}\u{3082}\u{7D9A}\u{884C}",
         "preflight.open_settings": "\u{8A2D}\u{5B9A}\u{3092}\u{958B}\u{304F}\u{2026}",
+        "preflight.start_ollama": "Ollama \u{3092}\u{8D77}\u{52D5}",
+        "preflight.starting_ollama": "Ollama \u{3092}\u{8D77}\u{52D5}\u{4E2D}\u{2026}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{3066}\u{3044}\u{308B}\u{3068}\u{304D}\u{306B}\u{81EA}\u{52D5}\u{958B}\u{59CB}",
@@ -2071,6 +2083,8 @@ enum Strings {
         "preflight.retry": "\u{91CD}\u{8BD5}",
         "preflight.continue_anyway": "\u{4ECD}\u{7136}\u{7EE7}\u{7EED}",
         "preflight.open_settings": "\u{6253}\u{5F00}\u{8BBE}\u{7F6E}\u{2026}",
+        "preflight.start_ollama": "\u{542F}\u{52A8} Ollama",
+        "preflight.starting_ollama": "\u{6B63}\u{5728}\u{542F}\u{52A8} Ollama\u{2026}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{9501}\u{5B9A}\u{65F6}\u{81EA}\u{52A8}\u{5F00}\u{59CB}",
@@ -2357,6 +2371,8 @@ enum Strings {
         "preflight.retry": "\u{B2E4}\u{C2DC} \u{C2DC}\u{B3C4}",
         "preflight.continue_anyway": "\u{ACC4}\u{C18D} \u{C9C4}\u{D589}",
         "preflight.open_settings": "\u{C124}\u{C815} \u{C5F4}\u{AE30}\u{2026}",
+        "preflight.start_ollama": "Ollama \u{C2DC}\u{C791}",
+        "preflight.starting_ollama": "Ollama \u{C2DC}\u{C791} \u{C911}\u{2026}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{C7A0}\u{AE08} \u{C2DC} \u{C790}\u{B3D9} \u{C2DC}\u{C791}",
