@@ -860,8 +860,15 @@ struct BulkActionBar: View {
     /// True when the user is looking at the Queue filter — flips the
     /// selection actions from "Add to queue" to "Remove from queue" and
     /// surfaces the Clear-queue button. Other filters (.all, .tagged,
-    /// .untouched, .failed) keep the regular Add/Process/Clear/Export set.
+    /// .untouched, .failed) keep the regular Add/Process/Erase/Export set.
     private var isQueueView: Bool { store.filter == .pending }
+    /// "Add all unprocessed to queue" only makes sense when the user is
+    /// looking at a filter that could contain unprocessed photos. .all
+    /// and .untouched qualify; .tagged/.pending/.failed are by definition
+    /// already-touched and would just confuse the action.
+    private var canAddAllUnprocessed: Bool {
+        store.filter == .all || store.filter == .untouched
+    }
 
     var body: some View {
         // Two rows so the action set isn't cramped into a single line:
@@ -876,16 +883,18 @@ struct BulkActionBar: View {
                 // Always-visible enqueue-everything button — the primary
                 // "start a fresh batch" entry point now that the
                 // RunnerDock no longer carries an Add-to-Queue menu.
-                Button {
-                    Task { await store.engine?.addAllUnprocessedToQueue() }
-                } label: {
-                    Label(loc.t("button.add_all_unprocessed"), systemImage: "photo.on.rectangle.angled")
+                if canAddAllUnprocessed {
+                    Button {
+                        Task { await store.engine?.addAllUnprocessedToQueue() }
+                    } label: {
+                        Label(loc.t("button.add_all_unprocessed"), systemImage: "photo.on.rectangle.angled")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .help(loc.t("button.add_all_unprocessed"))
+                    .disabled(store.engine == nil
+                              || store.engine?.state == .running
+                              || store.engine?.state == .enumerating)
                 }
-                .buttonStyle(.borderedProminent)
-                .help(loc.t("button.add_all_unprocessed"))
-                .disabled(store.engine == nil
-                          || store.engine?.state == .running
-                          || store.engine?.state == .enumerating)
 
                 // Clear-queue is only meaningful (and only shown) when
                 // looking at the Queue view; everywhere else it'd be an
@@ -955,12 +964,18 @@ struct BulkActionBar: View {
                     .help(loc.t("bulk.process_now_help"))
                     .disabled(store.singleSelection == nil)
 
-                    Button(role: .destructive) {
-                        showingClearConfirm = true
-                    } label: {
-                        Label(loc.t("button.clear"), systemImage: "eraser")
+                    // "Erase description" only makes sense outside the
+                    // Queue view — pending photos haven't been described
+                    // yet, so erasing would be a no-op for the user's
+                    // mental model.
+                    if !isQueueView {
+                        Button(role: .destructive) {
+                            showingClearConfirm = true
+                        } label: {
+                            Label(loc.t("button.erase_description"), systemImage: "eraser")
+                        }
+                        .help(loc.t("bulk.clear_help"))
                     }
-                    .help(loc.t("bulk.clear_help"))
 
                     Button {
                         runExport()

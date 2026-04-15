@@ -385,6 +385,11 @@ final class LibraryStore {
     func setFilter(_ f: Filter) {
         guard filter != f else { return }
         filter = f
+        // A selection that was meaningful in the previous filter (e.g.
+        // a tagged photo) is rarely meaningful in the new one, and the
+        // bulk-action bar reads the selection as "things you're acting on
+        // right now." Reset it so the user starts each filter view clean.
+        clearSelection()
         rebuildDisplayOrder()
     }
 
@@ -784,11 +789,24 @@ final class LibraryStore {
             for id in ids {
                 if let row = try? await q.fetchRow(id: id) {
                     rows[id] = row
+                } else {
+                    // Defensive: if the row no longer exists, drop the
+                    // cached entry so the view doesn't keep showing a
+                    // ghost.
+                    rows.removeValue(forKey: id)
                 }
             }
         case .updated(let id):
             if let row = try? await q.fetchRow(id: id) {
                 rows[id] = row
+            } else {
+                // The row was deleted (e.g. removeFromQueue / clearQueue
+                // broadcast .updated with a now-missing id). Drop it
+                // from the cache so pendingCount and the Queue filter
+                // stop counting it. Without this the row stays visible
+                // in the Queue view forever even though it's gone from
+                // the database.
+                rows.removeValue(forKey: id)
             }
         }
         // Rebuild the tag index AND the display order. Full-rebuild is the
