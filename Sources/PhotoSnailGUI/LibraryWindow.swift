@@ -1497,7 +1497,7 @@ struct RunnerDock: View {
                 )
             } else {
                 Button {
-                    engine.pause()
+                    engine.userPause()
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         ProgressView()

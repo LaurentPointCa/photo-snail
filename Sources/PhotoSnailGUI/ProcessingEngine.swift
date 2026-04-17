@@ -69,6 +69,19 @@ final class ProcessingEngine {
     /// pause a user-initiated batch just because they unlocked).
     private var startedByLockWatcher: Bool = false
 
+    /// Tracks that the last unlock auto-paused a lock-initiated run. If the
+    /// Mac re-locks before the user manually touched pause/resume, we treat
+    /// that re-lock as a continuation of the overnight batch and resume the
+    /// worker rather than skipping (because state == .running/.paused would
+    /// otherwise trip the auto-start guard in `handleScreenLocked`). Cleared
+    /// by any manual resume or by the re-lock consuming it.
+    private var pausedByUnlock: Bool = false
+
+    /// Tracks whether the worker was paused by a system sleep event so
+    /// `handleSystemDidWake` only auto-resumes sleep-paused runs (not
+    /// runs the user manually paused). Same pattern as `startedByLockWatcher`.
+    private var pausedBySleep: Bool = false
+
     /// Models discovered from Ollama at startup. Empty until `refreshAvailableModels()`
     /// completes (or returns empty if Ollama is unreachable).
     var availableModels: [OllamaModel] = []
@@ -115,6 +128,11 @@ final class ProcessingEngine {
     /// (after settings are loaded) and forwards screen lock/unlock events
     /// to `handleScreenLocked` / `handleScreenUnlocked`.
     private var lockWatcher: LockWatcher?
+
+    /// Manages IOKit power assertions (prevent idle sleep) and
+    /// NSWorkspace sleep/wake observers (pause on forced sleep).
+    /// Instantiated alongside the lock watcher in `loadInitialStats`.
+    private var sleepManager: SleepManager?
 
     // MARK: - Init
 
@@ -172,6 +190,20 @@ final class ProcessingEngine {
                 }
             )
         }
+
+        // 6. Install the sleep manager. Prevents idle sleep while
+        //    processing (IOKit assertion) and pauses/resumes the worker
+        //    gracefully around forced sleep (lid close, low battery).
+        if self.sleepManager == nil {
+            self.sleepManager = SleepManager(
+                onSleep: { [weak self] in
+                    Task { @MainActor in self?.handleSystemWillSleep() }
+                },
+                onWake: { [weak self] in
+                    Task { @MainActor in self?.handleSystemDidWake() }
+                }
+            )
+        }
     }
 
     /// Re-run the Ollama preflight. Invoked at startup and when the user
@@ -212,6 +244,24 @@ final class ProcessingEngine {
     /// start the worker and remember we did so (so unlock pauses it).
     func handleScreenLocked() async {
         guard autoStartWhenLocked else { return }
+
+        // If the previous unlock auto-paused an overnight batch and the user
+        // hasn't touched anything since, this re-lock cancels that pause and
+        // the worker continues. Without this, the guard below would bail out
+        // because state is .running (pending pause) or .paused, and no more
+        // work would happen while locked — the bug reported 2026-04-17.
+        if pausedByUnlock {
+            pausedByUnlock = false
+            if state == .paused || state == .running {
+                log.append(.info, "Screen locked — canceling unlock-pause, resuming batch")
+                startedByLockWatcher = true
+                resume()
+                return
+            }
+            // Worker finished between unlock and re-lock; fall through to
+            // the regular start path so a newly-enqueued photo can run.
+        }
+
         guard state == .idle || state == .finished else { return }
         try? await refreshStats()
         guard pendingCount > 0 else {
@@ -221,6 +271,28 @@ final class ProcessingEngine {
         log.append(.info, "Screen locked — auto-starting queue (\(pendingCount) pending)")
         startedByLockWatcher = true
         await start()
+    }
+
+    // MARK: - Sleep/wake handling
+
+    /// Called by SleepManager just before the system sleeps (lid close,
+    /// low battery, etc.). Pauses the worker so in-flight Ollama requests
+    /// don't fail into a dead network stack.
+    func handleSystemWillSleep() {
+        guard state == .running else { return }
+        log.append(.info, "System going to sleep — pausing worker")
+        pausedBySleep = true
+        pause()
+    }
+
+    /// Called by SleepManager after the system wakes. Resumes only if we
+    /// were the ones who paused (don't resume a user-initiated pause).
+    func handleSystemDidWake() {
+        guard pausedBySleep else { return }
+        pausedBySleep = false
+        log.append(.info, "System woke — resuming worker")
+        sleepManager?.preventIdleSleep()
+        resume()
     }
 
     /// Called by LockWatcher when the Mac unlocks. Pauses the worker only
@@ -235,6 +307,7 @@ final class ProcessingEngine {
         startedByLockWatcher = false
         guard state == .running else { return }
         log.append(.info, "Screen unlocked — auto-pausing queue")
+        pausedByUnlock = true
         pause()
     }
 
@@ -328,6 +401,7 @@ final class ProcessingEngine {
         statusMessage = "\(Localizer.shared.t("status.processing_verb"))..."
         log.append(.info, "Processing started — \(pendingCount) pending, \(doneCount) done, \(failedCount) failed")
 
+        sleepManager?.preventIdleSleep()
         launchWorker()
     }
 
@@ -469,11 +543,20 @@ final class ProcessingEngine {
         log.append(.info, "Pause requested")
     }
 
+    /// User-facing pause from the UI. Clears `pausedByUnlock` so a
+    /// subsequent re-lock won't undo the user's explicit pause.
+    func userPause() {
+        pausedByUnlock = false
+        pause()
+    }
+
     func resume() {
         isPausedFlag = false
+        pausedByUnlock = false
         state = .running
         statusMessage = Localizer.shared.t("status.resuming")
         log.append(.info, "Resumed")
+        sleepManager?.preventIdleSleep()
         pauseContinuation?.resume()
         pauseContinuation = nil
     }
@@ -581,6 +664,7 @@ final class ProcessingEngine {
                     await MainActor.run {
                         self?.state = .paused
                         self?.statusMessage = locPaused
+                        self?.sleepManager?.allowIdleSleep()
                     }
                     await withCheckedContinuation { cont in
                         Task { @MainActor in
@@ -599,6 +683,7 @@ final class ProcessingEngine {
                         await MainActor.run {
                             self?.state = .finished
                             self?.statusMessage = locDryrunComplete
+                            self?.sleepManager?.allowIdleSleep()
                             log.append(.success, "Dry-run complete — queue not mutated")
                         }
                         return
@@ -613,6 +698,7 @@ final class ProcessingEngine {
                     } catch {
                         await MainActor.run {
                             self?.statusMessage = "\(locQueueError): \(error)"
+                            self?.sleepManager?.allowIdleSleep()
                             log.append(.error, "Queue error: \(error)")
                         }
                         return
@@ -621,6 +707,7 @@ final class ProcessingEngine {
                         await MainActor.run {
                             self?.state = .finished
                             self?.statusMessage = locAllProcessed
+                            self?.sleepManager?.allowIdleSleep()
                             log.append(.success, "All photos processed")
                         }
                         return

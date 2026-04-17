@@ -325,7 +325,7 @@ enum Strings {
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Auto-start when Mac is locked",
-        "setting.auto_start_when_locked.help": "Start processing when the screen locks and pause when it unlocks. Useful for desktop Macs left running during long batches.",
+        "setting.auto_start_when_locked.help": "Start processing when the screen locks and pause when it unlocks. Prevents automatic sleep while processing. Useful for long batches.",
         "status.settings_saved": "Settings saved",
         "status.dryrun_complete": "Dry-run complete (queue not mutated)",
         "button.start": "Start Queue",
@@ -670,7 +670,7 @@ enum Strings {
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "D\u{00E9}marrer automatiquement quand le Mac est verrouill\u{00E9}",
-        "setting.auto_start_when_locked.help": "D\u{00E9}marrer le traitement au verrouillage de l'\u{00E9}cran et le mettre en pause au d\u{00E9}verrouillage. Utile pour les Mac de bureau laiss\u{00E9}s allum\u{00E9}s durant de longs traitements.",
+        "setting.auto_start_when_locked.help": "D\u{00E9}marrer le traitement au verrouillage de l'\u{00E9}cran et le mettre en pause au d\u{00E9}verrouillage. Emp\u{00EA}che la mise en veille automatique pendant le traitement. Utile pour les longs traitements.",
     ]
 
     // MARK: - Spanish
@@ -971,7 +971,7 @@ enum Strings {
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Iniciar autom\u{00E1}ticamente cuando el Mac est\u{00E1} bloqueado",
-        "setting.auto_start_when_locked.help": "Comienza el procesamiento al bloquearse la pantalla y se pausa al desbloquearla. \u{00DA}til para Macs de escritorio que quedan encendidos durante procesos largos.",
+        "setting.auto_start_when_locked.help": "Comienza el procesamiento al bloquearse la pantalla y se pausa al desbloquearla. Evita la suspensi\u{00F3}n autom\u{00E1}tica durante el procesamiento. \u{00DA}til para procesos largos.",
     ]
 
     // MARK: - German
@@ -1271,7 +1271,7 @@ enum Strings {
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Automatisch starten, wenn der Mac gesperrt ist",
-        "setting.auto_start_when_locked.help": "Verarbeitung beginnt, wenn der Bildschirm gesperrt wird, und pausiert beim Entsperren. N\u{00FC}tzlich f\u{00FC}r Desktop-Macs, die w\u{00E4}hrend langer Durchl\u{00E4}ufe laufen bleiben.",
+        "setting.auto_start_when_locked.help": "Verarbeitung beginnt, wenn der Bildschirm gesperrt wird, und pausiert beim Entsperren. Verhindert automatischen Ruhezustand w\u{00E4}hrend der Verarbeitung. N\u{00FC}tzlich f\u{00FC}r lange Durchl\u{00E4}ufe.",
     ]
 
     // MARK: - Portuguese
@@ -1572,7 +1572,7 @@ enum Strings {
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Iniciar automaticamente quando o Mac est\u{00E1} bloqueado",
-        "setting.auto_start_when_locked.help": "Come\u{00E7}a o processamento ao bloquear a tela e pausa ao desbloquear. \u{00DA}til para Macs de mesa que ficam ligados durante processamentos longos.",
+        "setting.auto_start_when_locked.help": "Come\u{00E7}a o processamento ao bloquear a tela e pausa ao desbloquear. Impede a suspens\u{00E3}o autom\u{00E1}tica durante o processamento. \u{00DA}til para processamentos longos.",
     ]
 
     // MARK: - Japanese
@@ -1872,7 +1872,7 @@ enum Strings {
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{3066}\u{3044}\u{308B}\u{3068}\u{304D}\u{306B}\u{81EA}\u{52D5}\u{958B}\u{59CB}",
-        "setting.auto_start_when_locked.help": "\u{753B}\u{9762}\u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{308B}\u{3068}\u{51E6}\u{7406}\u{3092}\u{958B}\u{59CB}\u{3057}\u{3001}\u{30ED}\u{30C3}\u{30AF}\u{89E3}\u{9664}\u{3067}\u{4E00}\u{6642}\u{505C}\u{6B62}\u{3057}\u{307E}\u{3059}\u{3002}\u{9577}\u{6642}\u{9593}\u{306E}\u{30D0}\u{30C3}\u{30C1}\u{4E2D}\u{306B}\u{8D77}\u{52D5}\u{3057}\u{305F}\u{307E}\u{307E}\u{306E}\u{30C7}\u{30B9}\u{30AF}\u{30C8}\u{30C3}\u{30D7} Mac \u{306B}\u{4FBF}\u{5229}\u{3067}\u{3059}\u{3002}",
+        "setting.auto_start_when_locked.help": "\u{753B}\u{9762}\u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{308B}\u{3068}\u{51E6}\u{7406}\u{3092}\u{958B}\u{59CB}\u{3057}\u{3001}\u{30ED}\u{30C3}\u{30AF}\u{89E3}\u{9664}\u{3067}\u{4E00}\u{6642}\u{505C}\u{6B62}\u{3057}\u{307E}\u{3059}\u{3002}\u{51E6}\u{7406}\u{4E2D}\u{306F}\u{81EA}\u{52D5}\u{30B9}\u{30EA}\u{30FC}\u{30D7}\u{3092}\u{9632}\u{6B62}\u{3057}\u{307E}\u{3059}\u{3002}\u{9577}\u{6642}\u{9593}\u{306E}\u{30D0}\u{30C3}\u{30C1}\u{306B}\u{4FBF}\u{5229}\u{3067}\u{3059}\u{3002}",
     ]
 
     // MARK: - Chinese (Simplified)
@@ -2172,7 +2172,7 @@ enum Strings {
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{9501}\u{5B9A}\u{65F6}\u{81EA}\u{52A8}\u{5F00}\u{59CB}",
-        "setting.auto_start_when_locked.help": "\u{5C4F}\u{5E55}\u{9501}\u{5B9A}\u{65F6}\u{5F00}\u{59CB}\u{5904}\u{7406}\u{FF0C}\u{89E3}\u{9501}\u{65F6}\u{6682}\u{505C}\u{3002}\u{9002}\u{7528}\u{4E8E}\u{957F}\u{65F6}\u{95F4}\u{6279}\u{5904}\u{7406}\u{671F}\u{95F4}\u{4FDD}\u{6301}\u{8FD0}\u{884C}\u{7684}\u{53F0}\u{5F0F} Mac\u{3002}",
+        "setting.auto_start_when_locked.help": "\u{5C4F}\u{5E55}\u{9501}\u{5B9A}\u{65F6}\u{5F00}\u{59CB}\u{5904}\u{7406}\u{FF0C}\u{89E3}\u{9501}\u{65F6}\u{6682}\u{505C}\u{3002}\u{5904}\u{7406}\u{671F}\u{95F4}\u{9632}\u{6B62}\u{81EA}\u{52A8}\u{4F11}\u{7720}\u{3002}\u{9002}\u{7528}\u{4E8E}\u{957F}\u{65F6}\u{95F4}\u{6279}\u{5904}\u{7406}\u{3002}",
     ]
 
     // MARK: - Korean
@@ -2472,6 +2472,6 @@ enum Strings {
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{C7A0}\u{AE08} \u{C2DC} \u{C790}\u{B3D9} \u{C2DC}\u{C791}",
-        "setting.auto_start_when_locked.help": "\u{D654}\u{BA74}\u{C774} \u{C7A0}\u{AE30}\u{BA74} \u{CC98}\u{B9AC}\u{B97C} \u{C2DC}\u{C791}\u{D558}\u{ACE0}, \u{C7A0}\u{AE08}\u{C774} \u{D574}\u{C81C}\u{B418}\u{BA74} \u{C77C}\u{C2DC} \u{C815}\u{C9C0}\u{D569}\u{B2C8}\u{B2E4}. \u{AE34} \u{BC30}\u{CE58} \u{C791}\u{C5C5} \u{C911} \u{ACC4}\u{C18D} \u{CF1C} \u{B450}\u{B294} \u{B370}\u{C2A4}\u{D06C}\u{D1B1} Mac\u{C5D0} \u{C720}\u{C6A9}\u{D569}\u{B2C8}\u{B2E4}.",
+        "setting.auto_start_when_locked.help": "\u{D654}\u{BA74}\u{C774} \u{C7A0}\u{AE30}\u{BA74} \u{CC98}\u{B9AC}\u{B97C} \u{C2DC}\u{C791}\u{D558}\u{ACE0}, \u{C7A0}\u{AE08}\u{C774} \u{D574}\u{C81C}\u{B418}\u{BA74} \u{C77C}\u{C2DC} \u{C815}\u{C9C0}\u{D569}\u{B2C8}\u{B2E4}. \u{CC98}\u{B9AC} \u{C911} \u{C790}\u{B3D9} \u{C7A0}\u{C790}\u{B9AC}\u{B97C} \u{BC29}\u{C9C0}\u{D569}\u{B2C8}\u{B2E4}. \u{AE34} \u{BC30}\u{CE58} \u{C791}\u{C5C5}\u{C5D0} \u{C720}\u{C6A9}\u{D569}\u{B2C8}\u{B2E4}.",
     ]
 }
