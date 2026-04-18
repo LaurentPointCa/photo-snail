@@ -9,13 +9,111 @@ public struct PromptBuilder {
     /// The default bare prompt — no Vision context. The English wording is the version
     /// that ran Phase D successfully. A French variant was trialled and reverted on
     /// 2026-04-07 (see memory: project_locale_decision.md).
+    ///
+    /// This is the **gemma4 baseline**. Qwen families use `qwenDefaultPrompt`, which
+    /// is the v20 consolidation from the 2026-04-18 research batch (see
+    /// `sample/PROMPT_RESEARCH.md`). Family selection happens in
+    /// `defaultPrompt(forModel:)`.
     public static let defaultPrompt: String = """
         Describe this image in 2-3 sentences. Then list 5-10 short tags (lowercase, comma-separated) that capture its content. Format strictly as:
         DESCRIPTION: <text>
         TAGS: <tag1>, <tag2>, ...
         """
 
-    /// Bare prompt, using a custom override if provided.
+    /// The default prompt for Qwen-family vision models (`qwen3-6`, `qwen2-vl`, …).
+    ///
+    /// This is v20 from the prompt-iteration work documented in
+    /// `sample/MODEL_COMPARISON.md` and `sample/PROMPT_RESEARCH.md`. Won 12/14
+    /// criteria across 20 tested iterations. Emits JSON (`{"description":…,"tags":[…]}`)
+    /// — CaptionParser handles both JSON and DESCRIPTION:/TAGS: formats.
+    ///
+    /// Winning tactics combined here: JSON output + "first char must be {" (format
+    /// compliance); confident definite language (unlocks perception on some photos);
+    /// "quote text exactly" (brand/OCR surfacing); few-shot brand exemplars
+    /// (BMW M, Dyson); contrastive negative exemplars (kills false positives
+    /// from color coincidence or mere outdoor setting); tag self-audit tying
+    /// category tags to described visual markers.
+    public static let qwenDefaultPrompt: String = """
+        Generate a description and searchable tags for this photo as JSON. Output ONLY the JSON object — no markdown, no preamble, no explanation. First character must be `{`.
+
+        Schema:
+        {
+          "description": "2-3 sentence prose in confident, definite language",
+          "tags": ["tag1", "tag2", "..."]
+        }
+
+        Description rules:
+        - Use confident, definite language. No "appears to be", "seems", "likely".
+        - Name object types (vacuum, sweatshirt, refrigerator, succulent, brake caliper), not appearance ("black-handled tool").
+        - If any text is legible — brand names, logos, signs, labels — quote it exactly in double quotes inside the description (escape as \\"). Brand examples: "Dyson", "BMW", "LEGO", "Boots", "Nike".
+        - If a location or landmark is clearly identifiable from multiple cues (red double-decker bus + British signage = London; Arcul de Triumf silhouette + Bucharest signage = Bucharest), name it.
+        - Describe every visible element — cakes, candles, unfinished counter edges, exposed plant roots, hot dogs, brand logos, identifiable landmarks.
+        - Never mention what is absent.
+        - No mood words (nostalgic, cozy, warm, peaceful).
+        - No speculation (decades ago, retro aesthetic).
+        - No meta-commentary (faded, vintage photo, pinkish tint).
+
+        Tags rules — 5 to 10 lowercase tags, one or two words each, spaces for multi-word tags (not hyphens):
+        - Include distinctive visible objects with brand names if you quoted them.
+        - Include setting: indoor/outdoor (only if distinctive), room type (kitchen, bedroom, workshop), city or landmark name if identified.
+        - Include category tags (birthday, meal, hike, renovation, repotting, travel, camping, cooking, gardening) ONLY when the concrete visual marker is in your description.
+        - Skip filler: wall, floor, ceiling, sky, ground, background, surface, object, scene.
+
+        Brand & landmark few-shot:
+        - BMW M brake caliper: "M" logo with red/blue/white tricolor stripes → include "bmw m" tag.
+        - Dyson vacuum: "Dyson" visible → include "dyson" tag.
+        - London: red double-decker bus + British storefronts → "london", "travel".
+        - Bucharest: Arcul de Triumf + Romanian context → "bucharest", "romania", "travel".
+
+        Tag self-audit (do NOT tag these without their marker):
+        - Skip `hike`/`camping` on outdoor scenes without hiking gear or tent+campfire.
+        - Skip `christmas`/`holiday` on scenes where green+red colors are just clothing or fabric (not christmas tree + ornaments).
+        - Skip `meal`/`cooking` on food photos where no one is eating or cooking.
+        - Skip `mannequin` if the figure is a real person, statue, or sculpture.
+
+        DO include these when their marker is present:
+        - Cake with lit candles OR party hat being worn → "birthday".
+        - Exposed plant roots + soil clinging → "repotting".
+        - Unfinished counter + support brackets + tool on top → "renovation".
+        - Identified city or landmark → "travel".
+
+        Respond with the JSON object only.
+        """
+
+    /// Short-family names that get the Qwen-tuned default prompt. Matches
+    /// `Sentinel.shortFamily(of:)` output. Keep narrow — only families that
+    /// have been validated against the v20 prompt. New Qwen variants can be
+    /// added as they are tested; unknown families keep the gemma4 baseline.
+    private static let qwenDefaultFamilies: Set<String> = [
+        "qwen3-6",
+        "qwen3-vl",
+        "qwen2-vl",
+    ]
+
+    /// Family-aware default prompt. Returns the Qwen v20 prompt for known
+    /// Qwen VL families, otherwise the gemma4 baseline.
+    public static func defaultPrompt(forModel model: String) -> String {
+        return defaultPrompt(forFamily: Sentinel.shortFamily(of: model))
+    }
+
+    /// Same as `defaultPrompt(forModel:)` but takes a pre-computed short
+    /// family string — convenient for callers (Settings, GUI) that already
+    /// have the family key in hand.
+    public static func defaultPrompt(forFamily family: String) -> String {
+        return qwenDefaultFamilies.contains(family) ? qwenDefaultPrompt : defaultPrompt
+    }
+
+    /// Bare prompt, using a custom override if provided, otherwise the
+    /// family-appropriate default for `model`.
+    public static func bare(override: String? = nil, forModel model: String) -> String {
+        if let custom = override, !custom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return custom
+        }
+        return defaultPrompt(forModel: model)
+    }
+
+    /// Legacy callers that don't know the model — returns the gemma4 baseline.
+    /// New code should prefer `bare(override:forModel:)`.
     public static func bare(override: String? = nil) -> String {
         if let custom = override, !custom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return custom

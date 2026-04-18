@@ -166,16 +166,27 @@ struct LanguageChangeSheet: View {
             return
         }
 
-        // Set the custom prompt to the pre-translated template for the target language
+        // Set the custom prompt to the pre-translated template for the target
+        // language and bump the active family's sentinel so new results are
+        // distinguishable from those written under the old prompt.
         let newPrompt = Localizer.promptTemplate(for: targetLanguage)
-        let newSentinel = Sentinel.bumpVersion(currentSentinel: engine.sentinel) ?? engine.sentinel
+        let activeFamily = Sentinel.shortFamily(of: engine.model)
+
+        var configs = engine.settingsSnapshot.modelConfigs
+        var cfg = configs[activeFamily] ?? ModelConfig()
+        cfg.customPrompt = newPrompt
+        cfg.promptLanguage = targetLanguage.code
+        if cfg.customSentinel == nil {
+            cfg.sentinelVersion = max(cfg.sentinelVersion + 1, 1)
+        }
+        configs[activeFamily] = cfg
 
         await engine.applyConfigChange(
             model: engine.model,
-            sentinel: newSentinel,
-            connection: engine.connection,
-            customPrompt: newPrompt,
-            promptLanguage: targetLanguage.code
+            apiProvider: engine.apiProvider,
+            ollama: engine.connection,
+            openai: engine.openaiConnection,
+            modelConfigs: configs
         )
 
         step = .translateExisting

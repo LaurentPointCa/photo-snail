@@ -88,6 +88,19 @@ cat > "${APP_DIR}/Contents/Info.plist" << PLIST
     <string>PhotoSnail writes AI-generated descriptions and tags back to your Photos library metadata.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>PhotoSnail drives Photos.app via AppleScript to write descriptions that sync via iCloud.</string>
+    <!--
+      PhotoSnail's only HTTP traffic is user-configured LLM endpoints:
+      Ollama on localhost, or a locally-hosted OpenAI-compatible server
+      on an arbitrary LAN hostname (e.g. *.localdomain, *.lan, raw IPs).
+      NSAllowsLocalNetworking only covers .local + unqualified names, so
+      we use the broader NSAllowsArbitraryLoads. The app initiates no
+      other network calls, so this doesn't expand the attack surface.
+    -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
     <key>NSHumanReadableCopyright</key>
     <string>MIT License</string>
 </dict>

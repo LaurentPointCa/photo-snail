@@ -10,52 +10,85 @@ import PhotoSnailCore
 enum QueueRunner {
 
     struct Config {
-        var model: String = "gemma4:31b"
+        var settings: Settings = .default
         var promptStyle: PromptStyle = .sideChannel
         var noDownsize: Bool = false
         var dbPath: URL = AssetQueue.defaultDBPath
         var concurrency: Int = 1
-        var sentinel: String = "ai:gemma4-v1"
         var dryRun: Bool = false
         var limit: Int = 0  // 0 = unlimited
-        var connection: OllamaConnection = .default
+
+        var model: String { settings.model }
+        var sentinel: String { settings.sentinel }
     }
 
     static func run(config: Config) async {
-        // 0. Ollama preflight — fail loud before any PhotoKit auth prompts
-        //    or library enumeration, since the whole run depends on Ollama
-        //    being reachable with the configured model.
-        let preflightClient = OllamaClient(connection: config.connection)
+        // 0. Provider preflight — fail loud before any PhotoKit auth prompts
+        //    or library enumeration, since the whole run depends on the LLM
+        //    backend being reachable with the configured model.
+        let imageOpts = OllamaImageOptions(downsize: !config.noDownsize)
+        let preflightClient = config.settings.makeLLMClient(imageOptions: imageOpts)
+        let providerName = config.settings.apiProvider.displayName
+        let providerURL: String
+        switch config.settings.apiProvider {
+        case .ollama: providerURL = config.settings.ollama.baseURL.absoluteString
+        case .openaiCompatible: providerURL = config.settings.openai.baseURL.absoluteString
+        }
         let preflight = await preflightClient.preflight(model: config.model)
         switch preflight {
         case .ok:
-            eprint("ollama preflight: ok (\(config.model) @ \(config.connection.baseURL.absoluteString))")
+            eprint("\(providerName) preflight: ok (\(config.model) @ \(providerURL))")
         case .unreachable(let reason):
-            eprint("""
-                ERROR: Ollama is not reachable at \(config.connection.baseURL.absoluteString)
-                reason: \(reason)
+            switch config.settings.apiProvider {
+            case .ollama:
+                eprint("""
+                    ERROR: Ollama is not reachable at \(providerURL)
+                    reason: \(reason)
 
-                Fix:
-                  brew install ollama     # if not installed
-                  ollama serve            # start the daemon
-                  ollama pull \(config.model)    # pull the model
+                    Fix:
+                      brew install ollama     # if not installed
+                      ollama serve            # start the daemon
+                      ollama pull \(config.model)    # pull the model
 
-                Or use --ollama-url to point at a different Ollama instance.
-                """)
+                    Or use --ollama-url to point at a different Ollama instance.
+                    """)
+            case .openaiCompatible:
+                eprint("""
+                    ERROR: OpenAI-compatible endpoint not reachable at \(providerURL)
+                    reason: \(reason)
+
+                    Start your local server (mlx-vlm, LM Studio, vLLM, ...) and
+                    confirm `curl \(providerURL)/models` returns JSON. Or pass
+                    --provider ollama to use Ollama instead.
+                    """)
+            }
             exit(2)
         case .modelMissing(let installed):
-            let installedList = installed.isEmpty ? "  (none installed)" : installed.map { "  \($0)" }.joined(separator: "\n")
-            eprint("""
-                ERROR: Ollama is reachable but model "\(config.model)" is not installed.
+            let installedList = installed.isEmpty ? "  (none available)" : installed.map { "  \($0)" }.joined(separator: "\n")
+            switch config.settings.apiProvider {
+            case .ollama:
+                eprint("""
+                    ERROR: Ollama is reachable but model "\(config.model)" is not installed.
 
-                Installed models:
-                \(installedList)
+                    Installed models:
+                    \(installedList)
 
-                Fix:
-                  ollama pull \(config.model)
+                    Fix:
+                      ollama pull \(config.model)
 
-                Or pass --model <name> to use a different model.
-                """)
+                    Or pass --model <name> to use a different model.
+                    """)
+            case .openaiCompatible:
+                eprint("""
+                    ERROR: OpenAI-compatible endpoint is reachable but model \
+                    "\(config.model)" is not in /v1/models.
+
+                    Available models:
+                    \(installedList)
+
+                    Load a different model on the server, or pass --model <name>.
+                    """)
+            }
             exit(2)
         }
 
@@ -107,7 +140,7 @@ enum QueueRunner {
         // 5. Worker loop
         let model = config.model
         let promptStyle = config.promptStyle
-        let imageOpts = OllamaImageOptions(downsize: !config.noDownsize)
+        let settings = config.settings
         let sentinel = config.sentinel
         let dryRun = config.dryRun
         let limit = config.limit
@@ -139,7 +172,7 @@ enum QueueRunner {
                     let workerPipeline = Pipeline(
                         model: model,
                         promptStyle: promptStyle,
-                        ollama: OllamaClient(imageOptions: imageOpts)
+                        llm: settings.makeLLMClient(imageOptions: imageOpts)
                     )
 
                     while true {

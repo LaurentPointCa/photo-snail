@@ -783,16 +783,14 @@ final class LibraryStore {
         guard let q = queue else { return }
         switch change {
         case .inserted(let ids):
-            // Patch each inserted id. Most will be no-ops (idempotent batch
-            // inserts) — the cost is one fetchRow per id and the store
-            // reflects whatever is currently persisted.
+            // Batched insert: one SQL fetch for the whole set, then patch.
+            // Absent rows (shouldn't happen here, but defensive) are
+            // dropped from the cache to avoid ghost entries.
+            let fetched = (try? await q.fetchRows(ids: ids)) ?? [:]
             for id in ids {
-                if let row = try? await q.fetchRow(id: id) {
+                if let row = fetched[id] {
                     rows[id] = row
                 } else {
-                    // Defensive: if the row no longer exists, drop the
-                    // cached entry so the view doesn't keep showing a
-                    // ghost.
                     rows.removeValue(forKey: id)
                 }
             }
@@ -800,20 +798,32 @@ final class LibraryStore {
             if let row = try? await q.fetchRow(id: id) {
                 rows[id] = row
             } else {
-                // The row was deleted (e.g. removeFromQueue / clearQueue
-                // broadcast .updated with a now-missing id). Drop it
-                // from the cache so pendingCount and the Queue filter
-                // stop counting it. Without this the row stays visible
-                // in the Queue view forever even though it's gone from
-                // the database.
+                rows.removeValue(forKey: id)
+            }
+        case .updatedMany(let ids):
+            // Same idea as .inserted: one batch SQL, one cache patch.
+            // Used by requeue / enqueueTranslation so large operations
+            // don't pay N actor hops.
+            let fetched = (try? await q.fetchRows(ids: ids)) ?? [:]
+            for id in ids {
+                if let row = fetched[id] {
+                    rows[id] = row
+                } else {
+                    rows.removeValue(forKey: id)
+                }
+            }
+        case .removed(let ids):
+            // No SQL needed — the queue has already deleted these. Drop
+            // them from the cache in one pass so pendingCount and the
+            // Queue filter update immediately.
+            for id in ids {
                 rows.removeValue(forKey: id)
             }
         }
-        // Rebuild the tag index AND the display order. Full-rebuild is the
-        // simple path; at 10k rows × ~8 tags it stays sub-ms for each, and
-        // change events arrive ~1/minute during a run plus at most a few per
-        // second during a bulk edit — easily inside budget. Phase 7 can
-        // switch to incremental patches if this shows up in traces.
+        // Single rebuild per event (batched or not). Previously each
+        // bulk mutator fanned out N `.updated` events, paying N full
+        // tag-index + display-order rebuilds — that was the dominant
+        // cost of large "Add to queue" / "Remove from queue" operations.
         rebuildTagIndex()
         rebuildDisplayOrder()
     }

@@ -67,6 +67,16 @@ public actor AssetQueue {
     public enum QueueChange: Sendable {
         case inserted([String])
         case updated(String)
+        /// Batched equivalent of many `.updated` events. Consumers should
+        /// fetch all ids in one go (`fetchRows(ids:)`) and rebuild any
+        /// derived state once — not per-id. Emitted by bulk mutators
+        /// (`requeue`, `enqueueTranslation`) so large operations don't
+        /// pay N rebuilds.
+        case updatedMany([String])
+        /// Batched "these rows are gone" signal. Emitted by
+        /// `removeFromQueue` and `clearQueue`. Consumers drop the ids
+        /// from their cache and rebuild once.
+        case removed([String])
     }
 
     /// Full-row projection for the library view and inspector. All fields after
@@ -319,8 +329,13 @@ public actor AssetQueue {
                 try update.reset()
             }
         }
+        // A single batched event — subscribers use `fetchRows(ids:)` and
+        // rebuild derived state once. The old code also emitted one
+        // `.updated(id)` per id on top of `.inserted`, which made large
+        // "Add to queue" operations O(N rebuilds). `.inserted` already
+        // asks consumers to patch every id, so the per-id loop was
+        // redundant.
         broadcast(.inserted(ids))
-        for id in ids { broadcast(.updated(id)) }
     }
 
     /// "Process now" upsert: insert the row if missing, then reset status to
@@ -588,6 +603,47 @@ public actor AssetQueue {
 
     /// Fetch one row by id. Returns nil if the row doesn't exist in the queue
     /// (e.g. an asset that hasn't been enumerated yet).
+    /// Batch variant of `fetchRow`. Returns a dictionary keyed by id; ids
+    /// with no matching row are simply absent (not nil entries). Used by
+    /// `LibraryStore` to patch its cache in one pass after a batched
+    /// change event — the per-id `fetchRow` path was O(N actor hops), and
+    /// at N=5000 that added seconds to large "Add to queue" / "Remove
+    /// from queue" operations.
+    ///
+    /// Chunks the input at 500 ids so the generated `IN (?,?,...)` clause
+    /// stays well below SQLite's parameter limit (32766 on modern builds,
+    /// but smaller chunks keep plan caching friendly).
+    public func fetchRows(ids: [String]) throws -> [String: Row] {
+        guard !ids.isEmpty else { return [:] }
+        var out: [String: Row] = [:]
+        out.reserveCapacity(ids.count)
+        let chunkSize = 500
+        var i = 0
+        while i < ids.count {
+            let end = min(i + chunkSize, ids.count)
+            let chunk = Array(ids[i..<end])
+            let placeholders = Array(repeating: "?", count: chunk.count).joined(separator: ",")
+            let sql = """
+                SELECT id, status, attempts, error, processed_at, description, tags_json,
+                       model, sentinel, vision_json, vision_ms, ollama_ms, total_ms, updated_at,
+                       task_type, original_description, original_tags_json
+                FROM assets
+                WHERE id IN (\(placeholders))
+                """
+            let stmt = try db.prepare(sql)
+            defer { stmt.finalize() }
+            for (idx, id) in chunk.enumerated() {
+                try stmt.bind(id, at: Int32(idx + 1))
+            }
+            while try stmt.step() == .row {
+                let row = Self.decodeRow(stmt)
+                out[row.id] = row
+            }
+            i = end
+        }
+        return out
+    }
+
     public func fetchRow(id: String) throws -> Row? {
         let stmt = try db.prepare("""
             SELECT id, status, attempts, error, processed_at, description, tags_json,
@@ -655,9 +711,7 @@ public actor AssetQueue {
                 try stmt.reset()
             }
         }
-        for id in ids {
-            broadcast(.updated(id))
-        }
+        broadcast(.updatedMany(ids))
     }
 
     /// Delete a set of pending rows from the queue. Untouched / done /
@@ -669,17 +723,25 @@ public actor AssetQueue {
     public func removeFromQueue(_ ids: [String]) throws -> Int {
         guard !ids.isEmpty else { return 0 }
         var deleted = 0
+        var deletedIds: [String] = []
+        deletedIds.reserveCapacity(ids.count)
         try db.transaction {
             let stmt = try db.prepare("DELETE FROM assets WHERE id = ? AND status = 'pending'")
             defer { stmt.finalize() }
             for id in ids {
                 try stmt.bind(id, at: 1)
                 _ = try stmt.step()
-                deleted += Int(db.changes())
+                let changed = Int(db.changes())
+                if changed > 0 {
+                    deleted += changed
+                    deletedIds.append(id)
+                }
                 try stmt.reset()
             }
         }
-        for id in ids { broadcast(.updated(id)) }
+        if !deletedIds.isEmpty {
+            broadcast(.removed(deletedIds))
+        }
         return deleted
     }
 
@@ -697,7 +759,7 @@ public actor AssetQueue {
         }
         guard !ids.isEmpty else { return 0 }
         try db.exec("DELETE FROM assets WHERE status = 'pending'")
-        for id in ids { broadcast(.updated(id)) }
+        broadcast(.removed(ids))
         return ids.count
     }
 
@@ -880,7 +942,7 @@ public actor AssetQueue {
                 try stmt.reset()
             }
         }
-        for id in ids { broadcast(.updated(id)) }
+        broadcast(.updatedMany(ids))
     }
 
     /// Mark a translation job as done. Updates description/tags with the

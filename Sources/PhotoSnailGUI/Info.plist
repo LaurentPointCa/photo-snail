@@ -20,5 +20,11 @@
 	<string>PhotoSnail writes AI-generated descriptions and tags back to your Photos library metadata.</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>PhotoSnail drives Photos.app via AppleScript to write descriptions that sync via iCloud.</string>
+	<!-- See PhotoSnailApp/Info.plist for the ATS rationale. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

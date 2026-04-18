@@ -22,7 +22,72 @@ public enum Sentinel {
     /// Extract the family token from an Ollama model name.
     public static func family(of model: String) -> String {
         let beforeColon = model.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? model
-        let lowered = beforeColon.lowercased()
+        return sanitize(beforeColon)
+    }
+
+    /// Like `family(of:)` but produces a compact family name for verbose
+    /// OpenAI-compatible model IDs such as `mlx-community/Qwen3.6-35B-A3B-4bit`.
+    /// Strips:
+    ///   - organization prefix (everything up to and including the last `/`)
+    ///   - quantization suffixes (`-4bit`, `-q4_K_M`, `-gptq`, `-mlx`, `-bf16`, …)
+    ///   - parameter-size suffixes (`-35b`, `-7b`, `-1.5b`, `-a3b` activation size)
+    ///   - instruction-tuning suffixes (`-instruct`, `-chat`, `-base`, `-it`)
+    /// Repeats until nothing matches, then sanitizes the remainder the same
+    /// way `family(of:)` does. Examples:
+    ///
+    ///   gemma4:31b                             → `gemma4`
+    ///   mlx-community/Qwen3.6-35B-A3B-4bit     → `qwen3-6`
+    ///   TheBloke/Llama-3.2-7B-Instruct-GPTQ    → `llama-3-2`
+    ///   mlx-community/Qwen2-VL-7B-Instruct     → `qwen2-vl`
+    ///
+    /// Used ONLY in the `propose(...)` path — existing persisted sentinels keep
+    /// parsing through `family(of:)`/`family(ofSentinel:)` so we never rewrite
+    /// sentinels we've already written into Photos.app metadata.
+    public static func shortFamily(of model: String) -> String {
+        // Ollama tags (`family:tag`) are already compact — defer to family(of:).
+        if model.contains(":") {
+            return family(of: model)
+        }
+
+        var s = model
+        // Strip org prefix: `mlx-community/...` → `...`
+        if let slash = s.lastIndex(of: "/") {
+            s = String(s[s.index(after: slash)...])
+        }
+
+        // Suffixes to strip iteratively. Order within the array doesn't matter
+        // because we loop until no pattern matches. Case-insensitive; anchored
+        // at end-of-string so only trailing segments go.
+        let suffixPatterns: [String] = [
+            "(?i)-(2bit|3bit|4bit|5bit|6bit|8bit|16bit)$",
+            "(?i)-q[0-9]+(_[a-z0-9]+)*$",
+            "(?i)-(fp16|bf16|fp32|fp8|int4|int8)$",
+            "(?i)-(gptq|awq|gguf|ggml|mlx)$",
+            "(?i)-(instruct|chat|base|it)$",
+            "(?i)-a?[0-9]+(\\.[0-9]+)?b$",
+        ]
+
+        var changed = true
+        while changed {
+            changed = false
+            for pattern in suffixPatterns {
+                guard let re = try? NSRegularExpression(pattern: pattern) else { continue }
+                let range = NSRange(s.startIndex..., in: s)
+                if let m = re.firstMatch(in: s, options: [], range: range), m.range.length > 0,
+                   let swiftRange = Range(m.range, in: s) {
+                    s.removeSubrange(swiftRange)
+                    changed = true
+                }
+            }
+        }
+
+        return sanitize(s)
+    }
+
+    /// Shared sanitizer: lowercase, non-alphanumerics → `-`, collapse runs,
+    /// trim leading/trailing dashes. Empty result becomes `unknown`.
+    private static func sanitize(_ input: String) -> String {
+        let lowered = input.lowercased()
         var out = ""
         for c in lowered {
             if c.isLetter || c.isNumber {
@@ -31,7 +96,6 @@ public enum Sentinel {
                 out.append("-")
             }
         }
-        // Collapse runs of dashes; trim leading/trailing dashes.
         while out.contains("--") {
             out = out.replacingOccurrences(of: "--", with: "-")
         }
@@ -80,14 +144,20 @@ public enum Sentinel {
     /// Propose a new sentinel for `model` if its family differs from `currentSentinel`'s.
     /// Returns `nil` when the family is unchanged (caller should keep `currentSentinel`).
     /// If `currentSentinel` is malformed or empty, returns a fresh `ai:<family>-v1`.
+    ///
+    /// Uses `shortFamily(of:)` for the proposed name so verbose OpenAI-compatible
+    /// IDs don't produce unwieldy sentinels. Both the short and long forms are
+    /// accepted as "same family" for the no-change check, so users who already
+    /// have a long-form sentinel persisted don't get prompted to migrate.
     public static func propose(forModel model: String, currentSentinel: String) -> String? {
-        let newFamily = family(of: model)
+        let newFamilyShort = shortFamily(of: model)
+        let newFamilyLong = family(of: model)
         if let currentFamily = family(ofSentinel: currentSentinel) {
-            if currentFamily == newFamily {
+            if currentFamily == newFamilyShort || currentFamily == newFamilyLong {
                 return nil
             }
         }
-        return make(family: newFamily, version: 1)
+        return make(family: newFamilyShort, version: 1)
     }
 
     /// Return `true` if `text` contains at least one PhotoSnail-shaped sentinel

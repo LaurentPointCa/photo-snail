@@ -54,10 +54,25 @@ final class ProcessingEngine {
 
     var model: String = Settings.default.model
     var sentinel: String = Settings.default.sentinel
+    /// Which LLM backend the engine is currently configured to use.
+    /// Persisted in `Settings.apiProvider`. The UI reads this to show the
+    /// right connection card in the Settings sheet.
+    var apiProvider: LLMProvider = .ollama
     var connection: OllamaConnection = .default
+    /// OpenAI-compatible connection block. Only consulted when
+    /// `apiProvider == .openaiCompatible`. Always populated from Settings
+    /// so the UI can render its fields even while Ollama is active.
+    var openaiConnection: OpenAIConnection = .default
     var customPrompt: String? = nil
     var promptLanguage: String? = nil
     var dryRun: Bool = false
+
+    /// The last Settings value loaded or saved. SettingsSheet reads this to
+    /// initialize its per-family draft state and to diff against edits so it
+    /// knows when a prompt change should bump the sentinel. Always reflects
+    /// the on-disk values (minus env-var-sourced API keys) — `withEnvOverrides()`
+    /// is applied only for transient runtime clients, never mirrored here.
+    var settingsSnapshot: Settings = .default
 
     /// When true, `handleScreenLocked` auto-starts the worker if the queue
     /// has work and `handleScreenUnlocked` pauses it afterwards. Persisted
@@ -154,9 +169,12 @@ final class ProcessingEngine {
             return
         }
         let runtime = loaded.withEnvOverrides()
+        self.settingsSnapshot = loaded   // on-disk shape, no env overrides
         self.model = runtime.model
         self.sentinel = runtime.sentinel
+        self.apiProvider = runtime.apiProvider
         self.connection = runtime.ollama
+        self.openaiConnection = runtime.openai
         self.customPrompt = runtime.customPrompt
         self.promptLanguage = runtime.promptLanguage
         self.autoStartWhenLocked = runtime.autoStartWhenLocked
@@ -206,27 +224,41 @@ final class ProcessingEngine {
         }
     }
 
-    /// Re-run the Ollama preflight. Invoked at startup and when the user
-    /// clicks "Retry" in the preflight failure sheet. Clears `.dismissed`
-    /// if the retry succeeds so a subsequent failure can surface again.
+    /// Re-run the LLM preflight against the currently-selected provider.
+    /// Invoked at startup and when the user clicks "Retry" in the preflight
+    /// failure sheet. Clears `.dismissed` if the retry succeeds so a
+    /// subsequent failure can surface again.
     func runPreflight() async {
         await MainActor.run { self.preflightStatus = .checking }
-        let client = OllamaClient(connection: self.connection)
+        let client = self.makeCurrentClient()
+        let providerLabel = self.apiProvider.displayName
         let result = await client.preflight(model: self.model)
         await MainActor.run {
             switch result {
             case .ok:
                 self.preflightStatus = .ok
-                self.log.append(.info, "Ollama preflight: ok (\(self.model))")
+                self.log.append(.info, "\(providerLabel) preflight: ok (\(self.model))")
             case .unreachable, .modelMissing:
                 // If the user already dismissed this session, don't pester.
                 if case .dismissed = self.preflightStatus {
-                    self.log.append(.warning, "Ollama preflight failed (dismissed): \(result)")
+                    self.log.append(.warning, "\(providerLabel) preflight failed (dismissed): \(result)")
                 } else {
                     self.preflightStatus = .failed(result)
-                    self.log.append(.error, "Ollama preflight failed: \(result.shortLabel)")
+                    self.log.append(.error, "\(providerLabel) preflight failed: \(result.shortLabel)")
                 }
             }
+        }
+    }
+
+    /// Build the `LLMClient` for the currently-selected provider. Centralized
+    /// so preflight, model discovery, and the worker loop all agree on which
+    /// backend is active.
+    private func makeCurrentClient() -> any LLMClient {
+        switch apiProvider {
+        case .ollama:
+            return OllamaClient(connection: self.connection)
+        case .openaiCompatible:
+            return OpenAIClient(connection: self.openaiConnection)
         }
     }
 
@@ -311,11 +343,11 @@ final class ProcessingEngine {
         pause()
     }
 
-    /// Probe Ollama and update `availableModels`. Safe to call repeatedly
-    /// (e.g. after the user changes the connection in the settings sheet).
+    /// Probe the current LLM provider and update `availableModels`. Safe to
+    /// call repeatedly (e.g. after the user changes the connection or
+    /// swaps providers in the settings sheet).
     func refreshAvailableModels() async {
-        let conn = self.connection
-        let client = OllamaClient(connection: conn)
+        let client = self.makeCurrentClient()
         do {
             let models = try await client.listModels()
             await MainActor.run {
@@ -330,37 +362,56 @@ final class ProcessingEngine {
         }
     }
 
-    /// Apply a model + sentinel + connection change from the settings sheet.
-    /// Persists to settings.json. Caller is responsible for asking the user
-    /// about sentinel choice on a family change BEFORE calling this.
-    /// Changes take effect on the next `start()` — does NOT interrupt a running batch.
-    func applyConfigChange(model: String, sentinel: String, connection: OllamaConnection,
-                           customPrompt: String? = nil, promptLanguage: String? = nil) async {
-        self.model = model
-        self.sentinel = sentinel
-        self.connection = connection
-        self.customPrompt = customPrompt
-        self.promptLanguage = promptLanguage
-
-        // Persist (without env-var overrides — those are runtime-only).
-        // Build a Settings from current state, but strip the env-var key if present
-        // so we don't accidentally write the env value to disk.
-        let envKey = ProcessInfo.processInfo.environment["PHOTO_SNAIL_OLLAMA_API_KEY"]
-        var persisted = connection
-        if let envKey = envKey, !envKey.isEmpty, persisted.apiKey == envKey {
-            persisted.apiKey = nil
+    /// Apply a full Settings change from the settings sheet. Persists the
+    /// entire `modelConfigs` dict so every family's prompt/sentinel/language
+    /// survives, even the ones that aren't currently active. Changes take
+    /// effect on the next `start()` — does NOT interrupt a running batch.
+    func applyConfigChange(model: String,
+                           apiProvider: LLMProvider,
+                           ollama: OllamaConnection,
+                           openai: OpenAIConnection,
+                           modelConfigs: [String: ModelConfig]) async {
+        // Strip any env-var-sourced keys so we don't accidentally write
+        // the env value to disk.
+        let env = ProcessInfo.processInfo.environment
+        var persistedOllama = ollama
+        if let k = env["PHOTO_SNAIL_OLLAMA_API_KEY"], !k.isEmpty, persistedOllama.apiKey == k {
+            persistedOllama.apiKey = nil
         }
-        let s = Settings(model: model, sentinel: sentinel, ollama: persisted,
-                         customPrompt: customPrompt, promptLanguage: promptLanguage,
-                         autoStartWhenLocked: autoStartWhenLocked)
+        var persistedOpenAI = openai
+        if let k = env["PHOTO_SNAIL_OPENAI_API_KEY"], !k.isEmpty, persistedOpenAI.apiKey == k {
+            persistedOpenAI.apiKey = nil
+        }
+
+        // Build the saved (on-disk) shape from the existing snapshot so we
+        // preserve fields we don't edit here (appLanguage, autoStartWhenLocked).
+        var saved: Settings = settingsSnapshot
+        saved.model = model
+        saved.apiProvider = apiProvider
+        saved.ollama = persistedOllama
+        saved.openai = persistedOpenAI
+        saved.autoStartWhenLocked = autoStartWhenLocked
+        saved.modelConfigs = modelConfigs
+
         do {
-            try s.save()
+            try saved.save()
+            settingsSnapshot = saved
             statusMessage = Localizer.shared.t("status.settings_saved")
         } catch {
             statusMessage = "\(Localizer.shared.t("error.save_failed")): \(error)"
         }
 
-        // Re-probe Ollama with the new connection.
+        // Mirror the active config into the engine's read-through fields so
+        // the worker loop picks up the new values on the next start.
+        self.model = saved.model
+        self.sentinel = saved.sentinel
+        self.apiProvider = saved.apiProvider
+        self.connection = saved.ollama
+        self.openaiConnection = saved.openai
+        self.customPrompt = saved.customPrompt
+        self.promptLanguage = saved.promptLanguage
+
+        // Re-probe the (possibly-new) provider.
         await refreshAvailableModels()
     }
 
@@ -602,7 +653,9 @@ final class ProcessingEngine {
         let queue = self.queue
         let model = self.model
         let sentinel = self.sentinel
-        let connection = self.connection
+        let apiProvider = self.apiProvider
+        let ollamaConnection = self.connection
+        let openaiConnection = self.openaiConnection
         let customPrompt = self.customPrompt
         let promptLanguage = self.promptLanguage
         let dryRun = self.dryRun
@@ -635,11 +688,20 @@ final class ProcessingEngine {
                 OllamaPriorityManager.restore(entries: priorityEntries)
             }
 
-            let ollamaClient = OllamaClient(connection: connection)
+            // Build the right LLM client for the selected provider. The
+            // translation branch reuses the same client — both Ollama and
+            // OpenAI-compatible implement `generateText`.
+            let llmClient: any LLMClient
+            switch apiProvider {
+            case .ollama:
+                llmClient = OllamaClient(connection: ollamaConnection)
+            case .openaiCompatible:
+                llmClient = OpenAIClient(connection: openaiConnection)
+            }
             let pipeline = Pipeline(
                 model: model,
                 promptStyle: .sideChannel,
-                ollama: ollamaClient,
+                llm: llmClient,
                 customPrompt: customPrompt
             )
 
@@ -753,7 +815,7 @@ final class ProcessingEngine {
                             TAGS: \(origTags.joined(separator: ", "))
                             """
                         let t0 = Date()
-                        let textResult = try await ollamaClient.generateText(model: model, prompt: translationPrompt)
+                        let textResult = try await llmClient.generateText(model: model, prompt: translationPrompt)
                         let ollamaMs = Int64(Date().timeIntervalSince(t0) * 1000)
                         let parsed = CaptionParser.parse(textResult.response)
 

@@ -16,7 +16,7 @@ The user's priorities, in order:
 
 ## Status
 
-Phases A–L complete. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, failure inspector, custom prompt editor, and runtime localization (8 languages). Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
+Phases A–L complete, plus a 2026-04-18 drop adding OpenAI-compatible (local) provider support and a lock-watcher auto-resume fix. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, failure inspector, custom prompt editor, runtime localization (8 languages), and a provider toggle between Ollama and a locally-hosted OpenAI-compatible server (mlx-vlm, LM Studio, vLLM). Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
 
 **Phase L (v0.1.2, 2026-04-14):** External-tester feedback batch. Queue is now empty by default (no auto-enroll on first launch). New "Add all unprocessed to queue" / "Add to queue" / "Process now" / "Remove from queue" / "Clear queue" actions. AssetQueue schema bumped to v3 with a `priority` column so Process now jumps ahead of FIFO. Description preservation: write-back reads pre-description and prepends user text when no PhotoSnail sentinel is found. Ollama preflight at startup with a blocking sheet (and one-click Start Ollama). LockWatcher + auto-start-when-locked toggle. OllamaPriorityManager renices Ollama during batches. UI labels normalized: "PhotoSnail" (one word) everywhere; "Start Queue" / "Queued" / "Erase description" replace older terms. Off-main-thread library enumeration so the UI doesn't freeze on large libraries. New `Tests/PhotoSnailCoreTests` target covers Sentinel and Pipeline.formatDescription.
 
@@ -90,6 +90,26 @@ The stop-list catches the residual edge case where a generic English/French word
 The user lives in QC (French context). A French prompt with brand preservation was trialled and worked (~10% slowdown, fluent French descriptions, brands preserved). User reverted to English the same session. The bilingual stop-list is kept regardless because OCR text can still be French even when the LLM speaks English.
 
 If asked to revisit French, see `project_locale_decision.md` — the prompt template is documented there.
+
+### OpenAI-compatible provider (added 2026-04-18)
+
+Settings grew a `LLMProvider` enum (`ollama` | `openaiCompatible`) persisted as `apiProvider`. The default is `.ollama` to preserve the privacy-first default. `.openaiCompatible` is intended for **locally-hosted** OpenAI-compatible servers (mlx-vlm, LM Studio, vLLM) — not for `api.openai.com`. The Settings sheet shows a persistent banner above the OpenAI connection fields reminding users of this.
+
+Architecture: `PhotoSnailCore/LLMClient.swift` defines a `LLMClient` protocol with `listModels()`, `preflight(model:)`, `generateCaption(...)`, `generateText(...)`. `OllamaClient` and `OpenAIClient` both conform. `Pipeline` takes `any LLMClient`. `Settings.makeLLMClient()` builds the right client from the current config. `ProcessingEngine` and `QueueRunner` both route through it.
+
+OpenAI mapping:
+- `GET /models` → `LLMModel` entries (size unknown → `sizeBytes: nil`).
+- `POST /chat/completions` with `messages: [{role: user, content: [{type: text, text: prompt}, {type: image_url, image_url: {url: "data:image/jpeg;base64,..."}}]}]` for captions; plain `{role: user, content: prompt}` for translation.
+- Same downsize policy as Ollama (1024 px JPEG q=0.8) via `OpenAIImageOptions` mirroring `OllamaImageOptions`.
+- `max_tokens: 1024`, `temperature: 0.3`. Higher cap than most local-server defaults — prevents the DESCRIPTION + TAGS output from getting truncated.
+
+Schema v1 → v2: adds `apiProvider` and `openai: OpenAIConnection` block. Old v1 files (no `apiProvider`, no `openai`) decode cleanly with `.ollama` and defaults. `PHOTO_SNAIL_OPENAI_API_KEY` env var mirrors the Ollama one and is applied by `withEnvOverrides()` without persisting.
+
+CLI flags: `--provider ollama|openai`, `--openai-url`, `--openai-key`, `--openai-header K=V`. `--api-test` is the new provider-agnostic probe (`--ollama-test` kept as an alias).
+
+**ATS**: both `Info.plist` files now set `NSAllowsArbitraryLoads = true`. Required because `NSAllowsLocalNetworking` only covers `.local` and unqualified hostnames, not Bonjour variants like `*.localdomain` or raw LAN IPs. The app's only network traffic is user-configured LLM endpoints, so the broader allow isn't a meaningful expansion of attack surface.
+
+**Known limitation**: sentinel family derivation (`Sentinel.family(of:)`) splits on the first `:` — Ollama models like `gemma4:31b` become family `gemma4`, while OpenAI model IDs like `mlx-community/Qwen3.6-35B-A3B-4bit` have no `:` so the whole string sanitizes into the family. That's fine — it just means each distinct OpenAI model ID yields its own sentinel family. Combine with `--sentinel`/`--keep-sentinel` to keep your sentinel stable if you swap model IDs under the same family in your head.
 
 ### Configurable Ollama connection + sentinel (added 2026-04-11)
 

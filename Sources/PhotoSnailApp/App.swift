@@ -1,56 +1,59 @@
 import Foundation
 import PhotoSnailCore
 
-// Usage: photo-snail-app [--list [N]] [--list-models] [--ollama-test] [--verify-queue]
+// Usage: photo-snail-app [--list [N]] [--list-models] [--api-test] [--verify-queue]
+//                      [--provider ollama|openai]
 //                      [--model <name>] [--bare|--hybrid] [--no-downsize]
 //                      [--db <path>] [--concurrency <N>]
 //                      [--sentinel <marker>] [--keep-sentinel]
 //                      [--ollama-url <url>] [--ollama-key <key>] [--ollama-header K=V ...]
+//                      [--openai-url <url>] [--openai-key <key>] [--openai-header K=V ...]
 //                      [--dry-run] [--limit <N>]
 //
 //   --list [N]           List N most-recent image assets and exit (default: 10)
-//   --list-models        Print Ollama's installed models and exit
-//   --ollama-test        Probe Ollama (/api/tags) with current config and exit
+//   --list-models        Print the current provider's installed/available models and exit
+//   --api-test           Probe the current provider with current config and exit.
+//                        Alias: --ollama-test (kept for back-compat).
 //   --verify-queue       Open the queue (triggers any pending schema migration),
-//                        print schema version + row counts, and exit. Useful as
-//                        a one-shot health check or to trigger the v0→v1
-//                        migration without starting a real batch.
-//   --model <name>       Ollama model to use (e.g. gemma4:31b, llava:13b)
-//                        Persists to settings.json. Switching to a different family
-//                        requires --sentinel or --keep-sentinel.
+//                        print schema version + row counts, and exit.
+//   --provider NAME      LLM backend: ollama (default) or openai (OpenAI-compatible,
+//                        local endpoints only — mlx-vlm, LM Studio, vLLM, ...).
+//   --model <name>       Model name. Ollama: gemma4:31b, llava:13b, ...
+//                        OpenAI-compatible: whatever `/v1/models` returns.
 //   --bare               Pure bare prompt, no Vision pre-pass (control arm)
 //   --hybrid             Inject Vision findings into the LLM prompt (slower)
 //   (default)            Side-channel (v3): Vision runs for OCR rescue, bare prompt
-//   --no-downsize        Send original image to Ollama (default: downsize to 1024 px)
+//   --no-downsize        Send original image (default: downsize to 1024 px)
 //   --db <path>          Override queue DB location
 //   --concurrency <N>    Number of concurrent workers (default: 1)
 //   --sentinel <marker>  Override the sentinel marker. Saved to settings.json.
-//   --keep-sentinel      Keep the existing settings.json sentinel even when --model
-//                        changes the model family. Without this (and without
-//                        --sentinel), a family change is rejected with an error.
+//   --keep-sentinel      Keep existing sentinel on model family change.
 //   --ollama-url <url>   Ollama base URL (default: http://localhost:11434)
-//   --ollama-key <key>   API key, sent as Authorization: Bearer <key>.
-//                        Saved to settings.json (0600). Set
-//                        PHOTO_SNAIL_OLLAMA_API_KEY in env to avoid persisting.
-//   --ollama-header K=V  Custom header (repeatable). Use for proxies with
-//                        non-Bearer auth schemes (Basic, X-API-Key, etc.).
-//                        Headers override --ollama-key if both set Authorization.
-//   --dry-run            Run pipeline but skip Photos.app write-back
+//   --ollama-key <key>   Ollama API key (Bearer). Env: PHOTO_SNAIL_OLLAMA_API_KEY.
+//   --ollama-header K=V  Custom Ollama header (repeatable).
+//   --openai-url <url>   OpenAI-compatible base URL (e.g. http://host:9090/v1)
+//   --openai-key <key>   OpenAI API key (Bearer). Env: PHOTO_SNAIL_OPENAI_API_KEY.
+//   --openai-header K=V  Custom OpenAI header (repeatable).
+//   --dry-run            Run pipeline but skip Photos.app write-back + queue mutation
 //   --limit <N>          Stop after N new photos processed (default: unlimited)
 
 struct AppArgs {
     var list: Int? = nil          // nil = not listing, Int = number to list
     var listModels: Bool = false
-    var ollamaTest: Bool = false
+    var apiTest: Bool = false
     var verifyQueue: Bool = false
 
     // CLI overrides; nil means "use whatever is in settings.json"
+    var apiProvider: LLMProvider? = nil
     var model: String? = nil
     var sentinel: String? = nil
     var keepSentinel: Bool = false
     var ollamaURL: String? = nil
     var ollamaKey: String? = nil
     var ollamaHeaders: [String: String] = [:]
+    var openaiURL: String? = nil
+    var openaiKey: String? = nil
+    var openaiHeaders: [String: String] = [:]
 
     var promptStyle: PromptStyle = .sideChannel
     var noDownsize: Bool = false
@@ -75,10 +78,22 @@ func parseArgs(_ argv: [String]) -> AppArgs {
             }
         case "--list-models":
             out.listModels = true
-        case "--ollama-test":
-            out.ollamaTest = true
+        case "--api-test", "--ollama-test":
+            out.apiTest = true
         case "--verify-queue":
             out.verifyQueue = true
+        case "--provider":
+            i += 1
+            if i < argv.count {
+                switch argv[i].lowercased() {
+                case "ollama":
+                    out.apiProvider = .ollama
+                case "openai", "openai-compatible":
+                    out.apiProvider = .openaiCompatible
+                default:
+                    FileHandle.standardError.write(Data("unknown --provider: \(argv[i]) (expected: ollama|openai)\n".utf8))
+                }
+            }
         case "--model":
             i += 1
             if i < argv.count { out.model = argv[i] }
@@ -117,6 +132,24 @@ func parseArgs(_ argv: [String]) -> AppArgs {
                     FileHandle.standardError.write(Data("ignoring --ollama-header without '=': \(kv)\n".utf8))
                 }
             }
+        case "--openai-url":
+            i += 1
+            if i < argv.count { out.openaiURL = argv[i] }
+        case "--openai-key":
+            i += 1
+            if i < argv.count { out.openaiKey = argv[i] }
+        case "--openai-header":
+            i += 1
+            if i < argv.count {
+                let kv = argv[i]
+                if let eq = kv.firstIndex(of: "=") {
+                    let k = String(kv[..<eq])
+                    let v = String(kv[kv.index(after: eq)...])
+                    if !k.isEmpty { out.openaiHeaders[k] = v }
+                } else {
+                    FileHandle.standardError.write(Data("ignoring --openai-header without '=': \(kv)\n".utf8))
+                }
+            }
         case "--dry-run":
             out.dryRun = true
         case "--limit":
@@ -135,14 +168,17 @@ func parseArgs(_ argv: [String]) -> AppArgs {
 
 private func printHelp() {
     print("""
-    usage: photo-snail-app [--list [N]] [--list-models] [--ollama-test]
+    usage: photo-snail-app [--list [N]] [--list-models] [--api-test]
+                           [--provider ollama|openai]
                            [--model <name>] [--bare|--hybrid] [--no-downsize]
                            [--db <path>] [--concurrency <N>]
                            [--sentinel <marker>] [--keep-sentinel]
                            [--ollama-url <url>] [--ollama-key <key>] [--ollama-header K=V ...]
+                           [--openai-url <url>] [--openai-key <key>] [--openai-header K=V ...]
                            [--dry-run] [--limit <N>]
 
-    Run with --help to see this message. See CLAUDE.md for the sentinel rule
+    --provider openai selects a locally-hosted OpenAI-compatible endpoint
+    (mlx-vlm, LM Studio, vLLM, ...). See CLAUDE.md for the sentinel rule
     and the API key storage tradeoff.
     """)
 }
@@ -163,7 +199,12 @@ private func eprint(_ s: String) {
 private func mergeSettings(loaded: Settings, args: AppArgs) -> Settings {
     var s = loaded
 
-    // 1. Ollama connection overrides
+    // 0. Provider selection
+    if let p = args.apiProvider {
+        s.apiProvider = p
+    }
+
+    // 1a. Ollama connection overrides
     if let url = args.ollamaURL {
         if let parsed = URL(string: url) {
             s.ollama.baseURL = parsed
@@ -181,24 +222,48 @@ private func mergeSettings(loaded: Settings, args: AppArgs) -> Settings {
         }
     }
 
+    // 1b. OpenAI-compatible connection overrides
+    if let url = args.openaiURL {
+        if let parsed = URL(string: url) {
+            s.openai.baseURL = parsed
+        } else {
+            eprint("ERROR: --openai-url is not a valid URL: \(url)")
+            exit(1)
+        }
+    }
+    if let key = args.openaiKey {
+        s.openai.apiKey = key.isEmpty ? nil : key
+    }
+    if !args.openaiHeaders.isEmpty {
+        for (k, v) in args.openaiHeaders {
+            s.openai.headers[k] = v
+        }
+    }
+
     // 2. Model + sentinel — interlocked by the family-change gate.
     let newModel = args.model ?? loaded.model
     let modelChanged = (newModel != loaded.model)
+    // Capture the loaded sentinel BEFORE we touch `s.model`; under the
+    // per-family schema, `s.sentinel` is derived from the active family so
+    // swapping the model first would change what we'd read here.
+    let loadedSentinel = loaded.sentinel
 
     if let explicit = args.sentinel {
         // Explicit sentinel always wins.
         s.model = newModel
         s.sentinel = explicit
     } else if args.keepSentinel {
-        // Keep existing sentinel even if family is changing.
+        // Keep existing sentinel even if family is changing. Re-apply it
+        // explicitly — if the family changed, it lands as a customSentinel
+        // pin on the new family's ModelConfig.
         s.model = newModel
-        // s.sentinel unchanged
+        s.sentinel = loadedSentinel
     } else if modelChanged {
         // No explicit sentinel, no --keep-sentinel: gate on family change.
         if Sentinel.propose(forModel: newModel, currentSentinel: loaded.sentinel) != nil {
             // Family changed → refuse without explicit choice.
             let oldFamily = Sentinel.family(ofSentinel: loaded.sentinel) ?? "(unknown)"
-            let newFamily = Sentinel.family(of: newModel)
+            let newFamily = Sentinel.shortFamily(of: newModel)
             let proposed = Sentinel.make(family: newFamily, version: 1)
             eprint("""
             ERROR: switching from model '\(loaded.model)' (family '\(oldFamily)') \
@@ -222,22 +287,28 @@ private func mergeSettings(loaded: Settings, args: AppArgs) -> Settings {
 
 // MARK: - --list-models
 
-private func runListModels(connection: OllamaConnection, currentModel: String) async {
-    eprint("ollama: \(connection.baseURL.absoluteString)  key: \(connection.redactedKey)")
-    let client = OllamaClient(connection: connection)
+private func runListModels(settings: Settings) async {
+    let client = settings.makeLLMClient()
+    switch settings.apiProvider {
+    case .ollama:
+        eprint("provider: ollama  url: \(settings.ollama.baseURL.absoluteString)  key: \(settings.ollama.redactedKey)")
+    case .openaiCompatible:
+        eprint("provider: openai-compatible  url: \(settings.openai.baseURL.absoluteString)  key: \(settings.openai.redactedKey)")
+    }
     do {
         let models = try await client.listModels()
         if models.isEmpty {
-            print("(no models installed)")
+            print("(no models available)")
             return
         }
         // Sort by name for stable output.
         let sorted = models.sorted { $0.name < $1.name }
         let nameWidth = max(20, sorted.map(\.name.count).max() ?? 20)
         for m in sorted {
-            let marker = (m.name == currentModel) ? "*" : " "
+            let marker = (m.name == settings.model) ? "*" : " "
             let padded = m.name.padding(toLength: nameWidth, withPad: " ", startingAt: 0)
-            print("\(marker) \(padded)  \(m.sizeLabel)")
+            let size = m.sizeLabel ?? ""
+            print("\(marker) \(padded)  \(size)")
         }
         print("")
         print("(* = current; set with --model <name>)")
@@ -294,14 +365,19 @@ private func runVerifyQueue(dbPath: URL?) async {
     exit(0)
 }
 
-// MARK: - --ollama-test
+// MARK: - --api-test
 
-private func runOllamaTest(connection: OllamaConnection) async {
-    eprint("ollama: \(connection.baseURL.absoluteString)  key: \(connection.redactedKey)")
-    let client = OllamaClient(connection: connection)
+private func runApiTest(settings: Settings) async {
+    let client = settings.makeLLMClient()
+    switch settings.apiProvider {
+    case .ollama:
+        eprint("provider: ollama  url: \(settings.ollama.baseURL.absoluteString)  key: \(settings.ollama.redactedKey)")
+    case .openaiCompatible:
+        eprint("provider: openai-compatible  url: \(settings.openai.baseURL.absoluteString)  key: \(settings.openai.redactedKey)")
+    }
     do {
         let models = try await client.listModels()
-        print("OK — Ollama responded, \(models.count) model(s) installed")
+        print("OK — \(settings.apiProvider.displayName) responded, \(models.count) model(s) available")
         exit(0)
     } catch {
         eprint("FAIL — \(error)")
@@ -337,11 +413,11 @@ struct App {
             return
         }
         if args.listModels {
-            await runListModels(connection: runtime.ollama, currentModel: runtime.model)
+            await runListModels(settings: runtime)
             return
         }
-        if args.ollamaTest {
-            await runOllamaTest(connection: runtime.ollama)
+        if args.apiTest {
+            await runApiTest(settings: runtime)
             return
         }
         if args.verifyQueue {
@@ -353,9 +429,13 @@ struct App {
         //    settings layer (not the env-var layer).
         if effective.model != loaded.model
             || effective.sentinel != loaded.sentinel
+            || effective.apiProvider != loaded.apiProvider
             || effective.ollama.baseURL != loaded.ollama.baseURL
             || effective.ollama.apiKey != loaded.ollama.apiKey
-            || effective.ollama.headers != loaded.ollama.headers {
+            || effective.ollama.headers != loaded.ollama.headers
+            || effective.openai.baseURL != loaded.openai.baseURL
+            || effective.openai.apiKey != loaded.openai.apiKey
+            || effective.openai.headers != loaded.openai.headers {
             do {
                 try effective.save()
                 eprint("settings: saved \(Settings.defaultPath.path)")
@@ -365,19 +445,22 @@ struct App {
             }
         }
 
-        eprint("model: \(runtime.model)   sentinel: \(runtime.sentinel)")
-        eprint("ollama: \(runtime.ollama.baseURL.absoluteString)  key: \(runtime.ollama.redactedKey)")
+        eprint("provider: \(runtime.apiProvider.rawValue)   model: \(runtime.model)   sentinel: \(runtime.sentinel)")
+        switch runtime.apiProvider {
+        case .ollama:
+            eprint("ollama: \(runtime.ollama.baseURL.absoluteString)  key: \(runtime.ollama.redactedKey)")
+        case .openaiCompatible:
+            eprint("openai: \(runtime.openai.baseURL.absoluteString)  key: \(runtime.openai.redactedKey)")
+        }
 
         // 6. Build runner config and start the batch.
         var config = QueueRunner.Config()
-        config.model = runtime.model
+        config.settings = runtime
         config.promptStyle = args.promptStyle
         config.noDownsize = args.noDownsize
         config.concurrency = args.concurrency
-        config.sentinel = runtime.sentinel
         config.dryRun = args.dryRun
         config.limit = args.limit
-        config.connection = runtime.ollama
         if let db = args.dbPath {
             config.dbPath = URL(fileURLWithPath: db)
         }

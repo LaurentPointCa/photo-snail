@@ -26,10 +26,14 @@ xcuserdata/
 # Claude Code local settings (local permission allowlist, not for sharing)
 .claude/settings.local.json
 
-# Sample images — keep the folder, ignore the contents
+# Sample images — keep the folder, ignore the contents. The research/benchmark
+# markdown docs are explicitly checked in alongside the empty folder; the
+# photos themselves stay local.
 sample/*
 !sample/.gitkeep
 !sample/README.md
+!sample/MODEL_COMPARISON.md
+!sample/PROMPT_RESEARCH.md
 
 # Icon build intermediates — the committed artifact is Resources/AppIcon.icns,
 # which is produced by running tools/make-icon.swift + iconutil. The

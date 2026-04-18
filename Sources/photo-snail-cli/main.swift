@@ -23,6 +23,10 @@ struct CLIArgs {
     var dbPath: String? = nil
     var concurrency: Int = 1
     var paths: [String] = []
+    var provider: LLMProvider = .ollama
+    var ollamaURL: String? = nil
+    var openaiURL: String? = nil
+    var openaiKey: String? = nil
 }
 
 func parseArgs(_ argv: [String]) -> CLIArgs {
@@ -50,6 +54,24 @@ func parseArgs(_ argv: [String]) -> CLIArgs {
         case "--concurrency":
             i += 1
             if i < argv.count, let n = Int(argv[i]), n >= 1 { out.concurrency = n }
+        case "--provider":
+            i += 1
+            if i < argv.count {
+                switch argv[i].lowercased() {
+                case "ollama": out.provider = .ollama
+                case "openai", "openai-compatible": out.provider = .openaiCompatible
+                default: FileHandle.standardError.write(Data("unknown --provider: \(argv[i])\n".utf8))
+                }
+            }
+        case "--ollama-url":
+            i += 1
+            if i < argv.count { out.ollamaURL = argv[i] }
+        case "--openai-url":
+            i += 1
+            if i < argv.count { out.openaiURL = argv[i] }
+        case "--openai-key":
+            i += 1
+            if i < argv.count { out.openaiKey = argv[i] }
         case "-h", "--help":
             print("usage: photo-snail-cli [--model <name>] [--bare|--hybrid] [--no-downsize] [--json] [--queue [--db <path>] [--concurrency <N>]] <image-path> [...]")
             exit(0)
@@ -234,8 +256,22 @@ struct CLI {
         }
 
         let imageOptions = OllamaImageOptions(downsize: !args.noDownsize)
-        let ollama = OllamaClient(imageOptions: imageOptions)
-        let pipeline = Pipeline(model: args.model, promptStyle: args.promptStyle, ollama: ollama)
+        let client: any LLMClient
+        switch args.provider {
+        case .ollama:
+            var conn = OllamaConnection.default
+            if let u = args.ollamaURL, let parsed = URL(string: u) { conn.baseURL = parsed }
+            client = OllamaClient(connection: conn, imageOptions: imageOptions)
+        case .openaiCompatible:
+            var conn = OpenAIConnection.default
+            if let u = args.openaiURL, let parsed = URL(string: u) { conn.baseURL = parsed }
+            if let k = args.openaiKey, !k.isEmpty { conn.apiKey = k }
+            let oaiOpts = OpenAIImageOptions(downsize: imageOptions.downsize,
+                                             maxPixelSize: imageOptions.maxPixelSize,
+                                             jpegQuality: imageOptions.jpegQuality)
+            client = OpenAIClient(connection: conn, imageOptions: oaiOpts)
+        }
+        let pipeline = Pipeline(model: args.model, promptStyle: args.promptStyle, llm: client)
         var results: [PipelineResult] = []
 
         for path in args.paths {

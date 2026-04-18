@@ -15,27 +15,44 @@ public enum PromptStyle: String, Codable, Sendable {
     case hybrid
 }
 
-/// Orchestrates the pipeline: optional Vision pre-pass → prompt → Ollama → parse → merge.
+/// Orchestrates the pipeline: optional Vision pre-pass → prompt → LLM → parse → merge.
+///
+/// The LLM backend is abstracted via `any LLMClient` so the same orchestration
+/// runs against Ollama or a locally-hosted OpenAI-compatible server.
 public final class Pipeline {
 
     public let model: String
     public let promptStyle: PromptStyle
     public let visionAnalyzer: VisionAnalyzer
-    public let ollama: OllamaClient
+    public let llm: any LLMClient
     public let customPrompt: String?
 
     public init(
         model: String = "gemma4:31b",
         promptStyle: PromptStyle = .sideChannel,
         visionAnalyzer: VisionAnalyzer = VisionAnalyzer(),
-        ollama: OllamaClient = OllamaClient(),
+        llm: any LLMClient = OllamaClient(),
         customPrompt: String? = nil
     ) {
         self.model = model
         self.promptStyle = promptStyle
         self.visionAnalyzer = visionAnalyzer
-        self.ollama = ollama
+        self.llm = llm
         self.customPrompt = customPrompt
+    }
+
+    /// Back-compat convenience: the Ollama-parameter spelling used by
+    /// pre-v0.1.3 call sites (QueueRunner, tests). New code should pass
+    /// `llm:` directly.
+    public convenience init(
+        model: String,
+        promptStyle: PromptStyle,
+        ollama: OllamaClient,
+        customPrompt: String? = nil
+    ) {
+        self.init(model: model, promptStyle: promptStyle,
+                  visionAnalyzer: VisionAnalyzer(),
+                  llm: ollama, customPrompt: customPrompt)
     }
 
     /// Process an image from a file path (CLI entry point).
@@ -67,17 +84,18 @@ public final class Pipeline {
         switch promptStyle {
         case .bare:
             findings = .empty
-            prompt = PromptBuilder.bare(override: customPrompt)
+            prompt = PromptBuilder.bare(override: customPrompt, forModel: model)
         case .sideChannel:
             findings = try visionAnalyzer.analyze(imageData: imageData)
-            prompt = PromptBuilder.bare(override: customPrompt)
+            prompt = PromptBuilder.bare(override: customPrompt, forModel: model)
         case .hybrid:
             findings = try visionAnalyzer.analyze(imageData: imageData)
             prompt = PromptBuilder.build(findings: findings)
         }
 
-        // 2. Caption via Ollama (image is downsized inside OllamaClient by default)
-        let caption = try await ollama.generateCaption(
+        // 2. Caption via the LLM client (image is downsized inside the
+        //    client by default, per each implementation's image options).
+        let caption = try await llm.generateCaption(
             model: model, prompt: prompt, imageData: imageData,
             sourcePixelWidth: w, sourcePixelHeight: h
         )

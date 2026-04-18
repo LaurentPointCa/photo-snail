@@ -45,37 +45,19 @@ public struct OllamaConnection: Codable, Sendable {
     }
 }
 
-/// One model entry returned by Ollama's `/api/tags` endpoint.
-public struct OllamaModel: Codable, Sendable, Identifiable {
-    public let name: String
-    public let sizeBytes: Int64
-    public let modifiedAt: String?
-
-    public var id: String { name }
-
-    public init(name: String, sizeBytes: Int64, modifiedAt: String?) {
-        self.name = name
-        self.sizeBytes = sizeBytes
-        self.modifiedAt = modifiedAt
-    }
-
-    /// Human-readable size like "9.6 GB" or "512 MB".
-    public var sizeLabel: String {
-        let gb = Double(sizeBytes) / 1_000_000_000
-        if gb >= 1 {
-            return String(format: "%.1f GB", gb)
-        }
-        let mb = Double(sizeBytes) / 1_000_000
-        return String(format: "%.0f MB", mb)
-    }
-}
-
 /// Minimal HTTP client for the Ollama /api/generate endpoint with image attachments.
-public final class OllamaClient {
+public final class OllamaClient: LLMClient {
 
     public let connection: OllamaConnection
     public let session: URLSession
     public var imageOptions: OllamaImageOptions
+
+    public var providerLabel: String { "ollama" }
+
+    /// Back-compat alias — old call sites reference `OllamaClient.PreflightResult`.
+    public typealias PreflightResult = LLMPreflightResult
+    /// Back-compat alias — old call sites reference `OllamaClient.TextResult`.
+    public typealias TextResult = LLMTextResult
 
     public init(connection: OllamaConnection = .default,
                 timeoutSeconds: TimeInterval = 1800,
@@ -161,8 +143,8 @@ public final class OllamaClient {
     }
 
     /// Fetch the list of locally-installed models from `/api/tags`.
-    /// Used by the model picker in the CLI/GUI and the `--ollama-test` flag.
-    public func listModels() async throws -> [OllamaModel] {
+    /// Used by the model picker in the CLI/GUI and the `--api-test` flag.
+    public func listModels() async throws -> [LLMModel] {
         var req = URLRequest(url: baseURL.appendingPathComponent("api/tags"))
         req.httpMethod = "GET"
         applyAuth(to: &req)
@@ -190,42 +172,19 @@ public final class OllamaClient {
             guard let name = entry["name"] as? String else { return nil }
             let size = (entry["size"] as? Int64) ?? Int64((entry["size"] as? Int) ?? 0)
             let modified = entry["modified_at"] as? String
-            return OllamaModel(name: name, sizeBytes: size, modifiedAt: modified)
+            return LLMModel(name: name, sizeBytes: size, modifiedAt: modified)
         }
     }
 
     // MARK: - Startup preflight
-
-    /// Outcome of `preflight(model:)`. Each case carries the fix message
-    /// the UI / CLI should surface so the user can copy-paste a resolution
-    /// without switching contexts.
-    public enum PreflightResult: Sendable, Equatable {
-        /// Ollama is reachable and the configured model is installed.
-        case ok
-        /// Couldn't reach the baseURL at all (daemon not running, wrong URL,
-        /// network error). Payload is a short one-line reason.
-        case unreachable(reason: String)
-        /// Connected, but the configured model isn't in `/api/tags`. Payload
-        /// is the list of installed model names for a helpful error.
-        case modelMissing(installed: [String])
-
-        /// Short label for logging.
-        public var shortLabel: String {
-            switch self {
-            case .ok: return "ok"
-            case .unreachable: return "unreachable"
-            case .modelMissing: return "model-missing"
-            }
-        }
-    }
 
     /// Verify that (a) the Ollama daemon is reachable via the current
     /// connection and (b) the configured `model` tag is present locally.
     /// Runs at app startup so failures surface once, loud, with the exact
     /// commands needed to fix things — rather than mid-batch when the first
     /// generate call explodes.
-    public func preflight(model: String) async -> PreflightResult {
-        let models: [OllamaModel]
+    public func preflight(model: String) async -> LLMPreflightResult {
+        let models: [LLMModel]
         do {
             models = try await listModels()
         } catch {
@@ -262,16 +221,9 @@ public final class OllamaClient {
 
     // MARK: - Text-only generation (no image)
 
-    /// Result from a text-only Ollama generation (translation, summarization, etc.).
-    public struct TextResult: Sendable {
-        public let model: String
-        public let response: String
-        public let elapsedSeconds: Double
-    }
-
     /// Send a text-only prompt to Ollama (no image). Used for translation of
     /// existing descriptions where the input is text, not an image.
-    public func generateText(model: String, prompt: String) async throws -> TextResult {
+    public func generateText(model: String, prompt: String) async throws -> LLMTextResult {
         let body: [String: Any] = [
             "model": model,
             "prompt": prompt,
@@ -302,7 +254,7 @@ public final class OllamaClient {
             throw PhotoSnailError.ollamaResponseParseFailed("missing 'response' field")
         }
 
-        return TextResult(model: model, response: raw, elapsedSeconds: elapsed)
+        return LLMTextResult(model: model, response: raw, elapsedSeconds: elapsed)
     }
 
     // MARK: - Shared image Ollama HTTP call

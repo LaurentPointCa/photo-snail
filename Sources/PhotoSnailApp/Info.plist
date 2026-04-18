@@ -16,5 +16,18 @@
 	<string>photo-snail drives Photos.app via AppleScript to write descriptions that sync via iCloud.</string>
 	<key>LSUIElement</key>
 	<true/>
+	<!--
+	  PhotoSnail only makes HTTP requests to user-configured LLM endpoints
+	  (Ollama on localhost; locally-hosted OpenAI-compatible servers on
+	  arbitrary LAN hostnames like *.localdomain, *.lan, raw IPs). There is
+	  no other network traffic. `NSAllowsLocalNetworking` only covers .local
+	  and unqualified names, so we need the broader `NSAllowsArbitraryLoads`
+	  to let the user point at whatever they've set up on their LAN.
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
