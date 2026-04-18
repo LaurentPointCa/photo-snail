@@ -225,7 +225,7 @@ struct LibrarySidebar: View {
                 filterRow(.tagged, label: loc.t("filter.tagged"), count: store.taggedCount, systemImage: "checkmark.seal.fill", tint: AppColor.statusDone)
                 filterRow(.untouched, label: loc.t("filter.untouched"), count: store.untouchedCount, systemImage: "circle.dashed", tint: AppColor.statusUntouched)
                 filterRow(.pending, label: loc.t("filter.pending"), count: store.pendingCount, systemImage: "hourglass", tint: AppColor.statusPending)
-                filterRow(.failed, label: loc.t("filter.failed"), count: store.failedCount, systemImage: "exclamationmark.triangle.fill", tint: AppColor.statusFailed)
+                filterRow(.failed, label: loc.t("filter.failed"), count: store.failedCount, systemImage: "exclamationmark.triangle.fill", tint: store.failedCount > 0 ? AppColor.statusFailed : AppColor.statusUntouched)
             } header: {
                 EyebrowLabel(loc.t("section.library"))
             }
@@ -574,6 +574,13 @@ struct LibraryGrid: View {
                                 size: thumbnailSize
                             )
                             .id(id)
+                            // Double-click opens the full-screen preview. Must
+                            // be attached before the single-tap gesture so
+                            // SwiftUI can disambiguate the two counts.
+                            .onTapGesture(count: 2) {
+                                store.select(id)
+                                store.wantsPreview = true
+                            }
                             .onTapGesture {
                                 // Read modifier keys at click time. ⌘-click
                                 // toggles, ⇧-click range-extends, plain click
@@ -1182,9 +1189,7 @@ struct FullscreenPreviewSheet: View {
 
             Group {
                 if let img = image {
-                    Image(nsImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
+                    ZoomablePhotoView(image: img)
                         .padding(24)
                 } else if failed {
                     VStack(spacing: 8) {
@@ -1261,6 +1266,107 @@ struct FullscreenPreviewSheet: View {
             image = loaded
         } else {
             failed = true
+        }
+    }
+}
+
+// MARK: - Zoomable photo
+
+/// Pinch-to-zoom + drag-to-pan photo view used inside the full-screen
+/// preview sheet. Trackpad pinch drives `MagnificationGesture`; dragging
+/// after zooming in pans the image. Scroll-wheel zoom is supported via
+/// an `NSScrollView`-free `NSEvent` monitor attached on appear so mouse
+/// users get parity. Double-click toggles between fit and 2.5×.
+private struct ZoomablePhotoView: View {
+    let image: NSImage
+
+    @State private var scale: CGFloat = 1.0
+    @State private var baseScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var baseOffset: CGSize = .zero
+    @State private var scrollMonitor: Any? = nil
+
+    private let minScale: CGFloat = 1.0
+    private let maxScale: CGFloat = 10.0
+
+    var body: some View {
+        GeometryReader { geo in
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: geo.size.width, height: geo.size.height)
+                .scaleEffect(scale)
+                .offset(offset)
+                .gesture(
+                    MagnificationGesture()
+                        .onChanged { value in
+                            let proposed = baseScale * value
+                            scale = min(max(proposed, minScale * 0.9), maxScale)
+                        }
+                        .onEnded { _ in
+                            if scale < minScale {
+                                withAnimation(.spring(response: 0.3)) {
+                                    scale = minScale
+                                    offset = .zero
+                                    baseOffset = .zero
+                                }
+                            }
+                            baseScale = scale
+                            baseOffset = offset
+                        }
+                )
+                .simultaneousGesture(
+                    DragGesture()
+                        .onChanged { value in
+                            // Pan only when zoomed in; otherwise let the
+                            // backdrop swallow the event.
+                            guard scale > minScale else { return }
+                            offset = CGSize(
+                                width: baseOffset.width + value.translation.width,
+                                height: baseOffset.height + value.translation.height
+                            )
+                        }
+                        .onEnded { _ in
+                            baseOffset = offset
+                        }
+                )
+                .onTapGesture(count: 2) {
+                    withAnimation(.spring(response: 0.3)) {
+                        if scale > minScale + 0.05 {
+                            scale = minScale
+                            baseScale = minScale
+                            offset = .zero
+                            baseOffset = .zero
+                        } else {
+                            scale = 2.5
+                            baseScale = 2.5
+                        }
+                    }
+                }
+                .contentShape(Rectangle())
+        }
+        .onAppear {
+            // Scroll-wheel zoom for users without a trackpad. Multiplicative
+            // step per tick keeps the feel linear on log-scale zoom.
+            scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
+                let delta = event.scrollingDeltaY
+                guard delta != 0 else { return event }
+                let factor = 1 + (delta * 0.0025)
+                let proposed = scale * factor
+                scale = min(max(proposed, minScale), maxScale)
+                baseScale = scale
+                if scale <= minScale + 0.001 {
+                    offset = .zero
+                    baseOffset = .zero
+                }
+                return nil
+            }
+        }
+        .onDisappear {
+            if let m = scrollMonitor {
+                NSEvent.removeMonitor(m)
+                scrollMonitor = nil
+            }
         }
     }
 }

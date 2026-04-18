@@ -283,16 +283,16 @@ private struct InspectorContent: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 heroSection
-                SurfaceCard { identitySection }
-                SurfaceCard { descriptionSection }
-                SurfaceCard { tagsSection }
-                SurfaceCard { provenanceSection }
-                SurfaceCard { visionSection }
-                SurfaceCard { developerSection }
+                SurfaceCard(padding: Spacing.md, spacing: Spacing.xs) { identitySection }
+                SurfaceCard(padding: Spacing.md, spacing: Spacing.xs) { descriptionSection }
+                SurfaceCard(padding: Spacing.md, spacing: Spacing.xs) { tagsSection }
+                SurfaceCard(padding: Spacing.md, spacing: Spacing.xs) { provenanceSection }
+                SurfaceCard(padding: Spacing.md, spacing: Spacing.xs) { visionSection }
+                SurfaceCard(padding: Spacing.md, spacing: Spacing.xs) { developerSection }
             }
-            .padding(Spacing.lg)
+            .padding(Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .task(id: assetId) {
@@ -314,30 +314,46 @@ private struct InspectorContent: View {
 
     @ViewBuilder
     private var heroSection: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                .fill(AppColor.surfaceSunken)
-                .aspectRatio(3/2, contentMode: .fit)
+        // Full-width landscape band with a HARD height cap (not just an
+        // aspect ratio). At 340pt width a 16:9 hero is ~191pt tall — too
+        // much real estate when the rest of the inspector is below it.
+        // 140pt leaves room for a legible preview without dominating.
+        // Portrait photos crop via `.fill`. Click opens the full-screen
+        // preview which supports pinch-zoom.
+        GeometryReader { geo in
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                    .fill(AppColor.surfaceSunken)
 
-            if let img = heroImage {
-                Image(nsImage: img)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-            } else if heroLoadFailed {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-            } else {
-                ProgressView()
-                    .controlSize(.small)
+                if let img = heroImage {
+                    Image(nsImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                } else if heroLoadFailed {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.title)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ProgressView()
+                        .controlSize(.small)
+                }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
+        .frame(height: 140)
         .overlay(
             RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
                 .strokeBorder(AppColor.borderSubtle, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 4)
+        .contentShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .onTapGesture {
+            guard heroImage != nil else { return }
+            store.wantsPreview = true
+        }
+        .help(loc.t("inspector.click_to_enlarge"))
+        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 3)
     }
 
     // MARK: - Identity section
@@ -345,48 +361,131 @@ private struct InspectorContent: View {
     @ViewBuilder
     private var identitySection: some View {
         sectionHeader(loc.t("section.identity"), systemImage: "info.circle")
-        VStack(alignment: .leading, spacing: 6) {
-            if let asset {
-                identityRow(loc.t("label.file"), value: filename(asset) ?? "—")
-                identityRow(loc.t("label.created"), value: formatDate(asset.creationDate))
-                if let modified = asset.modificationDate,
-                   modified != asset.creationDate {
-                    identityRow(loc.t("label.modified"), value: formatDate(modified))
+        if let asset {
+            Grid(alignment: .topLeading, horizontalSpacing: Spacing.sm, verticalSpacing: 2) {
+                GridRow {
+                    kvLabel(loc.t("label.file"))
+                    kvValue(filename(asset) ?? "—", truncate: true).gridCellColumns(3)
                 }
-                identityRow(loc.t("label.dimensions"), value: "\(asset.pixelWidth) × \(asset.pixelHeight)")
-                identityRow(loc.t("label.type"), value: PhotoLibrary.mediaTypeLabel(asset.mediaType))
+                GridRow {
+                    kvLabel(loc.t("label.created")); kvValue(formatDate(asset.creationDate))
+                    if let modified = asset.modificationDate, modified != asset.creationDate {
+                        kvLabel(loc.t("label.modified")); kvValue(formatDate(modified))
+                    } else {
+                        Color.clear.frame(height: 1); Color.clear.frame(height: 1)
+                    }
+                }
+                GridRow {
+                    kvLabel(loc.t("label.dimensions"))
+                    kvValue("\(asset.pixelWidth) × \(asset.pixelHeight)")
+                    kvLabel(loc.t("label.type")); kvValue(PhotoLibrary.mediaTypeLabel(asset.mediaType))
+                }
                 if asset.isFavorite {
-                    identityRow(loc.t("label.favorite"), value: "★")
+                    GridRow {
+                        kvLabel(loc.t("label.favorite"))
+                        kvValue("★").gridCellColumns(3)
+                    }
                 }
                 if let assetLocation = asset.location {
-                    identityRow(
-                        loc.t("label.location"),
-                        value: String(format: "%.5f, %.5f", assetLocation.coordinate.latitude, assetLocation.coordinate.longitude)
-                    )
+                    GridRow {
+                        kvLabel(loc.t("label.location"))
+                        kvValue(String(format: "%.5f, %.5f", assetLocation.coordinate.latitude, assetLocation.coordinate.longitude)).gridCellColumns(3)
+                    }
                 }
                 if !albums.isEmpty {
-                    identityRow(loc.t("label.albums"), value: albums.joined(separator: ", "))
+                    GridRow {
+                        kvLabel(loc.t("label.albums"))
+                        kvValue(albums.joined(separator: ", "), truncate: true).gridCellColumns(3)
+                    }
                 }
-            } else {
-                Text("PhotoKit asset not available")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                GridRow {
+                    kvLabel(loc.t("label.asset_id"))
+                    kvValue(assetId, monospaced: true, truncate: true).gridCellColumns(3)
+                }
             }
-            // The full PHAsset localIdentifier is hidden under a disclosure
-            // because it's long and rarely useful outside debugging.
-            identityRow(loc.t("label.asset_id"), value: assetId, monospaced: true)
+        } else {
+            Text("PhotoKit asset not available")
+                .font(AppFont.caption)
+                .foregroundStyle(.secondary)
+            Grid(alignment: .topLeading, horizontalSpacing: Spacing.sm, verticalSpacing: 2) {
+                GridRow {
+                    kvLabel(loc.t("label.asset_id"))
+                    kvValue(assetId, monospaced: true, truncate: true).gridCellColumns(3)
+                }
+            }
+        }
+    }
+
+    /// Inline label cell: small uppercase-ish secondary text, fixed width
+    /// for columnar alignment across `GridRow`s.
+    @ViewBuilder
+    private func kvLabel(_ text: String) -> some View {
+        Text(text)
+            .font(AppFont.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .frame(width: 74, alignment: .leading)
+    }
+
+    /// Inline value cell.
+    @ViewBuilder
+    private func kvValue(_ text: String, monospaced: Bool = false, truncate: Bool = false) -> some View {
+        Text(text)
+            .font(monospaced ? AppFont.monoCaption : AppFont.caption)
+            .foregroundStyle(AppColor.textPrimary)
+            .textSelection(.enabled)
+            .lineLimit(truncate ? 1 : nil)
+            .truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Inline "Vision X.Xs · LLM X.Xs · Other X.Xs" breakdown used under
+    /// the Processing grid. Replaces the old TimingBar which read as a
+    /// single solid color once LLM time dominated (~95% on Qwen).
+    @ViewBuilder
+    private func timingBreakdownLine(row: AssetQueue.Row) -> some View {
+        let total = row.totalMs ?? 0
+        let vision = row.visionMs ?? 0
+        let ollama = row.ollamaMs ?? 0
+        let other = max(0, total - vision - ollama)
+        HStack(spacing: 6) {
+            segmentSwatch(color: Color.blue.opacity(0.8))
+            Text("\(loc.t("label.vision")) \(formatMs(vision))")
+                .font(AppFont.monoCaption)
+                .foregroundStyle(.secondary)
+            Text("·").foregroundStyle(.secondary)
+            segmentSwatch(color: Color.accentColor.opacity(0.85))
+            Text("LLM \(formatMs(ollama))")
+                .font(AppFont.monoCaption)
+                .foregroundStyle(.secondary)
+            Text("·").foregroundStyle(.secondary)
+            segmentSwatch(color: Color.gray.opacity(0.5))
+            Text("\(loc.t("label.other")) \(formatMs(other))")
+                .font(AppFont.monoCaption)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
         }
     }
 
     @ViewBuilder
+    private func segmentSwatch(color: Color) -> some View {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(color)
+            .frame(width: 8, height: 8)
+    }
+
+    /// Legacy inline row for sections that still use `identityRow(...)`
+    /// (Vision, Developer's devRow is separate). Matches the grid's
+    /// typography so the whole inspector reads as one sheet.
+    @ViewBuilder
     private func identityRow(_ label: String, value: String, monospaced: Bool = false) -> some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
+        HStack(alignment: .top, spacing: Spacing.sm) {
             Text(label)
-                .font(AppFont.label)
-                .foregroundStyle(AppColor.textSecondary)
-                .frame(width: 104, alignment: .leading)
+                .font(AppFont.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 74, alignment: .leading)
             Text(value)
-                .font(monospaced ? AppFont.monoCaption : AppFont.body)
+                .font(monospaced ? AppFont.monoCaption : AppFont.caption)
                 .foregroundStyle(AppColor.textPrimary)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -453,16 +552,16 @@ private struct InspectorContent: View {
                 }
             } else {
                 Text(row.description ?? "")
-                    .font(AppFont.body)
+                    .font(AppFont.caption)
                     .foregroundStyle(AppColor.textPrimary)
-                    .lineSpacing(2)
+                    .lineSpacing(1)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button(loc.t("button.edit")) {
                     beginEditing(with: row.description ?? "")
                 }
                 .buttonStyle(.link)
-                .font(AppFont.label)
+                .font(AppFont.caption)
             }
         }
     }
@@ -501,10 +600,10 @@ private struct InspectorContent: View {
 
         if activeTags.isEmpty {
             Text(loc.t("inspector.no_tags"))
-                .font(AppFont.body)
+                .font(AppFont.caption)
                 .foregroundStyle(.secondary)
         } else {
-            ChipFlowLayout(spacing: 8, runSpacing: 8) {
+            ChipFlowLayout(spacing: 5, runSpacing: 5) {
                 ForEach(activeTags, id: \.self) { tag in
                     inspectorTagChip(tag: tag)
                 }
@@ -567,37 +666,64 @@ private struct InspectorContent: View {
         sectionHeader(loc.t("section.processing"), systemImage: "cpu", tint: tint)
 
         if let row = store.rows[assetId] {
-            VStack(alignment: .leading, spacing: 6) {
-                identityRow(loc.t("label.status"), value: row.status.capitalized)
+            Grid(alignment: .topLeading, horizontalSpacing: Spacing.sm, verticalSpacing: 2) {
+                GridRow {
+                    kvLabel(loc.t("label.status"))
+                    kvValue(row.status.capitalized)
+                    if let total = row.totalMs {
+                        kvLabel(loc.t("label.total")); kvValue(formatMs(total))
+                    } else if let ollama = row.ollamaMs {
+                        kvLabel(loc.t("label.ollama")); kvValue(formatMs(ollama))
+                    } else {
+                        Color.clear.frame(height: 1); Color.clear.frame(height: 1)
+                    }
+                }
                 if let model = row.model {
-                    identityRow(loc.t("label.model"), value: model, monospaced: true)
+                    GridRow {
+                        kvLabel(loc.t("label.model"))
+                        kvValue(model, monospaced: true, truncate: true).gridCellColumns(3)
+                    }
                 } else if row.status == "done" {
-                    identityRow(loc.t("label.model"), value: loc.t("inspector.pre_v1"))
+                    GridRow {
+                        kvLabel(loc.t("label.model"))
+                        kvValue(loc.t("inspector.pre_v1")).gridCellColumns(3)
+                    }
                 }
                 if let sentinel = row.sentinel {
-                    identityRow(loc.t("label.sentinel"), value: sentinel, monospaced: true)
+                    GridRow {
+                        kvLabel(loc.t("label.sentinel"))
+                        kvValue(sentinel, monospaced: true, truncate: true).gridCellColumns(3)
+                    }
                 }
                 if let ts = row.processedAt {
-                    identityRow(loc.t("label.ran_at"), value: formatTimestamp(ts))
-                }
-                if let total = row.totalMs {
-                    identityRow(loc.t("label.total"), value: formatMs(total))
-                    TimingBar(visionMs: row.visionMs ?? 0, ollamaMs: row.ollamaMs ?? 0, totalMs: total)
-                        .frame(height: 14)
-                        .padding(.top, Spacing.xs)
-                } else if let ollama = row.ollamaMs {
-                    identityRow(loc.t("label.ollama"), value: formatMs(ollama))
-                }
-                if row.attempts > 1 {
-                    identityRow(loc.t("label.attempts"), value: "\(row.attempts)")
+                    GridRow {
+                        kvLabel(loc.t("label.ran_at"))
+                        if row.attempts > 1 {
+                            kvValue(formatTimestamp(ts))
+                            kvLabel(loc.t("label.attempts")); kvValue("\(row.attempts)")
+                        } else {
+                            kvValue(formatTimestamp(ts)).gridCellColumns(3)
+                        }
+                    }
                 }
                 if let ed = row.updatedAt, row.processedAt != ed, ed != row.processedAt ?? 0 {
-                    identityRow(loc.t("label.edited_at"), value: formatTimestamp(ed))
+                    GridRow {
+                        kvLabel(loc.t("label.edited_at"))
+                        kvValue(formatTimestamp(ed)).gridCellColumns(3)
+                    }
                 }
                 if let err = row.error {
-                    identityRow(loc.t("label.error"), value: err, monospaced: true)
-                        .foregroundStyle(.red)
+                    GridRow {
+                        kvLabel(loc.t("label.error"))
+                        kvValue(err, monospaced: true).gridCellColumns(3)
+                            .foregroundStyle(.red)
+                    }
                 }
+            }
+
+            if row.totalMs != nil {
+                timingBreakdownLine(row: row)
+                    .padding(.top, 2)
             }
         } else {
             Text(loc.t("inspector.no_processing_record"))
@@ -613,40 +739,38 @@ private struct InspectorContent: View {
         sectionHeader(loc.t("section.vision"), systemImage: "eye")
 
         if let findings = decodedVisionFindings {
-            VStack(alignment: .leading, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 if findings.classifications.isEmpty
                     && findings.animals.isEmpty
                     && findings.faces.isEmpty
                     && findings.ocrText.isEmpty {
                     Text(loc.t("inspector.vision_nothing"))
-                        .font(AppFont.body)
+                        .font(AppFont.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 if !findings.classifications.isEmpty {
                     EyebrowLabel(loc.t("label.classifications"))
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(findings.classifications.prefix(5), id: \.identifier) { label in
-                            HStack(spacing: Spacing.sm) {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), alignment: .leading),
+                            GridItem(.flexible(), alignment: .leading)
+                        ],
+                        alignment: .leading,
+                        spacing: 3
+                    ) {
+                        ForEach(findings.classifications.prefix(6), id: \.identifier) { label in
+                            HStack(spacing: 6) {
                                 Text(label.identifier)
-                                    .font(AppFont.label)
+                                    .font(AppFont.caption)
                                     .foregroundStyle(AppColor.textPrimary)
-                                    .frame(width: 140, alignment: .leading)
                                     .lineLimit(1)
-                                GeometryReader { geo in
-                                    ZStack(alignment: .leading) {
-                                        Capsule()
-                                            .fill(AppColor.surfaceSunken)
-                                        Capsule()
-                                            .fill(Color.accentColor.opacity(0.85))
-                                            .frame(width: geo.size.width * CGFloat(max(0, min(1, label.confidence))))
-                                    }
-                                }
-                                .frame(height: 10)
-                                Text(String(format: "%.2f", label.confidence))
+                                    .truncationMode(.tail)
+                                Spacer(minLength: 4)
+                                Text("\(Int((label.confidence * 100).rounded()))%")
                                     .font(AppFont.monoCaption)
                                     .foregroundStyle(.secondary)
-                                    .frame(width: 40, alignment: .trailing)
+                                    .monospacedDigit()
                             }
                         }
                     }
@@ -759,18 +883,18 @@ private struct InspectorContent: View {
 
     @ViewBuilder
     private func sectionHeader(_ title: String, systemImage: String, tint: Color = .accentColor, trailing: AnyView? = nil) -> some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(spacing: 6) {
             Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(tint)
-                .frame(width: 22, alignment: .center)
+                .frame(width: 16, alignment: .center)
             Text(title)
-                .font(AppFont.sectionTitle)
+                .font(AppFont.bodyEmphasized)
                 .foregroundStyle(AppColor.textPrimary)
             Spacer()
             if let trailing { trailing }
         }
-        .padding(.bottom, Spacing.xs)
+        .padding(.bottom, 2)
     }
 
     // MARK: - Load
@@ -1000,9 +1124,9 @@ private struct TagChipView: View {
     let onRemoveFromPhoto: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             Text(tag)
-                .font(AppFont.label)
+                .font(AppFont.caption)
                 .foregroundStyle(.white)
                 .lineLimit(1)
             if canEdit, let onRemoveFromPhoto {
@@ -1016,8 +1140,8 @@ private struct TagChipView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
         .background(
             Capsule()
                 .fill(AppColor.tagTint(for: tag).opacity(isActiveFilter ? 1.00 : 0.78))
