@@ -83,12 +83,20 @@ struct PhotoSnailApp: App {
             attributes: bodyAttrs
         ))
 
-        // Note: we used to append a "Build YYYY-MM-DD HH:MM:SS" stamp
-        // here, but the prominent version line macOS renders already
-        // includes the build number in parentheses — e.g. "Version
-        // v0.1.5-1-g644f493 (202604201253)" — so the credits stamp was
-        // both redundant and caused the credits area to overflow on
-        // longer localized descriptions.
+        // Build stamp on its own line. Reading `PhotoSnailBuildDate` from
+        // Info.plist (written by bundle-gui.sh) — the raw compact
+        // `CFBundleVersion` form that macOS renders in parentheses after
+        // the version line is hard to parse visually; the human-readable
+        // "YYYY-MM-DD HH:MM:SS" form here is what the developer is
+        // actually looking for when comparing which build is installed.
+        if let buildDate = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailBuildDate") as? String,
+           !buildDate.isEmpty {
+            let stampFont = NSFont.systemFont(ofSize: 10)
+            credits.append(NSAttributedString(
+                string: "\n\(Localizer.shared.t("about.build_prefix")) \(buildDate)",
+                attributes: [.font: stampFont, .foregroundColor: NSColor.tertiaryLabelColor]
+            ))
+        }
 
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center

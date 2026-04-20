@@ -455,6 +455,14 @@ final class ProcessingEngine {
 
         // Re-probe the (possibly-new) provider.
         await refreshAvailableModels()
+
+        // And re-run the preflight. Otherwise a stale failure sheet — e.g.
+        // "Can't reach Ollama" after switching to an OpenAI-compatible
+        // server — lingers until next app launch. runPreflight() resets
+        // status to `.checking` first, so the sheet binding gracefully
+        // transitions to either `.ok` (dismiss) or `.failed` (re-present
+        // with the new provider's copy + URL).
+        await runPreflight()
     }
 
     /// Toggle the auto-start-when-locked preference and persist to disk.

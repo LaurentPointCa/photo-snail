@@ -157,10 +157,18 @@ struct LibraryWindow: View {
                 )) {
                     if let engine = store.engine,
                        case .failed(let result) = engine.preflightStatus {
+                        let provider = engine.apiProvider
+                        let baseURL: URL = {
+                            switch provider {
+                            case .ollama: return engine.connection.baseURL
+                            case .openaiCompatible: return engine.openaiConnection.baseURL
+                            }
+                        }()
                         PreflightSheet(
                             result: result,
                             model: engine.model,
-                            baseURL: engine.connection.baseURL,
+                            baseURL: baseURL,
+                            provider: provider,
                             engine: engine,
                             isPresented: Binding(
                                 get: {

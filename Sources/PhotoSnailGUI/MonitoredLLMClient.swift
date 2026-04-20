@@ -7,10 +7,13 @@ import PhotoSnailCore
 /// concrete client returned by `makeLLMClient` with this before handing
 /// it to the worker loop.
 ///
-/// Preflight is forwarded untouched because its richer result enum is
-/// recorded via `APIStatusMonitor.noteHandshake(...)` at the call site in
-/// `ProcessingEngine.runPreflight`. Emitting a generic begin/end pair on
-/// top of that would just duplicate the signal.
+/// Every protocol method — including `preflight` — emits begin/end pairs.
+/// The event drives the status-bar *tail* slot; `noteHandshake` (called
+/// separately by `ProcessingEngine.runPreflight`) drives the *pill* with
+/// the richer preflight enum. These are complementary, not duplicate:
+/// without the preflight event the tail would stay stuck on the last
+/// caption/listModels call — including the stale failure message from
+/// before a successful retry.
 struct MonitoredLLMClient: LLMClient {
     let inner: any LLMClient
 
@@ -34,10 +37,23 @@ struct MonitoredLLMClient: LLMClient {
     }
 
     func preflight(model: String) async -> LLMPreflightResult {
-        // No event emission here — ProcessingEngine.runPreflight records the
-        // handshake via noteHandshake which carries the richer enum. A
-        // duplicate begin/end would just flicker the tail for no gain.
-        await inner.preflight(model: model)
+        let label = inner.providerLabel
+        let token = await APIStatusMonitor.shared.begin(
+            call: "preflight", model: model, providerLabel: label
+        )
+        let result = await inner.preflight(model: model)
+        switch result {
+        case .ok:
+            await APIStatusMonitor.shared.end(token: token, success: true, reason: nil)
+        case .unreachable(let reason):
+            await APIStatusMonitor.shared.end(
+                token: token, success: false, reason: "unreachable: \(reason)"
+            )
+        case .modelMissing(let installed):
+            let hint = installed.isEmpty ? "no models installed" : "model not installed"
+            await APIStatusMonitor.shared.end(token: token, success: false, reason: hint)
+        }
+        return result
     }
 
     func generateCaption(model: String,

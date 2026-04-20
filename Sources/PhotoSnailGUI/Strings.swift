@@ -315,6 +315,7 @@ enum Strings {
         "about.author": "by Laurent Chouinard",
         "about.license": "MIT License",
         "about.github": "GitHub",
+        "about.build_prefix": "Build",
 
         // Status, controls & errors
         "status.n_selected": "%d selected",
@@ -346,6 +347,16 @@ enum Strings {
         "preflight.open_settings": "Open Settings…",
         "preflight.start_ollama": "Start Ollama",
         "preflight.starting_ollama": "Starting Ollama…",
+        "preflight.title_openai": "LLM server check failed",
+        "preflight.unreachable_heading_openai": "Can\u{2019}t reach the OpenAI-compatible server.",
+        "preflight.unreachable_body_openai": "Tried to connect to %@ but got: %@\n\nPhotoSnail needs a locally-hosted OpenAI-compatible server (mlx-vlm, LM Studio, vLLM) running at the configured URL.",
+        "preflight.model_missing_heading_openai": "Model \"%@\" isn\u{2019}t available on the server.",
+        "preflight.model_missing_none_installed_openai": "The server is reachable but isn\u{2019}t exposing any models yet.",
+        "preflight.model_missing_installed_list_openai": "The server is reachable. Available models:",
+        "preflight.openai_fix_check_running": "Make sure your mlx-vlm / LM Studio / vLLM server is running",
+        "preflight.openai_fix_check_url": "Verify the server URL in Settings matches your server\u{2019}s address",
+        "preflight.openai_fix_load_model": "Load the model in your server",
+        "preflight.openai_fix_check_model_id": "Double-check the model ID matches what the server exposes",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Auto-start when Mac is locked",
@@ -636,6 +647,7 @@ enum Strings {
         "about.author": "par Laurent Chouinard",
         "about.license": "Licence MIT",
         "about.github": "GitHub",
+        "about.build_prefix": "Compilation",
 
         // Status, controls & errors
         "status.n_selected": "%d s\u{00E9}lectionn\u{00E9}(s)",
@@ -726,6 +738,16 @@ enum Strings {
         "preflight.open_settings": "Ouvrir les r\u{00E9}glages\u{2026}",
         "preflight.start_ollama": "D\u{00E9}marrer Ollama",
         "preflight.starting_ollama": "D\u{00E9}marrage d\u{2019}Ollama\u{2026}",
+        "preflight.title_openai": "\u{00C9}chec de la v\u{00E9}rification du serveur LLM",
+        "preflight.unreachable_heading_openai": "Impossible de joindre le serveur compatible OpenAI.",
+        "preflight.unreachable_body_openai": "Tentative de connexion \u{00E0} %@ : %@\n\nPhotoSnail a besoin d\u{2019}un serveur compatible OpenAI h\u{00E9}berg\u{00E9} localement (mlx-vlm, LM Studio, vLLM) \u{00E0} l\u{2019}URL configur\u{00E9}e.",
+        "preflight.model_missing_heading_openai": "Le mod\u{00E8}le \u{00AB} %@ \u{00BB} n\u{2019}est pas disponible sur le serveur.",
+        "preflight.model_missing_none_installed_openai": "Le serveur est accessible mais n\u{2019}expose encore aucun mod\u{00E8}le.",
+        "preflight.model_missing_installed_list_openai": "Le serveur est accessible. Mod\u{00E8}les disponibles :",
+        "preflight.openai_fix_check_running": "V\u{00E9}rifiez que votre serveur mlx-vlm / LM Studio / vLLM fonctionne",
+        "preflight.openai_fix_check_url": "V\u{00E9}rifiez que l\u{2019}URL du serveur dans les R\u{00E9}glages correspond \u{00E0} son adresse",
+        "preflight.openai_fix_load_model": "Chargez le mod\u{00E8}le dans votre serveur",
+        "preflight.openai_fix_check_model_id": "V\u{00E9}rifiez que l\u{2019}identifiant du mod\u{00E8}le correspond \u{00E0} celui expos\u{00E9} par le serveur",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "D\u{00E9}marrer automatiquement quand le Mac est verrouill\u{00E9}",
@@ -972,6 +994,7 @@ enum Strings {
         "about.author": "por Laurent Chouinard",
         "about.license": "Licencia MIT",
         "about.github": "GitHub",
+        "about.build_prefix": "Compilaci\u{00F3}n",
 
         // Status, controls & errors
         "status.n_selected": "%d seleccionado(s)",
@@ -1062,6 +1085,16 @@ enum Strings {
         "preflight.open_settings": "Abrir ajustes\u{2026}",
         "preflight.start_ollama": "Iniciar Ollama",
         "preflight.starting_ollama": "Iniciando Ollama\u{2026}",
+        "preflight.title_openai": "Fallo en la comprobaci\u{00F3}n del servidor LLM",
+        "preflight.unreachable_heading_openai": "No se puede conectar con el servidor compatible con OpenAI.",
+        "preflight.unreachable_body_openai": "Se intent\u{00F3} conectar a %@ pero se obtuvo: %@\n\nPhotoSnail necesita un servidor compatible con OpenAI alojado localmente (mlx-vlm, LM Studio, vLLM) en la URL configurada.",
+        "preflight.model_missing_heading_openai": "El modelo \u{00AB}%@\u{00BB} no est\u{00E1} disponible en el servidor.",
+        "preflight.model_missing_none_installed_openai": "El servidor est\u{00E1} accesible, pero a\u{00FA}n no expone ning\u{00FA}n modelo.",
+        "preflight.model_missing_installed_list_openai": "El servidor est\u{00E1} accesible. Modelos disponibles:",
+        "preflight.openai_fix_check_running": "Aseg\u{00FA}rate de que tu servidor mlx-vlm / LM Studio / vLLM est\u{00E1} en ejecuci\u{00F3}n",
+        "preflight.openai_fix_check_url": "Verifica que la URL del servidor en Ajustes coincida con la direcci\u{00F3}n del servidor",
+        "preflight.openai_fix_load_model": "Carga el modelo en tu servidor",
+        "preflight.openai_fix_check_model_id": "Comprueba que el ID del modelo coincide con el que expone el servidor",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Iniciar autom\u{00E1}ticamente cuando el Mac est\u{00E1} bloqueado",
@@ -1308,6 +1341,7 @@ enum Strings {
         "about.author": "von Laurent Chouinard",
         "about.license": "MIT-Lizenz",
         "about.github": "GitHub",
+        "about.build_prefix": "Build",
 
         // Status, controls & errors
         "status.n_selected": "%d ausgew\u{00E4}hlt",
@@ -1397,6 +1431,16 @@ enum Strings {
         "preflight.open_settings": "Einstellungen \u{00F6}ffnen\u{2026}",
         "preflight.start_ollama": "Ollama starten",
         "preflight.starting_ollama": "Ollama wird gestartet\u{2026}",
+        "preflight.title_openai": "LLM-Server-Pr\u{00FC}fung fehlgeschlagen",
+        "preflight.unreachable_heading_openai": "Der OpenAI-kompatible Server ist nicht erreichbar.",
+        "preflight.unreachable_body_openai": "Verbindung zu %@ versucht, erhalten: %@\n\nPhotoSnail ben\u{00F6}tigt einen lokal gehosteten OpenAI-kompatiblen Server (mlx-vlm, LM Studio, vLLM) unter der konfigurierten URL.",
+        "preflight.model_missing_heading_openai": "Das Modell \u{201E}%@\u{201C} ist auf dem Server nicht verf\u{00FC}gbar.",
+        "preflight.model_missing_none_installed_openai": "Der Server ist erreichbar, stellt aber noch keine Modelle bereit.",
+        "preflight.model_missing_installed_list_openai": "Der Server ist erreichbar. Verf\u{00FC}gbare Modelle:",
+        "preflight.openai_fix_check_running": "Stellen Sie sicher, dass Ihr mlx-vlm / LM Studio / vLLM-Server l\u{00E4}uft",
+        "preflight.openai_fix_check_url": "Pr\u{00FC}fen Sie, ob die Server-URL in den Einstellungen mit der Server-Adresse \u{00FC}bereinstimmt",
+        "preflight.openai_fix_load_model": "Laden Sie das Modell in Ihren Server",
+        "preflight.openai_fix_check_model_id": "Pr\u{00FC}fen Sie, ob die Modell-ID mit der vom Server ausgegebenen \u{00FC}bereinstimmt",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Automatisch starten, wenn der Mac gesperrt ist",
@@ -1643,6 +1687,7 @@ enum Strings {
         "about.author": "por Laurent Chouinard",
         "about.license": "Licen\u{00E7}a MIT",
         "about.github": "GitHub",
+        "about.build_prefix": "Compila\u{00E7}\u{00E3}o",
 
         // Status, controls & errors
         "status.n_selected": "%d selecionado(s)",
@@ -1733,6 +1778,16 @@ enum Strings {
         "preflight.open_settings": "Abrir ajustes\u{2026}",
         "preflight.start_ollama": "Iniciar Ollama",
         "preflight.starting_ollama": "Iniciando Ollama\u{2026}",
+        "preflight.title_openai": "Falha na verifica\u{00E7}\u{00E3}o do servidor LLM",
+        "preflight.unreachable_heading_openai": "N\u{00E3}o \u{00E9} poss\u{00ED}vel conectar ao servidor compat\u{00ED}vel com OpenAI.",
+        "preflight.unreachable_body_openai": "Tentativa de conex\u{00E3}o com %@ retornou: %@\n\nO PhotoSnail precisa de um servidor compat\u{00ED}vel com OpenAI hospedado localmente (mlx-vlm, LM Studio, vLLM) no URL configurado.",
+        "preflight.model_missing_heading_openai": "O modelo \u{201C}%@\u{201D} n\u{00E3}o est\u{00E1} dispon\u{00ED}vel no servidor.",
+        "preflight.model_missing_none_installed_openai": "O servidor est\u{00E1} acess\u{00ED}vel, mas ainda n\u{00E3}o exp\u{00F5}e nenhum modelo.",
+        "preflight.model_missing_installed_list_openai": "O servidor est\u{00E1} acess\u{00ED}vel. Modelos dispon\u{00ED}veis:",
+        "preflight.openai_fix_check_running": "Confirme que seu servidor mlx-vlm / LM Studio / vLLM est\u{00E1} em execu\u{00E7}\u{00E3}o",
+        "preflight.openai_fix_check_url": "Verifique se o URL do servidor nas Prefer\u{00EA}ncias corresponde ao endere\u{00E7}o do servidor",
+        "preflight.openai_fix_load_model": "Carregue o modelo no seu servidor",
+        "preflight.openai_fix_check_model_id": "Confirme que o ID do modelo corresponde ao que o servidor exp\u{00F5}e",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Iniciar automaticamente quando o Mac est\u{00E1} bloqueado",
@@ -1979,6 +2034,7 @@ enum Strings {
         "about.author": "Laurent Chouinard \u{4F5C}",
         "about.license": "MIT\u{30E9}\u{30A4}\u{30BB}\u{30F3}\u{30B9}",
         "about.github": "GitHub",
+        "about.build_prefix": "\u{30D3}\u{30EB}\u{30C9}",
 
         // Status, controls & errors
         "status.n_selected": "%d\u{4EF6}\u{9078}\u{629E}\u{6E08}\u{307F}",
@@ -2068,6 +2124,16 @@ enum Strings {
         "preflight.open_settings": "\u{8A2D}\u{5B9A}\u{3092}\u{958B}\u{304F}\u{2026}",
         "preflight.start_ollama": "Ollama \u{3092}\u{8D77}\u{52D5}",
         "preflight.starting_ollama": "Ollama \u{3092}\u{8D77}\u{52D5}\u{4E2D}\u{2026}",
+        "preflight.title_openai": "LLM\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{306E}\u{30C1}\u{30A7}\u{30C3}\u{30AF}\u{306B}\u{5931}\u{6557}\u{3057}\u{307E}\u{3057}\u{305F}",
+        "preflight.unreachable_heading_openai": "OpenAI\u{4E92}\u{63DB}\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{306B}\u{63A5}\u{7D9A}\u{3067}\u{304D}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "preflight.unreachable_body_openai": "%@\u{3078}\u{306E}\u{63A5}\u{7D9A}\u{3092}\u{8A66}\u{307F}\u{307E}\u{3057}\u{305F}\u{304C}\u{30A8}\u{30E9}\u{30FC}: %@\n\nPhotoSnail\u{306F}\u{3001}\u{8A2D}\u{5B9A}\u{3055}\u{308C}\u{305F}URL\u{3067}\u{30ED}\u{30FC}\u{30AB}\u{30EB}\u{306B}\u{30DB}\u{30B9}\u{30C8}\u{3055}\u{308C}\u{305F}OpenAI\u{4E92}\u{63DB}\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{FF08}mlx-vlm\u{3001}LM Studio\u{3001}vLLM\u{FF09}\u{3092}\u{5FC5}\u{8981}\u{3068}\u{3057}\u{307E}\u{3059}\u{3002}",
+        "preflight.model_missing_heading_openai": "\u{30E2}\u{30C7}\u{30EB}\u{300C}%@\u{300D}\u{306F}\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{3067}\u{5229}\u{7528}\u{3067}\u{304D}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "preflight.model_missing_none_installed_openai": "\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{306F}\u{5230}\u{9054}\u{53EF}\u{80FD}\u{3067}\u{3059}\u{304C}\u{3001}\u{30E2}\u{30C7}\u{30EB}\u{304C}\u{307E}\u{3060}\u{516C}\u{958B}\u{3055}\u{308C}\u{3066}\u{3044}\u{307E}\u{305B}\u{3093}\u{3002}",
+        "preflight.model_missing_installed_list_openai": "\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{306F}\u{5230}\u{9054}\u{53EF}\u{80FD}\u{3067}\u{3059}\u{3002}\u{5229}\u{7528}\u{53EF}\u{80FD}\u{306A}\u{30E2}\u{30C7}\u{30EB}:",
+        "preflight.openai_fix_check_running": "mlx-vlm / LM Studio / vLLM\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{304C}\u{5B9F}\u{884C}\u{4E2D}\u{3067}\u{3042}\u{308B}\u{3053}\u{3068}\u{3092}\u{78BA}\u{8A8D}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}",
+        "preflight.openai_fix_check_url": "\u{8A2D}\u{5B9A}\u{306E}\u{30B5}\u{30FC}\u{30D0}\u{30FC}URL\u{304C}\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{306E}\u{30A2}\u{30C9}\u{30EC}\u{30B9}\u{3068}\u{4E00}\u{81F4}\u{3057}\u{3066}\u{3044}\u{308B}\u{304B}\u{78BA}\u{8A8D}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}",
+        "preflight.openai_fix_load_model": "\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{3067}\u{30E2}\u{30C7}\u{30EB}\u{3092}\u{30ED}\u{30FC}\u{30C9}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}",
+        "preflight.openai_fix_check_model_id": "\u{30E2}\u{30C7}\u{30EB}ID\u{304C}\u{30B5}\u{30FC}\u{30D0}\u{30FC}\u{304C}\u{516C}\u{958B}\u{3057}\u{3066}\u{3044}\u{308B}\u{3082}\u{306E}\u{3068}\u{4E00}\u{81F4}\u{3059}\u{308B}\u{3053}\u{3068}\u{3092}\u{78BA}\u{8A8D}\u{3057}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{3066}\u{3044}\u{308B}\u{3068}\u{304D}\u{306B}\u{81EA}\u{52D5}\u{958B}\u{59CB}",
@@ -2314,6 +2380,7 @@ enum Strings {
         "about.author": "Laurent Chouinard \u{5236}\u{4F5C}",
         "about.license": "MIT \u{8BB8}\u{53EF}\u{8BC1}",
         "about.github": "GitHub",
+        "about.build_prefix": "\u{6784}\u{5EFA}",
 
         // Status, controls & errors
         "status.n_selected": "\u{5DF2}\u{9009}\u{62E9}%d\u{9879}",
@@ -2403,6 +2470,16 @@ enum Strings {
         "preflight.open_settings": "\u{6253}\u{5F00}\u{8BBE}\u{7F6E}\u{2026}",
         "preflight.start_ollama": "\u{542F}\u{52A8} Ollama",
         "preflight.starting_ollama": "\u{6B63}\u{5728}\u{542F}\u{52A8} Ollama\u{2026}",
+        "preflight.title_openai": "LLM \u{670D}\u{52A1}\u{5668}\u{68C0}\u{67E5}\u{5931}\u{8D25}",
+        "preflight.unreachable_heading_openai": "\u{65E0}\u{6CD5}\u{8FDE}\u{63A5}\u{5230} OpenAI \u{517C}\u{5BB9}\u{670D}\u{52A1}\u{5668}\u{3002}",
+        "preflight.unreachable_body_openai": "\u{5C1D}\u{8BD5}\u{8FDE}\u{63A5} %@ \u{65F6}\u{51FA}\u{9519}: %@\n\nPhotoSnail \u{9700}\u{8981}\u{5728}\u{914D}\u{7F6E}\u{7684} URL \u{4E0A}\u{8FD0}\u{884C}\u{672C}\u{5730}\u{6258}\u{7BA1}\u{7684} OpenAI \u{517C}\u{5BB9}\u{670D}\u{52A1}\u{5668}\u{FF08}mlx-vlm\u{3001}LM Studio\u{3001}vLLM\u{FF09}\u{3002}",
+        "preflight.model_missing_heading_openai": "\u{670D}\u{52A1}\u{5668}\u{4E0A}\u{6CA1}\u{6709}\u{6A21}\u{578B} \u{201C}%@\u{201D}\u{3002}",
+        "preflight.model_missing_none_installed_openai": "\u{670D}\u{52A1}\u{5668}\u{53EF}\u{8BBF}\u{95EE}\u{FF0C}\u{4F46}\u{5C1A}\u{672A}\u{516C}\u{5F00}\u{4EFB}\u{4F55}\u{6A21}\u{578B}\u{3002}",
+        "preflight.model_missing_installed_list_openai": "\u{670D}\u{52A1}\u{5668}\u{53EF}\u{8BBF}\u{95EE}\u{3002}\u{53EF}\u{7528}\u{6A21}\u{578B}:",
+        "preflight.openai_fix_check_running": "\u{8BF7}\u{786E}\u{4FDD}\u{60A8}\u{7684} mlx-vlm / LM Studio / vLLM \u{670D}\u{52A1}\u{5668}\u{6B63}\u{5728}\u{8FD0}\u{884C}",
+        "preflight.openai_fix_check_url": "\u{8BF7}\u{6838}\u{5BF9}\u{8BBE}\u{7F6E}\u{4E2D}\u{7684}\u{670D}\u{52A1}\u{5668} URL \u{4E0E}\u{60A8}\u{7684}\u{670D}\u{52A1}\u{5668}\u{5730}\u{5740}\u{4E00}\u{81F4}",
+        "preflight.openai_fix_load_model": "\u{5728}\u{60A8}\u{7684}\u{670D}\u{52A1}\u{5668}\u{4E0A}\u{52A0}\u{8F7D}\u{6A21}\u{578B}",
+        "preflight.openai_fix_check_model_id": "\u{8BF7}\u{6838}\u{5BF9}\u{6A21}\u{578B} ID \u{4E0E}\u{670D}\u{52A1}\u{5668}\u{516C}\u{5F00}\u{7684}\u{540D}\u{79F0}\u{4E00}\u{81F4}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{9501}\u{5B9A}\u{65F6}\u{81EA}\u{52A8}\u{5F00}\u{59CB}",
@@ -2649,6 +2726,7 @@ enum Strings {
         "about.author": "Laurent Chouinard \u{C81C}\u{C791}",
         "about.license": "MIT \u{B77C}\u{C774}\u{C120}\u{C2A4}",
         "about.github": "GitHub",
+        "about.build_prefix": "\u{BE4C}\u{B4DC}",
 
         // Status, controls & errors
         "status.n_selected": "%d\u{AC1C} \u{C120}\u{D0DD}\u{B428}",
@@ -2738,6 +2816,16 @@ enum Strings {
         "preflight.open_settings": "\u{C124}\u{C815} \u{C5F4}\u{AE30}\u{2026}",
         "preflight.start_ollama": "Ollama \u{C2DC}\u{C791}",
         "preflight.starting_ollama": "Ollama \u{C2DC}\u{C791} \u{C911}\u{2026}",
+        "preflight.title_openai": "LLM \u{C11C}\u{BC84} \u{D655}\u{C778} \u{C2E4}\u{D328}",
+        "preflight.unreachable_heading_openai": "OpenAI \u{D638}\u{D658} \u{C11C}\u{BC84}\u{C5D0} \u{C5F0}\u{ACB0}\u{D560} \u{C218} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "preflight.unreachable_body_openai": "%@\u{C5D0} \u{C5F0}\u{ACB0}\u{C744} \u{C2DC}\u{B3C4}\u{D588}\u{C9C0}\u{B9CC} \u{C624}\u{B958}\u{AC00} \u{BC1C}\u{C0DD}\u{D588}\u{C2B5}\u{B2C8}\u{B2E4}: %@\n\nPhotoSnail\u{C740} \u{AD6C}\u{C131}\u{B41C} URL\u{C5D0}\u{C11C} \u{B85C}\u{CEEC}\u{B85C} \u{D638}\u{C2A4}\u{D305}\u{B41C} OpenAI \u{D638}\u{D658} \u{C11C}\u{BC84}(mlx-vlm, LM Studio, vLLM)\u{AC00} \u{D544}\u{C694}\u{D569}\u{B2C8}\u{B2E4}.",
+        "preflight.model_missing_heading_openai": "\u{BAA8}\u{B378} \"%@\"\u{C744}(\u{B97C}) \u{C11C}\u{BC84}\u{C5D0}\u{C11C} \u{C0AC}\u{C6A9}\u{D560} \u{C218} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "preflight.model_missing_none_installed_openai": "\u{C11C}\u{BC84}\u{C5D0} \u{C5F0}\u{ACB0}\u{B418}\u{C5B4} \u{C788}\u{C9C0}\u{B9CC} \u{C544}\u{C9C1} \u{B178}\u{CD9C}\u{B41C} \u{BAA8}\u{B378}\u{C774} \u{C5C6}\u{C2B5}\u{B2C8}\u{B2E4}.",
+        "preflight.model_missing_installed_list_openai": "\u{C11C}\u{BC84}\u{C5D0} \u{C5F0}\u{ACB0}\u{B418}\u{C5B4} \u{C788}\u{C2B5}\u{B2C8}\u{B2E4}. \u{C0AC}\u{C6A9} \u{AC00}\u{B2A5}\u{D55C} \u{BAA8}\u{B378}:",
+        "preflight.openai_fix_check_running": "mlx-vlm / LM Studio / vLLM \u{C11C}\u{BC84}\u{AC00} \u{C2E4}\u{D589} \u{C911}\u{C778}\u{C9C0} \u{D655}\u{C778}\u{D558}\u{C138}\u{C694}",
+        "preflight.openai_fix_check_url": "\u{C124}\u{C815}\u{C758} \u{C11C}\u{BC84} URL\u{C774} \u{C11C}\u{BC84} \u{C8FC}\u{C18C}\u{C640} \u{C77C}\u{CE58}\u{D558}\u{B294}\u{C9C0} \u{D655}\u{C778}\u{D558}\u{C138}\u{C694}",
+        "preflight.openai_fix_load_model": "\u{C11C}\u{BC84}\u{C5D0} \u{BAA8}\u{B378}\u{C744} \u{B85C}\u{B4DC}\u{D558}\u{C138}\u{C694}",
+        "preflight.openai_fix_check_model_id": "\u{BAA8}\u{B378} ID\u{AC00} \u{C11C}\u{BC84}\u{AC00} \u{B178}\u{CD9C}\u{D558}\u{B294} \u{AC83}\u{ACFC} \u{C77C}\u{CE58}\u{D558}\u{B294}\u{C9C0} \u{D655}\u{C778}\u{D558}\u{C138}\u{C694}",
 
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{C7A0}\u{AE08} \u{C2DC} \u{C790}\u{B3D9} \u{C2DC}\u{C791}",
