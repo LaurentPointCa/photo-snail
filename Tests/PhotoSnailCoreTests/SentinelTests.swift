@@ -29,9 +29,39 @@ final class SentinelTests: XCTestCase {
         XCTAssertFalse(Sentinel.containsAnySentinel("ai:gemma4-v"))
     }
 
-    func testContainsAnySentinel_rejectsUppercaseOrSpaced() {
+    func testContainsAnySentinel_rejectsUppercaseAiPrefixOrSpaced() {
+        // The `ai:` prefix is lowercase-only (our `make(...)` writes it that
+        // way). The family part after the prefix is permissive, but the
+        // marker itself is a fixed literal.
         XCTAssertFalse(Sentinel.containsAnySentinel("AI:GEMMA4-V1"))
         XCTAssertFalse(Sentinel.containsAnySentinel("ai: gemma4-v1"))
+    }
+
+    func testContainsAnySentinel_matchesManualSentinelsWithUnderscoresDotsOrUppercase() {
+        // Real-world accumulation bug on 2026-04-20 came from `ai:qwen36_4b-v20`
+        // (manually set via GUI), which the original `[a-z0-9-]+` pattern
+        // missed. The splitter consequently treated our segment as user text
+        // and appended a fresh copy on every reprocess. Guard rails for the
+        // broader character class:
+        XCTAssertTrue(Sentinel.containsAnySentinel("ai:qwen36_4b-v20"))
+        XCTAssertTrue(Sentinel.containsAnySentinel("ai:my.model-v3"))
+        XCTAssertTrue(Sentinel.containsAnySentinel("ai:Qwen3_6-v1"))
+        // Embedded in realistic tag list:
+        XCTAssertTrue(Sentinel.containsAnySentinel(
+            "A photo. Tags: foo, bar, ai:qwen36_4b-v20"
+        ))
+    }
+
+    func testContainsAnySentinel_doesNotCrossWhitespaceBetweenSentinels() {
+        // Two adjacent sentinels separated by ", " must each match as a
+        // discrete occurrence — the character class must exclude whitespace
+        // and punctuation other than `.`, `_`, `-`.
+        let text = "Tags: ai:gemma4-v1, ai:qwen36_4b-v2"
+        let pattern = Sentinel.sentinelPattern
+        let re = try! NSRegularExpression(pattern: pattern, options: [])
+        let range = NSRange(text.startIndex..., in: text)
+        let matches = re.numberOfMatches(in: text, options: [], range: range)
+        XCTAssertEqual(matches, 2)
     }
 
     // MARK: - shortFamily

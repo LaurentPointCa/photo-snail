@@ -43,6 +43,7 @@ struct AppArgs {
     var listModels: Bool = false
     var apiTest: Bool = false
     var verifyQueue: Bool = false
+    var scanMulti: Bool = false
 
     // CLI overrides; nil means "use whatever is in settings.json"
     var apiProvider: LLMProvider? = nil
@@ -83,6 +84,8 @@ func parseArgs(_ argv: [String]) -> AppArgs {
             out.apiTest = true
         case "--verify-queue":
             out.verifyQueue = true
+        case "--scan-multi":
+            out.scanMulti = true
         case "--provider":
             i += 1
             if i < argv.count {
@@ -386,6 +389,126 @@ private func runApiTest(settings: Settings) async {
     }
 }
 
+// MARK: - --scan-multi
+
+/// Read-only diagnostic that scans every `done` asset in the queue,
+/// reads its current Photos.app description via AppleScript, and reports
+/// rows that look "accumulated" — more than one PhotoSnail sentinel,
+/// more than one `\n\n---\n\n` separator, or unusual length for a clean
+/// one-touch write.
+///
+/// Iterates one asset at a time (NSAppleScript has to run on the main
+/// thread; each call is ~100ms). For the user's ~4k done rows this takes
+/// a few minutes — acceptable for a one-shot remediation audit.
+///
+/// Does NOT mutate anything: no Photos.app writes, no queue updates. The
+/// output is a TSV-ish report the user can eyeball or feed into a later
+/// cleanup pass.
+@MainActor
+private func runScanMulti(dbPath: URL?) async {
+    let status = await PhotoLibrary.requestAuth()
+    guard status == .authorized else {
+        eprint("ERROR: Photo Library auth \(PhotoLibrary.authStatusLabel(status))")
+        exit(1)
+    }
+
+    let path = dbPath ?? AssetQueue.defaultDBPath
+    eprint("queue: \(path.path)")
+    let queue: AssetQueue
+    do {
+        queue = try AssetQueue(dbPath: path)
+    } catch {
+        eprint("ERROR opening queue: \(error)")
+        exit(1)
+    }
+
+    // Pull every done id regardless of which sentinel was used — the
+    // report needs to span sentinel bumps and provider switches.
+    var doneIds: [String] = []
+    do {
+        let sentinels = try await queue.distinctSentinels()
+        for s in sentinels {
+            let ids = try await queue.idsWithSentinel(s)
+            doneIds.append(contentsOf: ids)
+        }
+    } catch {
+        eprint("ERROR reading done ids: \(error)")
+        exit(1)
+    }
+    // De-duplicate in case a row somehow ended up with multiple sentinels
+    // (shouldn't, but defensive).
+    doneIds = Array(Set(doneIds))
+    eprint("scanning \(doneIds.count) done asset(s)...")
+
+    // Reuse the same pattern as Sentinel.containsAnySentinel so this
+    // diagnostic can never diverge from the detection used by the write-back
+    // splitter. We call numberOfMatches(...) to COUNT sentinels, while
+    // containsAnySentinel only needs presence.
+    let sentinelRE = try! NSRegularExpression(
+        pattern: Sentinel.sentinelPattern,
+        options: []
+    )
+    let separator = "\n\n---\n\n"
+
+    struct Finding {
+        let id: String
+        let sentinels: Int
+        let separators: Int
+        let length: Int
+        let description: String
+    }
+    var suspicious: [Finding] = []
+    var hardErrors = 0
+    var scanned = 0
+    let startedAt = Date()
+
+    for id in doneIds {
+        let uuid = PhotoLibrary.uuidPrefix(id)
+        let desc: String
+        do {
+            desc = try PhotosScripter.readDescription(uuid: uuid)
+        } catch {
+            hardErrors += 1
+            continue
+        }
+        let range = NSRange(desc.startIndex..., in: desc)
+        let sentinels = sentinelRE.numberOfMatches(in: desc, options: [], range: range)
+        let separators = desc.components(separatedBy: separator).count - 1
+        if sentinels >= 2 || separators >= 2 {
+            suspicious.append(Finding(
+                id: id, sentinels: sentinels, separators: separators,
+                length: desc.count, description: desc
+            ))
+        }
+        scanned += 1
+        if scanned % 100 == 0 {
+            let elapsed = Date().timeIntervalSince(startedAt)
+            let rate = Double(scanned) / max(elapsed, 0.001)
+            let remaining = Double(doneIds.count - scanned) / max(rate, 0.001)
+            eprint("  \(scanned)/\(doneIds.count) · suspicious=\(suspicious.count) · errors=\(hardErrors) · ~\(Int(remaining))s left")
+        }
+    }
+
+    let elapsed = Date().timeIntervalSince(startedAt)
+    eprint("scan done in \(String(format: "%.1f", elapsed))s — \(scanned) read, \(hardErrors) errors, \(suspicious.count) suspicious")
+    print("")
+    print("=== Suspicious descriptions (≥2 sentinels OR ≥2 separators) ===")
+    if suspicious.isEmpty {
+        print("(none — library is clean)")
+    } else {
+        print("uuid-prefix                           sentinels  seps  len  preview")
+        for f in suspicious.sorted(by: { $0.sentinels == $1.sentinels ? $0.separators > $1.separators : $0.sentinels > $1.sentinels }) {
+            let short = String(PhotoLibrary.uuidPrefix(f.id))
+            let oneline = f.description
+                .replacingOccurrences(of: "\n", with: "⏎")
+                .prefix(80)
+            print(String(format: "%@  %8d  %4d  %4d  %@",
+                         short, f.sentinels, f.separators, f.length, String(oneline)))
+        }
+    }
+    exit(0)
+}
+
 @main
 struct App {
     static func main() async {
@@ -423,6 +546,10 @@ struct App {
         }
         if args.verifyQueue {
             await runVerifyQueue(dbPath: args.dbPath.map { URL(fileURLWithPath: $0) })
+            return
+        }
+        if args.scanMulti {
+            await runScanMulti(dbPath: args.dbPath.map { URL(fileURLWithPath: $0) })
             return
         }
 

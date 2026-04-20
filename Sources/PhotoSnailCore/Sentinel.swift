@@ -162,17 +162,33 @@ public enum Sentinel {
 
     /// Return `true` if `text` contains at least one PhotoSnail-shaped sentinel
     /// (`ai:<family>-v<N>`), regardless of which model family wrote it. Used by
-    /// the write-back path to decide whether an existing description belongs to
-    /// us (overwrite freely) or to the user (preserve, append ours after a
-    /// separator). The pattern mirrors `family(of:)`'s sanitization rule
-    /// (alphanumeric runs separated by single dashes) so every sentinel we
-    /// could have written matches.
+    /// the write-back path (via `Pipeline.splitExistingDescription`) to decide
+    /// whether a segment of the existing description is ours (replace) or the
+    /// user's (preserve).
+    ///
+    /// The character class is intentionally broader than `sanitize()`'s own
+    /// output — `sanitize` produces `[a-z0-9-]+`, but real-world sentinels
+    /// include underscores and dots because users can set them manually via
+    /// `--sentinel ai:qwen36_4b-v1` or the GUI custom-sentinel field. We saw
+    /// this in production on 2026-04-20: 12 assets had accumulated 3-5
+    /// reprocess segments because `ai:qwen36_4b-v20`-style sentinels didn't
+    /// match the original `[a-z0-9]+(-…)*-v[0-9]+` pattern, so every reprocess
+    /// treated the prior segment as user text and appended a fresh copy.
+    /// Accepting any `[a-zA-Z0-9._-]` run keeps detection robust against those
+    /// manual variants without risking false positives — the `-v<digits>`
+    /// anchor and the `ai:` prefix are both very unlikely to appear in user
+    /// prose by accident.
     public static func containsAnySentinel(_ text: String) -> Bool {
-        let pattern = "ai:[a-z0-9]+(-[a-z0-9]+)*-v[0-9]+"
-        guard let re = try? NSRegularExpression(pattern: pattern, options: []) else {
+        guard let re = try? NSRegularExpression(pattern: sentinelPattern, options: []) else {
             return false
         }
         let range = NSRange(text.startIndex..., in: text)
         return re.firstMatch(in: text, options: [], range: range) != nil
     }
+
+    /// Shared regex source for `containsAnySentinel` and any caller that needs
+    /// to count or extract sentinels (the `--scan-multi` diagnostic, the future
+    /// cleanup tool). Exposed so there's one definition of "what does a
+    /// PhotoSnail sentinel look like in the wild".
+    public static let sentinelPattern = "ai:[A-Za-z0-9._-]+-v[0-9]+"
 }
