@@ -120,11 +120,14 @@ public final class Pipeline {
     ///
     /// Base output: `<description>. Tags: tag1, tag2, ..., <sentinel>`
     ///
-    /// When `existingDescription` is non-empty AND does NOT contain any
-    /// PhotoSnail sentinel (per `Sentinel.containsAnySentinel`), the user's
-    /// existing text is preserved and our payload is appended after a
-    /// `\n\n---\n\n` separator. If the existing description is empty or
-    /// already carries a sentinel, we overwrite cleanly.
+    /// If `existingDescription` contains a previously-written PhotoSnail
+    /// payload (detected via `splitExistingDescription`), we replace ONLY
+    /// our segment and keep everything the user had before it. So a reprocess
+    /// doesn't destroy the user's original prefix — that's the bug this
+    /// method used to have (it overwrote whenever the sentinel was anywhere
+    /// in the text, which is true on every reprocess). If there's no
+    /// PhotoSnail payload present, we treat the full existing text as the
+    /// user's and append ours after a `\n\n---\n\n` separator.
     public static func formatDescription(
         description: String,
         tags: [String],
@@ -137,11 +140,47 @@ public final class Pipeline {
         }
         let ours = "\(description). Tags: \(allTags.joined(separator: ", "))"
 
-        let pre = (existingDescription ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if pre.isEmpty || Sentinel.containsAnySentinel(pre) {
+        let raw = existingDescription ?? ""
+        let (userPrefix, _) = splitExistingDescription(raw)
+        let trimmed = userPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
             return ours
         }
-        return "\(pre)\n\n---\n\n\(ours)"
+        return "\(trimmed)\n\n---\n\n\(ours)"
+    }
+
+    /// Separate a description into (user-authored prefix, was there a
+    /// PhotoSnail payload present) so the write-back can replace only our
+    /// segment and keep the user's text intact across reprocessing.
+    ///
+    /// Algorithm: split on `\n\n---\n\n` (the separator we insert when
+    /// prepending our payload after user text). Walk from the end and find
+    /// the last segment that contains a PhotoSnail sentinel (`ai:<family>-v<N>`).
+    /// Everything before that segment is the user's prefix; that segment and
+    /// anything after are ours (discarded by the caller when rewriting).
+    ///
+    /// Edge cases:
+    ///   - No sentinel anywhere → entire text is user's; hasPayload=false.
+    ///   - Sentinel in the ONLY segment → user prefix is empty (we wrote
+    ///     the whole description).
+    ///   - User added text after our sentinel in Photos.app → the segment
+    ///     containing the sentinel still wins, and anything after is treated
+    ///     as part of our (replaced) payload. The user's in-payload edit is
+    ///     lost — acceptable, since editing inside our tag list is a weird
+    ///     state we can't round-trip reliably.
+    ///   - User has `---` separators in their own prose and no sentinel:
+    ///     falls through to hasPayload=false, whole text preserved.
+    public static func splitExistingDescription(
+        _ text: String
+    ) -> (userPrefix: String, hasPhotoSnailPayload: Bool) {
+        let separator = "\n\n---\n\n"
+        let segments = text.components(separatedBy: separator)
+        guard let idx = segments.lastIndex(where: { Sentinel.containsAnySentinel($0) }) else {
+            return (userPrefix: text, hasPhotoSnailPayload: false)
+        }
+        let userSegments = Array(segments.prefix(idx))
+        let userPrefix = userSegments.joined(separator: separator)
+        return (userPrefix: userPrefix, hasPhotoSnailPayload: true)
     }
 
     /// Merge strategy (v3):
