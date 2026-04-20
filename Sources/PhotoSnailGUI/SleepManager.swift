@@ -29,6 +29,11 @@ final class SleepManager {
     private var assertionID: IOPMAssertionID = 0
     private var assertionHeld = false
 
+    /// Read-only view of the IOKit no-idle-sleep assertion state for UI
+    /// indicators (status bar, etc.). True from `preventIdleSleep` until
+    /// the matching `allowIdleSleep`.
+    var isAssertionHeld: Bool { assertionHeld }
+
     init(onSleep: @escaping () -> Void, onWake: @escaping () -> Void) {
         self.onSleep = onSleep
         self.onWake = onWake

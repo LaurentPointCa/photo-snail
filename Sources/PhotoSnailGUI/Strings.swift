@@ -390,6 +390,16 @@ enum Strings {
         "lang.translate_message": "This will queue all previously-processed photos for translation to the new language using the AI model. Translation is text-only and much faster than re-processing.",
         "lang.translate": "Translate",
         "status.translation_queued": "%d photos queued for translation",
+
+        // Bottom status bar (v0.1.6)
+        "pill.connected": "Connected",
+        "pill.unreachable": "Unreachable",
+        "pill.unknown": "Unknown",
+        "health.photos_tooltip": "Photos authorization",
+        "health.sleep_held": "Preventing idle sleep during batch",
+        "health.sleep_idle": "Idle sleep allowed",
+        "health.lock_armed": "Auto-start when locked · armed",
+        "health.lock_off": "Auto-start when locked · off",
     ]
 
     // MARK: - French
@@ -708,6 +718,16 @@ enum Strings {
         "setting.auto_start_when_locked.help": "D\u{00E9}marrer le traitement au verrouillage de l'\u{00E9}cran et le mettre en pause au d\u{00E9}verrouillage. Emp\u{00EA}che la mise en veille automatique pendant le traitement. Utile pour les longs traitements.",
         "setting.lower_llm_priority": "R\u{00E9}duire la priorit\u{00E9} du LLM pendant le traitement",
         "setting.lower_llm_priority.help": "R\u{00E9}duit la priorit\u{00E9} du serveur LLM actif (Ollama, mlx-vlm, vLLM, LM Studio) pendant un traitement pour que les autres applications restent r\u{00E9}actives. La priorit\u{00E9} d'origine est r\u{00E9}tablie \u{00E0} l'arr\u{00EA}t du traitement.",
+
+        // Bottom status bar (v0.1.6)
+        "pill.connected": "Connect\u{00E9}",
+        "pill.unreachable": "Inaccessible",
+        "pill.unknown": "Inconnu",
+        "health.photos_tooltip": "Autorisation Photos",
+        "health.sleep_held": "Veille bloqu\u{00E9}e pendant le traitement",
+        "health.sleep_idle": "Veille autoris\u{00E9}e",
+        "health.lock_armed": "D\u{00E9}marrage auto au verrouillage \u{00B7} arm\u{00E9}",
+        "health.lock_off": "D\u{00E9}marrage auto au verrouillage \u{00B7} d\u{00E9}sactiv\u{00E9}",
     ]
 
     // MARK: - Spanish
@@ -1020,6 +1040,16 @@ enum Strings {
         "setting.auto_start_when_locked.help": "Comienza el procesamiento al bloquearse la pantalla y se pausa al desbloquearla. Evita la suspensi\u{00F3}n autom\u{00E1}tica durante el procesamiento. \u{00DA}til para procesos largos.",
         "setting.lower_llm_priority": "Reducir la prioridad del LLM durante el procesamiento",
         "setting.lower_llm_priority.help": "Reduce la prioridad del servidor LLM activo (Ollama, mlx-vlm, vLLM, LM Studio) mientras se ejecuta un lote para que otras apps sigan respondiendo. La prioridad original se restaura al detener el procesamiento.",
+
+        // Bottom status bar (v0.1.6)
+        "pill.connected": "Conectado",
+        "pill.unreachable": "Inalcanzable",
+        "pill.unknown": "Desconocido",
+        "health.photos_tooltip": "Autorizaci\u{00F3}n de Fotos",
+        "health.sleep_held": "Suspensi\u{00F3}n bloqueada durante el procesamiento",
+        "health.sleep_idle": "Suspensi\u{00F3}n permitida",
+        "health.lock_armed": "Inicio autom\u{00E1}tico al bloquear \u{00B7} activo",
+        "health.lock_off": "Inicio autom\u{00E1}tico al bloquear \u{00B7} desactivado",
     ]
 
     // MARK: - German
@@ -1331,6 +1361,16 @@ enum Strings {
         "setting.auto_start_when_locked.help": "Verarbeitung beginnt, wenn der Bildschirm gesperrt wird, und pausiert beim Entsperren. Verhindert automatischen Ruhezustand w\u{00E4}hrend der Verarbeitung. N\u{00FC}tzlich f\u{00FC}r lange Durchl\u{00E4}ufe.",
         "setting.lower_llm_priority": "LLM-Priorit\u{00E4}t w\u{00E4}hrend der Verarbeitung senken",
         "setting.lower_llm_priority.help": "Senkt die Priorit\u{00E4}t des aktiven LLM-Servers (Ollama, mlx-vlm, vLLM, LM Studio) w\u{00E4}hrend eines Durchlaufs, damit andere Apps reaktionsf\u{00E4}hig bleiben. Die urspr\u{00FC}ngliche Priorit\u{00E4}t wird beim Stopp wiederhergestellt.",
+
+        // Bottom status bar (v0.1.6)
+        "pill.connected": "Verbunden",
+        "pill.unreachable": "Nicht erreichbar",
+        "pill.unknown": "Unbekannt",
+        "health.photos_tooltip": "Fotos-Berechtigung",
+        "health.sleep_held": "Ruhezustand w\u{00E4}hrend Verarbeitung blockiert",
+        "health.sleep_idle": "Ruhezustand erlaubt",
+        "health.lock_armed": "Auto-Start bei Sperre \u{00B7} aktiv",
+        "health.lock_off": "Auto-Start bei Sperre \u{00B7} aus",
     ]
 
     // MARK: - Portuguese
@@ -1643,6 +1683,16 @@ enum Strings {
         "setting.auto_start_when_locked.help": "Come\u{00E7}a o processamento ao bloquear a tela e pausa ao desbloquear. Impede a suspens\u{00E3}o autom\u{00E1}tica durante o processamento. \u{00DA}til para processamentos longos.",
         "setting.lower_llm_priority": "Reduzir a prioridade do LLM durante o processamento",
         "setting.lower_llm_priority.help": "Reduz a prioridade do servidor LLM ativo (Ollama, mlx-vlm, vLLM, LM Studio) enquanto um lote est\u{00E1} em execu\u{00E7}\u{00E3}o para que os outros apps permane\u{00E7}am respons\u{00ED}veis. A prioridade original \u{00E9} restaurada ao parar o processamento.",
+
+        // Bottom status bar (v0.1.6)
+        "pill.connected": "Conectado",
+        "pill.unreachable": "Inacess\u{00ED}vel",
+        "pill.unknown": "Desconhecido",
+        "health.photos_tooltip": "Autoriza\u{00E7}\u{00E3}o do Fotos",
+        "health.sleep_held": "Suspens\u{00E3}o bloqueada durante o processamento",
+        "health.sleep_idle": "Suspens\u{00E3}o permitida",
+        "health.lock_armed": "In\u{00ED}cio autom\u{00E1}tico ao bloquear \u{00B7} ativo",
+        "health.lock_off": "In\u{00ED}cio autom\u{00E1}tico ao bloquear \u{00B7} desativado",
     ]
 
     // MARK: - Japanese
@@ -1954,6 +2004,16 @@ enum Strings {
         "setting.auto_start_when_locked.help": "\u{753B}\u{9762}\u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{308B}\u{3068}\u{51E6}\u{7406}\u{3092}\u{958B}\u{59CB}\u{3057}\u{3001}\u{30ED}\u{30C3}\u{30AF}\u{89E3}\u{9664}\u{3067}\u{4E00}\u{6642}\u{505C}\u{6B62}\u{3057}\u{307E}\u{3059}\u{3002}\u{51E6}\u{7406}\u{4E2D}\u{306F}\u{81EA}\u{52D5}\u{30B9}\u{30EA}\u{30FC}\u{30D7}\u{3092}\u{9632}\u{6B62}\u{3057}\u{307E}\u{3059}\u{3002}\u{9577}\u{6642}\u{9593}\u{306E}\u{30D0}\u{30C3}\u{30C1}\u{306B}\u{4FBF}\u{5229}\u{3067}\u{3059}\u{3002}",
         "setting.lower_llm_priority": "処理中に LLM の優先度を下げる",
         "setting.lower_llm_priority.help": "バッチ処理中にアクティブな LLM サーバー (Ollama、mlx-vlm、vLLM、LM Studio) の優先度を下げ、他のアプリの応答性を維持します。処理が停止すると元の優先度に復元されます。",
+
+        // Bottom status bar (v0.1.6)
+        "pill.connected": "接続済み",
+        "pill.unreachable": "到達不能",
+        "pill.unknown": "不明",
+        "health.photos_tooltip": "写真アクセス権",
+        "health.sleep_held": "処理中はスリープを抑止",
+        "health.sleep_idle": "スリープ許可",
+        "health.lock_armed": "ロック時に自動開始 \u{00B7} 有効",
+        "health.lock_off": "ロック時に自動開始 \u{00B7} 無効",
     ]
 
     // MARK: - Chinese (Simplified)
@@ -2265,6 +2325,16 @@ enum Strings {
         "setting.auto_start_when_locked.help": "\u{5C4F}\u{5E55}\u{9501}\u{5B9A}\u{65F6}\u{5F00}\u{59CB}\u{5904}\u{7406}\u{FF0C}\u{89E3}\u{9501}\u{65F6}\u{6682}\u{505C}\u{3002}\u{5904}\u{7406}\u{671F}\u{95F4}\u{9632}\u{6B62}\u{81EA}\u{52A8}\u{4F11}\u{7720}\u{3002}\u{9002}\u{7528}\u{4E8E}\u{957F}\u{65F6}\u{95F4}\u{6279}\u{5904}\u{7406}\u{3002}",
         "setting.lower_llm_priority": "处理期间降低 LLM 优先级",
         "setting.lower_llm_priority.help": "批处理运行期间降低活动 LLM 服务器（Ollama、mlx-vlm、vLLM、LM Studio）的优先级，使其他应用保持响应。处理停止时恢复原始优先级。",
+
+        // Bottom status bar (v0.1.6)
+        "pill.connected": "已连接",
+        "pill.unreachable": "无法连接",
+        "pill.unknown": "未知",
+        "health.photos_tooltip": "照片访问权限",
+        "health.sleep_held": "处理期间阻止休眠",
+        "health.sleep_idle": "允许休眠",
+        "health.lock_armed": "锁屏时自动开始 \u{00B7} 已启用",
+        "health.lock_off": "锁屏时自动开始 \u{00B7} 已关闭",
     ]
 
     // MARK: - Korean
@@ -2576,5 +2646,15 @@ enum Strings {
         "setting.auto_start_when_locked.help": "\u{D654}\u{BA74}\u{C774} \u{C7A0}\u{AE30}\u{BA74} \u{CC98}\u{B9AC}\u{B97C} \u{C2DC}\u{C791}\u{D558}\u{ACE0}, \u{C7A0}\u{AE08}\u{C774} \u{D574}\u{C81C}\u{B418}\u{BA74} \u{C77C}\u{C2DC} \u{C815}\u{C9C0}\u{D569}\u{B2C8}\u{B2E4}. \u{CC98}\u{B9AC} \u{C911} \u{C790}\u{B3D9} \u{C7A0}\u{C790}\u{B9AC}\u{B97C} \u{BC29}\u{C9C0}\u{D569}\u{B2C8}\u{B2E4}. \u{AE34} \u{BC30}\u{CE58} \u{C791}\u{C5C5}\u{C5D0} \u{C720}\u{C6A9}\u{D569}\u{B2C8}\u{B2E4}.",
         "setting.lower_llm_priority": "처리 중 LLM 우선순위 낮추기",
         "setting.lower_llm_priority.help": "배치 실행 중 활성 LLM 서버(Ollama, mlx-vlm, vLLM, LM Studio)의 우선순위를 낮춰 다른 앱의 응답성을 유지합니다. 처리가 중지되면 원래 우선순위로 복원됩니다.",
+
+        // Bottom status bar (v0.1.6)
+        "pill.connected": "연결됨",
+        "pill.unreachable": "연결 불가",
+        "pill.unknown": "알 수 없음",
+        "health.photos_tooltip": "사진 권한",
+        "health.sleep_held": "처리 중 절전 모드 방지",
+        "health.sleep_idle": "절전 허용",
+        "health.lock_armed": "잠금 시 자동 시작 \u{00B7} 사용",
+        "health.lock_off": "잠금 시 자동 시작 \u{00B7} 꺼짐",
     ]
 }

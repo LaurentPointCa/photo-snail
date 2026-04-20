@@ -104,6 +104,23 @@ struct PhotoSnailApp: App {
         NSApplication.shared.orderFrontStandardAboutPanel(options: [
             .credits: credits,
         ])
+
+        // The standard About panel auto-sizes to content, but some localized
+        // descriptions wrap into a cramped box. Nudge the frame larger after
+        // it's on screen so the text has breathing room.
+        DispatchQueue.main.async {
+            guard let win = NSApp.windows.first(where: {
+                NSStringFromClass(type(of: $0)).contains("AboutPanel")
+            }) else { return }
+            var f = win.frame
+            let dw: CGFloat = 80
+            let dh: CGFloat = 40
+            f.origin.x -= dw / 2
+            f.origin.y -= dh / 2
+            f.size.width += dw
+            f.size.height += dh
+            win.setFrame(f, display: true)
+        }
     }
 }
 

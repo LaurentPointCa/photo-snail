@@ -25,7 +25,12 @@ final class ProcessingEngine {
 
     // Current photo being processed (bottom half)
     var currentPhotoID: String? = nil {
-        didSet { onCurrentPhotoChanged?(currentPhotoID) }
+        didSet {
+            onCurrentPhotoChanged?(currentPhotoID)
+            // Mirror into the status-bar monitor so begin() can stamp
+            // per-photo events with the asset id.
+            APIStatusMonitor.shared.setCurrentAsset(id: currentPhotoID)
+        }
     }
     var currentThumbnail: CGImage? = nil
 
@@ -165,6 +170,11 @@ final class ProcessingEngine {
     /// Instantiated alongside the lock watcher in `loadInitialStats`.
     private var sleepManager: SleepManager?
 
+    /// Read-only view of the idle-sleep assertion for the bottom status
+    /// bar. True when a batch is running and holding the no-idle-sleep
+    /// power assertion. Nil-safe for the "no batch ever started" case.
+    var isIdleSleepHeld: Bool { sleepManager?.isAssertionHeld ?? false }
+
     // MARK: - Init
 
     init(queue: AssetQueue) {
@@ -251,6 +261,10 @@ final class ProcessingEngine {
         let providerLabel = self.apiProvider.displayName
         let result = await client.preflight(model: self.model)
         await MainActor.run {
+            // Mirror the handshake into the status-bar monitor so the pill
+            // reflects reachability before the first real request runs.
+            APIStatusMonitor.shared.noteHandshake(result, providerLabel: providerLabel)
+
             switch result {
             case .ok:
                 self.preflightStatus = .ok
@@ -271,11 +285,15 @@ final class ProcessingEngine {
     /// adapter over PhotoSnailCore.makeLLMClient so preflight, model
     /// discovery, and the worker loop all route through one factory.
     private func makeCurrentClient() -> any LLMClient {
-        makeLLMClient(
+        let raw = makeLLMClient(
             provider: apiProvider,
             ollama: self.connection,
             openai: self.openaiConnection
         )
+        // Wrap once at the factory — every caption, translation, and
+        // listModels call routed through this client publishes begin/end
+        // events to the status bar.
+        return MonitoredLLMClient(inner: raw)
     }
 
     /// "Continue anyway" from the preflight sheet: acknowledge the failure
@@ -703,7 +721,12 @@ final class ProcessingEngine {
         let promptLanguage: String?
 
         func makeClient() -> any LLMClient {
-            makeLLMClient(provider: apiProvider, ollama: ollama, openai: openai)
+            // Wrap so per-photo generateCaption/generateText calls publish
+            // begin/end events to the status-bar monitor. The main-actor
+            // factory wraps too, but that one's only used for preflight
+            // and initial listModels — the worker loop runs through here.
+            let raw = makeLLMClient(provider: apiProvider, ollama: ollama, openai: openai)
+            return MonitoredLLMClient(inner: raw)
         }
 
         func makePipeline() -> Pipeline {
@@ -1111,18 +1134,36 @@ final class ProcessingEngine {
         tags: [String],
         sentinel: String
     ) async throws {
-        let uuid = PhotoLibrary.uuidPrefix(id)
-        let preDesc = try await MainActor.run {
-            try PhotosScripter.readDescription(uuid: uuid)
-        }
-        let payload = Pipeline.formatDescription(
-            description: description,
-            tags: tags,
-            sentinel: sentinel,
-            existingDescription: preDesc
+        // Publish a write-back event so the status-bar tail shows a second
+        // transition per photo (LLM → write-back), making single-photo
+        // batches feel alive rather than stuck on a stale "completed" line.
+        let token = await APIStatusMonitor.shared.begin(
+            call: "writeBack",
+            model: nil,
+            assetId: id,
+            providerLabel: "photos",
+            tracksConnection: false
         )
-        _ = try await MainActor.run {
-            try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
+        do {
+            let uuid = PhotoLibrary.uuidPrefix(id)
+            let preDesc = try await MainActor.run {
+                try PhotosScripter.readDescription(uuid: uuid)
+            }
+            let payload = Pipeline.formatDescription(
+                description: description,
+                tags: tags,
+                sentinel: sentinel,
+                existingDescription: preDesc
+            )
+            _ = try await MainActor.run {
+                try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
+            }
+            await APIStatusMonitor.shared.end(token: token, success: true, reason: nil)
+        } catch {
+            await APIStatusMonitor.shared.end(
+                token: token, success: false, reason: String(describing: error)
+            )
+            throw error
         }
     }
 

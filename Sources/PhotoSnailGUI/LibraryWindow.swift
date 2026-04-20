@@ -24,6 +24,7 @@ struct LibraryWindow: View {
                     description: Text(err)
                 )
             } else {
+                VStack(spacing: 0) {
                 NavigationSplitView {
                     LibrarySidebar(store: store)
                         .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
@@ -164,6 +165,11 @@ struct LibraryWindow: View {
                             ),
                             onOpenSettings: { showSettings = true }
                         )
+                    }
+                }
+
+                    if let engine = store.engine {
+                        APIStatusBar(engine: engine)
                     }
                 }
             }
