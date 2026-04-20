@@ -8,7 +8,18 @@ import CoreGraphics
 @MainActor
 final class ProcessingEngine {
 
-    enum State { case idle, enumerating, running, paused, finished }
+    /// Engine lifecycle.
+    ///   - `.idle`      — never started this session (fresh launch / post-start failure).
+    ///   - `.enumerating` — one-shot library enumeration in progress.
+    ///   - `.running`   — worker actively processing.
+    ///   - `.paused`    — user pressed Pause (soft stop). Auto-start-when-locked
+    ///                    still applies: a subsequent lock auto-resumes.
+    ///   - `.stopped`   — user pressed Stop (hard stop). Auto-start-when-locked
+    ///                    does NOT apply: the lock watcher leaves this alone.
+    ///                    UI-wise it looks like `.idle` (shows Start button) but
+    ///                    the distinction matters to the lock watcher only.
+    ///   - `.finished`  — queue drained.
+    enum State { case idle, enumerating, running, paused, stopped, finished }
 
     // MARK: - Published state
 
@@ -153,6 +164,13 @@ final class ProcessingEngine {
     }
     private var pauseRequest: PauseRequest = .none
     private var pauseContinuation: CheckedContinuation<Void, Never>?
+
+    /// "Hard stop" intent. Set by `stop()` alongside the normal pause flag;
+    /// the worker reads this at its park checkpoint and transitions to
+    /// `.stopped` + exits (instead of `.paused` + waiting on the
+    /// continuation). Cleared by any subsequent `start()`, `resume()`, or
+    /// `userPause()` so the two intents never get stuck together.
+    private var stopIntent: Bool = false
 
     /// Exposed for the UI: true from the moment the user hits Pause until
     /// the worker actually reaches its next pause checkpoint. Lets the
@@ -305,27 +323,44 @@ final class ProcessingEngine {
 
     // MARK: - Lock-triggered auto-start
 
-    /// Called by LockWatcher when the Mac locks. If the auto-start toggle
-    /// is on AND the queue has pending work AND we're currently idle,
-    /// start the worker and remember we did so (so unlock pauses it).
+    /// Called by LockWatcher when the Mac locks. Three ways this can drive
+    /// the worker, gated on the `autoStartWhenLocked` toggle:
+    ///
+    ///  1. `.paused` (user soft-paused, or unlock auto-paused): resume.
+    ///     Pause is the "I want a break, but come back on next lock"
+    ///     gesture; Stop is the "leave me alone" escape hatch.
+    ///  2. `.idle` / `.finished`: auto-start a fresh worker if the queue
+    ///     has pending work.
+    ///  3. `.stopped`: do nothing. The user explicitly stopped; the lock
+    ///     watcher MUST NOT override that.
     func handleScreenLocked() async {
         guard autoStartWhenLocked else { return }
 
-        // If the previous unlock auto-paused an overnight batch and the user
-        // hasn't touched anything since, this re-lock cancels that pause and
-        // the worker continues. Without this, the guard below would bail out
-        // because state is .running (pending pause) or .paused, and no more
-        // work would happen while locked — the bug reported 2026-04-17.
+        // `.stopped` opts out of everything below. No auto-resume, no
+        // auto-start. The user pressed Stop to escape the watcher's reach.
+        if state == .stopped {
+            log.append(.info, "Screen locked — batch is stopped, leaving alone")
+            return
+        }
+
+        // Consume any pending unlock-pause bookkeeping. This branch used
+        // to carry the overnight re-lock case alone; with the new design
+        // user-paused also resumes, but we keep the pausedByUnlock reset
+        // here so the flag doesn't stay true past its relevance.
         if pausedByUnlock {
             pausedByUnlock = false
-            if state == .paused || state == .running {
-                log.append(.info, "Screen locked — canceling unlock-pause, resuming batch")
-                startedByLockWatcher = true
-                resume()
-                return
-            }
-            // Worker finished between unlock and re-lock; fall through to
-            // the regular start path so a newly-enqueued photo can run.
+        }
+
+        // User-paused (or unlock-paused) + toggle on → resume. This is the
+        // core behavior the Pause vs Stop split exists to enable: Pause
+        // yields to the watcher, Stop doesn't.
+        if state == .paused || state == .running {
+            // `.running` only ends up here if we were mid-pause when the
+            // user locked — the unlock-pause transient. Resume covers both.
+            log.append(.info, "Screen locked — auto-resuming batch (state=\(state))")
+            startedByLockWatcher = true
+            resume()
+            return
         }
 
         guard state == .idle || state == .finished else { return }
@@ -504,8 +539,12 @@ final class ProcessingEngine {
     /// Start processing whatever's currently pending in the queue. Does NOT
     /// enumerate the library — that's now the "Add to Queue" action's job.
     /// If the queue is empty, the engine stays idle and surfaces a hint.
+    ///
+    /// Accepts `.stopped` as a valid starting state (user pressed Stop and
+    /// is now pressing Start) — we just reset the worker plumbing and spin
+    /// up a fresh task.
     func start() async {
-        guard state == .idle || state == .finished else { return }
+        guard state == .idle || state == .finished || state == .stopped else { return }
         try? await refreshStats()
 
         if pendingCount == 0 {
@@ -514,6 +553,13 @@ final class ProcessingEngine {
             state = .idle
             return
         }
+
+        // Clear any leftover pause/stop intent from a prior run — a fresh
+        // worker task is about to be launched and would otherwise park on
+        // its very first iteration.
+        pauseRequest = .none
+        stopIntent = false
+        pausedByUnlock = false
 
         state = .running
         sessionStartTime = Date()
@@ -530,7 +576,7 @@ final class ProcessingEngine {
     /// done without re-running the pipeline). First call on a fresh install
     /// builds the initial queue; subsequent calls pick up newly-added photos.
     func addAllUnprocessedToQueue() async {
-        guard state == .idle || state == .finished else { return }
+        guard state == .idle || state == .finished || state == .stopped else { return }
         state = .enumerating
         statusMessage = Localizer.shared.t("status.requesting_photos")
         log.append(.info, "Requesting Photos access (Add all unprocessed)")
@@ -604,7 +650,7 @@ final class ProcessingEngine {
             }
             pauseRequest = .afterPhoto(id: id)
             log.append(.info, "Process now: \(String(id.prefix(8))) queued at priority=1; worker will pause after")
-            if state == .idle || state == .finished {
+            if state == .idle || state == .finished || state == .stopped {
                 await start()
             }
         } catch {
@@ -662,16 +708,63 @@ final class ProcessingEngine {
         log.append(.info, "Pause requested")
     }
 
-    /// User-facing pause from the UI. Clears `pausedByUnlock` so a
-    /// subsequent re-lock won't undo the user's explicit pause.
+    /// User-facing soft pause. Auto-start-when-locked still applies — if the
+    /// screen locks, the watcher auto-resumes. Clears `pausedByUnlock` so
+    /// any pending unlock-pause bookkeeping doesn't get mixed in.
     func userPause() {
         pausedByUnlock = false
+        stopIntent = false
         pause()
+    }
+
+    /// User-facing hard stop. The worker parks at its next checkpoint,
+    /// transitions to `.stopped`, and exits — NOT into `.paused`. From
+    /// `.stopped` the lock watcher will NOT auto-start even if the toggle
+    /// is on. If the worker is already in `.paused` (waiting on the pause
+    /// continuation), we push it out of that wait so it can reach the
+    /// park block and exit cleanly.
+    func stop() {
+        pausedByUnlock = false
+        startedByLockWatcher = false
+        stopIntent = true
+        pausedBySleep = false
+
+        switch state {
+        case .running:
+            // Worker is active — arm pause; worker's next park checkpoint
+            // will read stopIntent and transition to .stopped + exit.
+            pauseRequest = .armed
+            statusMessage = Localizer.shared.t("status.stopping")
+            log.append(.info, "Stop requested")
+        case .paused:
+            // Worker is already parked in the pause continuation. Flip
+            // state immediately and kick the continuation so it re-enters
+            // the loop's park block, where stopIntent → exit path runs.
+            // pauseRequest stays .armed so shouldPauseNow returns true on
+            // re-entry.
+            state = .stopped
+            statusMessage = Localizer.shared.t("status.stopped")
+            log.append(.info, "Stopped from paused state")
+            sleepManager?.allowIdleSleep()
+            pauseContinuation?.resume()
+            pauseContinuation = nil
+        case .idle, .finished:
+            // No worker to stop, but still move to .stopped so the lock
+            // watcher won't auto-start after this no-op click.
+            state = .stopped
+            statusMessage = Localizer.shared.t("status.stopped")
+            log.append(.info, "Stopped (was idle/finished)")
+        case .stopped, .enumerating:
+            // Already stopped, or enumeration is a one-shot that can't be
+            // cancelled mid-flight — leave alone.
+            break
+        }
     }
 
     func resume() {
         pauseRequest = .none
         pausedByUnlock = false
+        stopIntent = false
         state = .running
         statusMessage = Localizer.shared.t("status.resuming")
         log.append(.info, "Resumed")
@@ -801,6 +894,7 @@ final class ProcessingEngine {
         let verbProcessing = loc.t("status.processing_verb")
         let verbTranslating = loc.t("status.translating_verb")
         let locPaused = loc.t("status.paused")
+        let locStopped = loc.t("status.stopped")
         let locDryrunComplete = loc.t("status.dryrun_complete")
         let locQueueError = loc.t("error.queue_open_failed")
         let locAllProcessed = loc.t("status.all_processed")
@@ -847,16 +941,40 @@ final class ProcessingEngine {
                 // is transient (set in Process now, promoted to `.armed`
                 // by `consumeStopAfterIfMatches` when that photo finishes).
                 if await self?.shouldPauseNow() == true {
+                    // Read stop intent BEFORE mutating state so we pick the
+                    // right branch (`.paused` → wait for continuation,
+                    // `.stopped` → exit worker entirely).
+                    let isStop = await self?.stopIntent ?? false
                     await MainActor.run { [weak self] in
                         guard let self else { return }
-                        self.state = .paused
-                        self.statusMessage = locPaused
+                        self.state = isStop ? .stopped : .paused
+                        self.statusMessage = isStop ? locStopped : locPaused
                         self.sleepManager?.allowIdleSleep()
+                    }
+                    if isStop {
+                        // Clean worker exit — no continuation, no re-entry.
+                        // A subsequent start() spins up a fresh worker task.
+                        await MainActor.run { [weak self] in
+                            self?.stopIntent = false
+                            self?.pauseRequest = .none
+                        }
+                        return
                     }
                     await withCheckedContinuation { cont in
                         Task { @MainActor [weak self] in
                             self?.pauseContinuation = cont
                         }
+                    }
+                    // Continuation just fired. If it fired as part of
+                    // `stop()` from the paused state, stopIntent is now
+                    // true and state is already .stopped — drop out of
+                    // the loop cleanly.
+                    if await self?.stopIntent == true {
+                        await MainActor.run { [weak self] in
+                            self?.stopIntent = false
+                            self?.pauseRequest = .none
+                        }
+                        return
                     }
                 }
 

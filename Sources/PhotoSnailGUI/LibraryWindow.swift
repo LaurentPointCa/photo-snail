@@ -1640,39 +1640,49 @@ struct RunnerDock: View {
 
     @ViewBuilder
     private var primaryButton: some View {
-        switch engine.state {
-        case .idle, .finished:
-            if engine.autoStartWhenLocked {
-                // Auto-start is armed — the lock watcher will flip this to
-                // .running when the screen locks, so the Start button
-                // would do the same thing prematurely. Show a disabled
-                // "Waiting…" label instead.
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "lock.fill")
-                        .foregroundStyle(.secondary)
-                    Text(loc.t("button.waiting_for_lock"))
-                        .font(AppFont.bodyEmphasized)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.secondary.opacity(0.12))
-                )
-            } else {
-                Button {
-                    Task { await engine.start() }
-                } label: {
-                    Label(loc.t("button.start"), systemImage: "play.fill")
-                        .font(AppFont.bodyEmphasized)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 2)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+        VStack(spacing: Spacing.xs) {
+            primaryButtonRow
+            primaryButtonChip
+        }
+    }
+
+    /// One-line informational chip that surfaces what auto-start-when-locked
+    /// is going to do from the current state. Kept out of the main button
+    /// row so the button itself stays uncluttered. Silent whenever there's
+    /// nothing to announce (toggle off, or state excludes lock behavior).
+    @ViewBuilder
+    private var primaryButtonChip: some View {
+        if engine.autoStartWhenLocked {
+            switch engine.state {
+            case .idle, .finished:
+                LockArmedChip(label: loc.t("chip.auto_start_armed"))
+            case .paused:
+                LockArmedChip(label: loc.t("chip.auto_resume_armed"))
+            case .running, .enumerating, .stopped:
+                EmptyView()
             }
+        }
+    }
+
+    @ViewBuilder
+    private var primaryButtonRow: some View {
+        switch engine.state {
+        case .idle, .finished, .stopped:
+            // Start is always enabled here — the old "Waiting for lock…"
+            // disabled label was user-hostile (had to toggle off to run
+            // right now). The `primaryButtonChip` above announces that
+            // the lock will also trigger auto-start from .idle/.finished;
+            // .stopped stays silent because the user explicitly opted out.
+            Button {
+                Task { await engine.start() }
+            } label: {
+                Label(loc.t("button.start"), systemImage: "play.fill")
+                    .font(AppFont.bodyEmphasized)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         case .enumerating:
             HStack(spacing: Spacing.sm) {
                 ProgressView().controlSize(.small)
@@ -1684,10 +1694,10 @@ struct RunnerDock: View {
             }
         case .running:
             if engine.isPausing {
-                // User has hit Pause — worker will park at its next
-                // checkpoint (after the current photo's markDone). Show
-                // a disabled "Waiting to finish…" so they don't click
-                // Pause again expecting an immediate stop.
+                // User has hit Pause OR Stop — worker will park at its
+                // next checkpoint (after the current photo's markDone).
+                // Show a disabled "Waiting to finish…" so they don't
+                // click the button again expecting an immediate park.
                 HStack(spacing: Spacing.sm) {
                     ProgressView().controlSize(.small)
                     Text(loc.t("button.waiting_to_finish"))
@@ -1702,35 +1712,90 @@ struct RunnerDock: View {
                         .fill(Color.secondary.opacity(0.12))
                 )
             } else {
-                Button {
-                    engine.userPause()
-                } label: {
-                    HStack(spacing: Spacing.sm) {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(.primary)
-                        Image(systemName: "pause.fill")
-                        Text(loc.t("button.pause"))
+                HStack(spacing: Spacing.sm) {
+                    Button {
+                        engine.userPause()
+                    } label: {
+                        HStack(spacing: Spacing.xs) {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(.primary)
+                            Image(systemName: "pause.fill")
+                            Text(loc.t("button.pause"))
+                        }
+                        .font(AppFont.bodyEmphasized)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 2)
                     }
-                    .font(AppFont.bodyEmphasized)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 2)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+
+                    Button {
+                        engine.stop()
+                    } label: {
+                        Label(loc.t("button.stop"), systemImage: "stop.fill")
+                            .font(AppFont.bodyEmphasized)
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 4)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .help(loc.t("button.stop.help"))
+                }
+            }
+        case .paused:
+            HStack(spacing: Spacing.sm) {
+                Button {
+                    engine.resume()
+                } label: {
+                    Label(loc.t("button.resume"), systemImage: "play.fill")
+                        .font(AppFont.bodyEmphasized)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+
+                Button {
+                    engine.stop()
+                } label: {
+                    Label(loc.t("button.stop"), systemImage: "stop.fill")
+                        .font(AppFont.bodyEmphasized)
+                        .padding(.vertical, 2)
+                        .padding(.horizontal, 4)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
+                .help(loc.t("button.stop.help"))
             }
-        case .paused:
-            Button {
-                engine.resume()
-            } label: {
-                Label(loc.t("button.resume"), systemImage: "play.fill")
-                    .font(AppFont.bodyEmphasized)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 2)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
         }
+    }
+}
+
+/// Small informational chip under the primary button announcing that the
+/// lock watcher is armed. Accepts a pre-localized label so the parent can
+/// branch copy on state (auto-start vs auto-resume) without the chip
+/// knowing about engine internals.
+private struct LockArmedChip: View {
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+            Text(label)
+                .font(AppFont.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.secondary.opacity(0.10))
+        )
     }
 }
 
