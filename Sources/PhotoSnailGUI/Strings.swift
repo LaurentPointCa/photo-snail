@@ -396,10 +396,24 @@ enum Strings {
         "pill.unreachable": "Unreachable",
         "pill.unknown": "Unknown",
         "health.photos_tooltip": "Photos authorization",
-        "health.sleep_held": "Preventing idle sleep during batch",
-        "health.sleep_idle": "Idle sleep allowed",
         "health.lock_armed": "Auto-start when locked · armed",
         "health.lock_off": "Auto-start when locked · off",
+
+        // Update checker (v0.1.6)
+        "update.check_menu": "Check for Updates\u{2026}",
+        "update.sheet_title_fmt": "%@ is available",
+        "update.current_version_fmt": "You have %@",
+        "update.view_on_github": "View on GitHub",
+        "update.skip_this_version": "Skip This Version",
+        "update.remind_later": "Remind Me Later",
+        "update.empty_release_notes": "No release notes provided for this version.",
+        "update.available_tooltip_fmt": "%@ is available \u{2014} click for details",
+        "update.current_tooltip_fmt": "Currently running %@ \u{2014} click to open on GitHub",
+        "update.up_to_date_title": "You're up to date",
+        "update.up_to_date_message_fmt": "PhotoSnail %@ is the latest release.",
+        "update.up_to_date_message_no_version": "You are running the latest release.",
+        "update.check_failed_title": "Check failed",
+        "update.check_failed_message_fmt": "Could not check for updates: %@",
     ]
 
     // MARK: - French
@@ -724,10 +738,24 @@ enum Strings {
         "pill.unreachable": "Inaccessible",
         "pill.unknown": "Inconnu",
         "health.photos_tooltip": "Autorisation Photos",
-        "health.sleep_held": "Veille bloqu\u{00E9}e pendant le traitement",
-        "health.sleep_idle": "Veille autoris\u{00E9}e",
         "health.lock_armed": "D\u{00E9}marrage auto au verrouillage \u{00B7} arm\u{00E9}",
         "health.lock_off": "D\u{00E9}marrage auto au verrouillage \u{00B7} d\u{00E9}sactiv\u{00E9}",
+
+        // Update checker (v0.1.6)
+        "update.check_menu": "Rechercher les mises \u{00E0} jour\u{2026}",
+        "update.sheet_title_fmt": "%@ est disponible",
+        "update.current_version_fmt": "Version actuelle\u{00A0}: %@",
+        "update.view_on_github": "Voir sur GitHub",
+        "update.skip_this_version": "Ignorer cette version",
+        "update.remind_later": "Me le rappeler plus tard",
+        "update.empty_release_notes": "Aucune note de version fournie.",
+        "update.available_tooltip_fmt": "%@ est disponible \u{2014} cliquez pour les d\u{00E9}tails",
+        "update.current_tooltip_fmt": "Version actuelle\u{00A0}: %@ \u{2014} cliquez pour ouvrir sur GitHub",
+        "update.up_to_date_title": "Vous \u{00EA}tes \u{00E0} jour",
+        "update.up_to_date_message_fmt": "PhotoSnail %@ est la derni\u{00E8}re version.",
+        "update.up_to_date_message_no_version": "Vous utilisez la derni\u{00E8}re version.",
+        "update.check_failed_title": "\u{00C9}chec de la v\u{00E9}rification",
+        "update.check_failed_message_fmt": "Impossible de v\u{00E9}rifier les mises \u{00E0} jour\u{00A0}: %@",
     ]
 
     // MARK: - Spanish
@@ -1046,10 +1074,24 @@ enum Strings {
         "pill.unreachable": "Inalcanzable",
         "pill.unknown": "Desconocido",
         "health.photos_tooltip": "Autorizaci\u{00F3}n de Fotos",
-        "health.sleep_held": "Suspensi\u{00F3}n bloqueada durante el procesamiento",
-        "health.sleep_idle": "Suspensi\u{00F3}n permitida",
         "health.lock_armed": "Inicio autom\u{00E1}tico al bloquear \u{00B7} activo",
         "health.lock_off": "Inicio autom\u{00E1}tico al bloquear \u{00B7} desactivado",
+
+        // Update checker (v0.1.6)
+        "update.check_menu": "Buscar actualizaciones\u{2026}",
+        "update.sheet_title_fmt": "%@ est\u{00E1} disponible",
+        "update.current_version_fmt": "Versi\u{00F3}n actual: %@",
+        "update.view_on_github": "Ver en GitHub",
+        "update.skip_this_version": "Omitir esta versi\u{00F3}n",
+        "update.remind_later": "Recordar m\u{00E1}s tarde",
+        "update.empty_release_notes": "No hay notas de versi\u{00F3}n disponibles.",
+        "update.available_tooltip_fmt": "%@ est\u{00E1} disponible \u{2014} haga clic para ver detalles",
+        "update.current_tooltip_fmt": "Versi\u{00F3}n actual: %@ \u{2014} haga clic para abrir en GitHub",
+        "update.up_to_date_title": "Est\u{00E1} actualizado",
+        "update.up_to_date_message_fmt": "PhotoSnail %@ es la \u{00FA}ltima versi\u{00F3}n.",
+        "update.up_to_date_message_no_version": "Est\u{00E1} ejecutando la \u{00FA}ltima versi\u{00F3}n.",
+        "update.check_failed_title": "Error de verificaci\u{00F3}n",
+        "update.check_failed_message_fmt": "No se pudo comprobar actualizaciones: %@",
     ]
 
     // MARK: - German
@@ -1367,10 +1409,24 @@ enum Strings {
         "pill.unreachable": "Nicht erreichbar",
         "pill.unknown": "Unbekannt",
         "health.photos_tooltip": "Fotos-Berechtigung",
-        "health.sleep_held": "Ruhezustand w\u{00E4}hrend Verarbeitung blockiert",
-        "health.sleep_idle": "Ruhezustand erlaubt",
         "health.lock_armed": "Auto-Start bei Sperre \u{00B7} aktiv",
         "health.lock_off": "Auto-Start bei Sperre \u{00B7} aus",
+
+        // Update checker (v0.1.6)
+        "update.check_menu": "Nach Updates suchen\u{2026}",
+        "update.sheet_title_fmt": "%@ ist verf\u{00FC}gbar",
+        "update.current_version_fmt": "Aktuell: %@",
+        "update.view_on_github": "Auf GitHub ansehen",
+        "update.skip_this_version": "Diese Version \u{00FC}berspringen",
+        "update.remind_later": "Sp\u{00E4}ter erinnern",
+        "update.empty_release_notes": "Keine Versionshinweise verf\u{00FC}gbar.",
+        "update.available_tooltip_fmt": "%@ ist verf\u{00FC}gbar \u{2014} klicken f\u{00FC}r Details",
+        "update.current_tooltip_fmt": "Aktuelle Version: %@ \u{2014} klicken um auf GitHub zu \u{00F6}ffnen",
+        "update.up_to_date_title": "Sie sind auf dem neuesten Stand",
+        "update.up_to_date_message_fmt": "PhotoSnail %@ ist die neueste Version.",
+        "update.up_to_date_message_no_version": "Sie verwenden die neueste Version.",
+        "update.check_failed_title": "Pr\u{00FC}fung fehlgeschlagen",
+        "update.check_failed_message_fmt": "Updates konnten nicht gepr\u{00FC}ft werden: %@",
     ]
 
     // MARK: - Portuguese
@@ -1689,10 +1745,24 @@ enum Strings {
         "pill.unreachable": "Inacess\u{00ED}vel",
         "pill.unknown": "Desconhecido",
         "health.photos_tooltip": "Autoriza\u{00E7}\u{00E3}o do Fotos",
-        "health.sleep_held": "Suspens\u{00E3}o bloqueada durante o processamento",
-        "health.sleep_idle": "Suspens\u{00E3}o permitida",
         "health.lock_armed": "In\u{00ED}cio autom\u{00E1}tico ao bloquear \u{00B7} ativo",
         "health.lock_off": "In\u{00ED}cio autom\u{00E1}tico ao bloquear \u{00B7} desativado",
+
+        // Update checker (v0.1.6)
+        "update.check_menu": "Verificar atualiza\u{00E7}\u{00F5}es\u{2026}",
+        "update.sheet_title_fmt": "%@ est\u{00E1} dispon\u{00ED}vel",
+        "update.current_version_fmt": "Vers\u{00E3}o atual: %@",
+        "update.view_on_github": "Ver no GitHub",
+        "update.skip_this_version": "Ignorar esta vers\u{00E3}o",
+        "update.remind_later": "Lembrar mais tarde",
+        "update.empty_release_notes": "Nenhuma nota de vers\u{00E3}o dispon\u{00ED}vel.",
+        "update.available_tooltip_fmt": "%@ est\u{00E1} dispon\u{00ED}vel \u{2014} clique para detalhes",
+        "update.current_tooltip_fmt": "Vers\u{00E3}o atual: %@ \u{2014} clique para abrir no GitHub",
+        "update.up_to_date_title": "Voc\u{00EA} est\u{00E1} atualizado",
+        "update.up_to_date_message_fmt": "PhotoSnail %@ \u{00E9} a vers\u{00E3}o mais recente.",
+        "update.up_to_date_message_no_version": "Voc\u{00EA} est\u{00E1} usando a vers\u{00E3}o mais recente.",
+        "update.check_failed_title": "Falha na verifica\u{00E7}\u{00E3}o",
+        "update.check_failed_message_fmt": "N\u{00E3}o foi poss\u{00ED}vel verificar atualiza\u{00E7}\u{00F5}es: %@",
     ]
 
     // MARK: - Japanese
@@ -2010,10 +2080,24 @@ enum Strings {
         "pill.unreachable": "到達不能",
         "pill.unknown": "不明",
         "health.photos_tooltip": "写真アクセス権",
-        "health.sleep_held": "処理中はスリープを抑止",
-        "health.sleep_idle": "スリープ許可",
         "health.lock_armed": "ロック時に自動開始 \u{00B7} 有効",
         "health.lock_off": "ロック時に自動開始 \u{00B7} 無効",
+
+        // Update checker (v0.1.6)
+        "update.check_menu": "アップデートを確認\u{2026}",
+        "update.sheet_title_fmt": "%@ が利用可能です",
+        "update.current_version_fmt": "現在のバージョン: %@",
+        "update.view_on_github": "GitHub で表示",
+        "update.skip_this_version": "このバージョンをスキップ",
+        "update.remind_later": "後で通知",
+        "update.empty_release_notes": "リリースノートはありません。",
+        "update.available_tooltip_fmt": "%@ が利用可能です \u{2014} クリックで詳細を表示",
+        "update.current_tooltip_fmt": "現在のバージョン: %@ \u{2014} クリックで GitHub を開く",
+        "update.up_to_date_title": "最新の状態です",
+        "update.up_to_date_message_fmt": "PhotoSnail %@ が最新リリースです。",
+        "update.up_to_date_message_no_version": "最新リリースをご利用中です。",
+        "update.check_failed_title": "確認に失敗しました",
+        "update.check_failed_message_fmt": "アップデートを確認できませんでした: %@",
     ]
 
     // MARK: - Chinese (Simplified)
@@ -2331,10 +2415,24 @@ enum Strings {
         "pill.unreachable": "无法连接",
         "pill.unknown": "未知",
         "health.photos_tooltip": "照片访问权限",
-        "health.sleep_held": "处理期间阻止休眠",
-        "health.sleep_idle": "允许休眠",
         "health.lock_armed": "锁屏时自动开始 \u{00B7} 已启用",
         "health.lock_off": "锁屏时自动开始 \u{00B7} 已关闭",
+
+        // Update checker (v0.1.6)
+        "update.check_menu": "检查更新\u{2026}",
+        "update.sheet_title_fmt": "%@ 可用",
+        "update.current_version_fmt": "当前版本: %@",
+        "update.view_on_github": "在 GitHub 上查看",
+        "update.skip_this_version": "跳过此版本",
+        "update.remind_later": "稍后提醒",
+        "update.empty_release_notes": "此版本没有发布说明。",
+        "update.available_tooltip_fmt": "%@ 可用 \u{2014} 点击查看详情",
+        "update.current_tooltip_fmt": "当前版本: %@ \u{2014} 点击在 GitHub 上打开",
+        "update.up_to_date_title": "已是最新版本",
+        "update.up_to_date_message_fmt": "PhotoSnail %@ 是最新版本。",
+        "update.up_to_date_message_no_version": "您正在使用最新版本。",
+        "update.check_failed_title": "检查失败",
+        "update.check_failed_message_fmt": "无法检查更新: %@",
     ]
 
     // MARK: - Korean
@@ -2652,9 +2750,23 @@ enum Strings {
         "pill.unreachable": "연결 불가",
         "pill.unknown": "알 수 없음",
         "health.photos_tooltip": "사진 권한",
-        "health.sleep_held": "처리 중 절전 모드 방지",
-        "health.sleep_idle": "절전 허용",
         "health.lock_armed": "잠금 시 자동 시작 \u{00B7} 사용",
         "health.lock_off": "잠금 시 자동 시작 \u{00B7} 꺼짐",
+
+        // Update checker (v0.1.6)
+        "update.check_menu": "업데이트 확인\u{2026}",
+        "update.sheet_title_fmt": "%@ 사용 가능",
+        "update.current_version_fmt": "현재 버전: %@",
+        "update.view_on_github": "GitHub에서 보기",
+        "update.skip_this_version": "이 버전 건너뛰기",
+        "update.remind_later": "나중에 알림",
+        "update.empty_release_notes": "이 버전의 릴리스 노트가 없습니다.",
+        "update.available_tooltip_fmt": "%@ 사용 가능 \u{2014} 세부 정보를 보려면 클릭",
+        "update.current_tooltip_fmt": "현재 버전: %@ \u{2014} GitHub에서 열려면 클릭",
+        "update.up_to_date_title": "최신 버전입니다",
+        "update.up_to_date_message_fmt": "PhotoSnail %@ 가 최신 릴리스입니다.",
+        "update.up_to_date_message_no_version": "최신 릴리스를 사용 중입니다.",
+        "update.check_failed_title": "확인 실패",
+        "update.check_failed_message_fmt": "업데이트를 확인할 수 없습니다: %@",
     ]
 }

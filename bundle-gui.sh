@@ -54,6 +54,17 @@ BUILD_NUMBER="$(date '+%Y%m%d%H%M')"
 # Falls back to "unknown" if git isn't available or this isn't a repo.
 GIT_VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
 
+# CFBundleShortVersionString must be a dotted numeric "X.Y.Z" string that
+# macOS can parse (Finder Get Info, mdls, app switcher, and our own
+# update checker all read it). Derive it from GIT_VERSION by extracting
+# the leading semver prefix and stripping the "v": "v0.1.5" → "0.1.5",
+# "v0.1.5-3-gabc1234-dirty" → "0.1.5". Falls back to "0.0.0" if git
+# describe returned just a commit hash (no tags yet).
+SHORT_VERSION="$(echo "${GIT_VERSION}" | grep -oE '^v?[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/^v//' || true)"
+if [[ -z "${SHORT_VERSION}" ]]; then
+    SHORT_VERSION="0.0.0"
+fi
+
 cat > "${APP_DIR}/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -69,7 +80,7 @@ cat > "${APP_DIR}/Contents/Info.plist" << PLIST
     <key>CFBundleVersion</key>
     <string>${BUILD_NUMBER}</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>${SHORT_VERSION}</string>
     <key>PhotoSnailBuildDate</key>
     <string>${BUILD_DATE}</string>
     <key>PhotoSnailGitVersion</key>

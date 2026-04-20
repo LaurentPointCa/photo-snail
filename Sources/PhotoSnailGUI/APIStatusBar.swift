@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import Photos
 import PhotoSnailCore
 import PhotoSnailPhotos
@@ -238,15 +239,13 @@ private struct SystemHealthView: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
+            if UpdateChecker.shared.currentDisplayVersion != nil {
+                UpdateVersionStrip(release: UpdateChecker.shared.availableRelease)
+            }
             HealthIcon(
                 symbol: "photo.on.rectangle.angled",
                 active: photosAuthOK,
                 tooltip: photosTooltip
-            )
-            HealthIcon(
-                symbol: "moon.zzz",
-                active: engine.isIdleSleepHeld,
-                tooltip: sleepTooltip
             )
             HealthIcon(
                 symbol: "lock.shield",
@@ -266,16 +265,63 @@ private struct SystemHealthView: View {
         return "\(loc.t("health.photos_tooltip")): \(PhotoLibrary.authStatusLabel(s))"
     }
 
-    private var sleepTooltip: String {
-        engine.isIdleSleepHeld
-            ? loc.t("health.sleep_held")
-            : loc.t("health.sleep_idle")
-    }
-
     private var lockTooltip: String {
         engine.autoStartWhenLocked
             ? loc.t("health.lock_armed")
             : loc.t("health.lock_off")
+    }
+}
+
+/// Version chip always visible on the right half of the bottom status
+/// bar (whenever there's a parseable current version). Shape:
+///
+///   no update:        [v0.1.5]
+///   update pending:   [v0.1.5] → [v0.1.6]    (new one amber)
+///
+/// Current version is clickable → opens the current release page on
+/// GitHub. New version is clickable → opens the in-app update sheet
+/// with release notes.
+private struct UpdateVersionStrip: View {
+    let release: UpdateChecker.Release?
+    private let loc = Localizer.shared
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if let current = UpdateChecker.shared.currentDisplayVersion {
+                Button {
+                    if let url = UpdateChecker.shared.currentReleaseURL {
+                        NSWorkspace.shared.open(url)
+                    }
+                } label: {
+                    Text(current)
+                        .font(AppFont.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(String(format: loc.t("update.current_tooltip_fmt"), current))
+            }
+
+            if let release {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+
+                Button {
+                    UpdateChecker.shared.isSheetPresented = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(AppColor.statusPending)
+                        Text(release.tagName)
+                            .font(AppFont.caption)
+                            .foregroundStyle(AppColor.statusPending)
+                    }
+                }
+                .buttonStyle(.plain)
+                .help(String(format: loc.t("update.available_tooltip_fmt"), release.displayName))
+            }
+        }
     }
 }
 

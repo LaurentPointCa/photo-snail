@@ -17,6 +17,10 @@ import IOKit.pwr_mgt
 /// `preventIdleSleep` / `allowIdleSleep` around processing runs.
 ///
 /// MainActor-isolated because the callbacks touch engine state.
+/// `@Observable` so the `isAssertionHeld` flag propagates to the bottom
+/// status bar — without it, `preventIdleSleep()` flips the internal
+/// state but SwiftUI never re-renders the health icon.
+@Observable
 @MainActor
 final class SleepManager {
 
@@ -84,10 +88,10 @@ final class SleepManager {
         wakeToken = nil
     }
 
-    deinit {
-        if assertionHeld { IOPMAssertionRelease(assertionID) }
-        let center = NSWorkspace.shared.notificationCenter
-        if let sleepToken { center.removeObserver(sleepToken) }
-        if let wakeToken { center.removeObserver(wakeToken) }
-    }
+    // No `deinit` cleanup: this object is owned by `ProcessingEngine` for
+    // the app's lifetime. The IOKit assertion and NSWorkspace observers
+    // are released automatically at process exit, and under Swift's
+    // strict concurrency rules a main-actor-isolated deinit can't reach
+    // its own stored properties anyway. Callers that want explicit
+    // cleanup should invoke `stop()`.
 }

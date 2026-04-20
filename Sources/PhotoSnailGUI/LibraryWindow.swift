@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import Photos
 import PhotoSnailCore
 import PhotoSnailPhotos
@@ -13,6 +14,11 @@ struct LibraryWindow: View {
     @State private var store = LibraryStore()
     @State private var showSettings = false
     @State private var showLegend = false
+    /// Local mirror of `UpdateChecker.shared.manualCheckOutcome`. SwiftUI's
+    /// `.alert(isPresented:)` is fussy when both its binding and its
+    /// content come from the same @Observable property; driving it from
+    /// a local @State via `.onChange` makes presentation deterministic.
+    @State private var showManualOutcome = false
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -177,6 +183,70 @@ struct LibraryWindow: View {
         .frame(minWidth: 1100, minHeight: 700)
         .task {
             await store.load()
+        }
+        .task {
+            // Non-blocking update check. Gated by a 24-hour timestamp so
+            // re-launches don't hammer the GitHub API.
+            await UpdateChecker.shared.checkIfNeeded()
+        }
+        .sheet(isPresented: Binding(
+            get: { UpdateChecker.shared.isSheetPresented },
+            set: { UpdateChecker.shared.isSheetPresented = $0 }
+        )) {
+            if case .updateAvailable(let release) = UpdateChecker.shared.status {
+                UpdateAvailableSheet(
+                    release: release,
+                    currentVersion: Bundle.main.object(forInfoDictionaryKey: "PhotoSnailGitVersion") as? String,
+                    isPresented: Binding(
+                        get: { UpdateChecker.shared.isSheetPresented },
+                        set: { UpdateChecker.shared.isSheetPresented = $0 }
+                    )
+                )
+            }
+        }
+        .onChange(of: UpdateChecker.shared.manualCheckOutcome) { _, new in
+            // Surface the result alert on transition to non-nil; mirror
+            // dismissals the other direction so the checker's state
+            // stays in sync.
+            showManualOutcome = (new != nil)
+        }
+        .alert(manualOutcomeAlertTitle, isPresented: $showManualOutcome) {
+            Button(loc.t("update.view_on_github")) {
+                NSWorkspace.shared.open(UpdateChecker.shared.releasesURL)
+                UpdateChecker.shared.dismissManualOutcome()
+            }
+            Button(loc.t("button.ok"), role: .cancel) {
+                UpdateChecker.shared.dismissManualOutcome()
+            }
+        } message: {
+            if let outcome = UpdateChecker.shared.manualCheckOutcome {
+                Text(manualOutcomeMessage(for: outcome))
+            }
+        }
+    }
+
+    // MARK: - Manual update-check alert helpers
+
+    /// Title of the alert shown after "Check for Updates…". Depends on
+    /// whether the check succeeded (up-to-date) or failed.
+    private var manualOutcomeAlertTitle: String {
+        switch UpdateChecker.shared.manualCheckOutcome {
+        case .upToDate:
+            return loc.t("update.up_to_date_title")
+        case .failed, .none:
+            return loc.t("update.check_failed_title")
+        }
+    }
+
+    private func manualOutcomeMessage(for outcome: UpdateChecker.ManualOutcome) -> String {
+        switch outcome {
+        case .upToDate(let version):
+            if let version {
+                return String(format: loc.t("update.up_to_date_message_fmt"), version)
+            }
+            return loc.t("update.up_to_date_message_no_version")
+        case .failed(let reason):
+            return String(format: loc.t("update.check_failed_message_fmt"), reason)
         }
     }
 }

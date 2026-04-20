@@ -13,6 +13,9 @@ struct PhotoSnailApp: App {
                 Button(Localizer.shared.t("button.about")) {
                     showAbout()
                 }
+                Button(Localizer.shared.t("update.check_menu")) {
+                    Task { await UpdateChecker.shared.checkNow() }
+                }
             }
             CommandGroup(after: .appSettings) {
                 Button(Localizer.shared.t("toolbar.settings") + "...") {
@@ -80,30 +83,29 @@ struct PhotoSnailApp: App {
             attributes: bodyAttrs
         ))
 
-        // Build stamp — written into Info.plist by bundle-gui.sh at package time.
-        // Format: "v1.0.0-3-gabc1234 · Build 2026-04-13 20:12:10"
-        let buildDate = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailBuildDate") as? String
-        let gitVersion = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailGitVersion") as? String
-        var stampParts: [String] = []
-        if let g = gitVersion, !g.isEmpty, g != "unknown" { stampParts.append(g) }
-        if let d = buildDate, !d.isEmpty { stampParts.append("Build \(d)") }
-        if !stampParts.isEmpty {
-            credits.append(NSAttributedString(
-                string: "\n\n" + stampParts.joined(separator: " · "),
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 10),
-                    .foregroundColor: NSColor.tertiaryLabelColor,
-                ]
-            ))
-        }
+        // Note: we used to append a "Build YYYY-MM-DD HH:MM:SS" stamp
+        // here, but the prominent version line macOS renders already
+        // includes the build number in parentheses — e.g. "Version
+        // v0.1.5-1-g644f493 (202604201253)" — so the credits stamp was
+        // both redundant and caused the credits area to overflow on
+        // longer localized descriptions.
 
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         credits.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: credits.length))
 
-        NSApplication.shared.orderFrontStandardAboutPanel(options: [
+        var options: [NSApplication.AboutPanelOptionKey: Any] = [
             .credits: credits,
-        ])
+        ]
+        if let displayVersion = prominentVersionString() {
+            // Overrides CFBundleShortVersionString (still "1.0" in the
+            // bundle). Clean tags drop the leading "v" so macOS doesn't
+            // render "Version v0.1.5"; dev builds keep the full
+            // `git describe` string so the developer sees what they're
+            // actually running (e.g. "v0.1.5-3-gabc1234-dirty").
+            options[.applicationVersion] = displayVersion
+        }
+        NSApplication.shared.orderFrontStandardAboutPanel(options: options)
 
         // The standard About panel auto-sizes to content, but some localized
         // descriptions wrap into a cramped box. Nudge the frame larger after
@@ -113,14 +115,30 @@ struct PhotoSnailApp: App {
                 NSStringFromClass(type(of: $0)).contains("AboutPanel")
             }) else { return }
             var f = win.frame
-            let dw: CGFloat = 80
-            let dh: CGFloat = 40
+            let dw: CGFloat = 120
+            let dh: CGFloat = 30
             f.origin.x -= dw / 2
             f.origin.y -= dh / 2
             f.size.width += dw
             f.size.height += dh
             win.setFrame(f, display: true)
         }
+    }
+
+    /// Compute the string shown in the About panel's "Version" slot.
+    /// - Clean release tag (`v0.1.5`) → `"0.1.5"` (leading `v` stripped so
+    ///   macOS doesn't render "Version v0.1.5").
+    /// - Dev build (`v0.1.5-3-gabc1234`, `v0.1.5-dirty`) → full string,
+    ///   so the developer sees they're running past-the-tag code.
+    /// - Missing / "unknown" → nil, letting the system fall back to
+    ///   CFBundleShortVersionString.
+    private func prominentVersionString() -> String? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: "PhotoSnailGitVersion") as? String,
+              !raw.isEmpty, raw != "unknown" else { return nil }
+        if raw.range(of: #"^v?\d+\.\d+(\.\d+)?$"#, options: .regularExpression) != nil {
+            return raw.hasPrefix("v") ? String(raw.dropFirst()) : raw
+        }
+        return raw
     }
 }
 
