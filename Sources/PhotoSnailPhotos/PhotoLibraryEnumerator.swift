@@ -3,19 +3,25 @@ import Photos
 import PhotoSnailCore
 
 /// Discovers unprocessed image assets in the Photo Library.
-/// GUI variant: logs via a closure instead of stderr.
-enum PhotoLibraryEnumerator {
+///
+/// Enumeration is detached to a `.userInitiated` background task because
+/// `PHFetchResult.enumerateObjects` pegs a core for multiple minutes on
+/// large libraries (the 39 k-photo tester case). Safe per Apple's docs —
+/// PHFetchResult is thread-safe.
+///
+/// Callers supply a `log` closure so the CLI can forward to stderr while
+/// the GUI fans out to its structured LogStore.
+public enum PhotoLibraryEnumerator {
 
-    static func fetchUnprocessedIdentifiers(
+    /// Walk the library, upsert every image asset into the queue, and (on
+    /// a fresh queue with zero `done` rows) bootstrap-detect already-tagged
+    /// assets by querying Photos.app for descriptions containing `sentinel`.
+    /// Returns the number of `pending` rows the queue holds afterward.
+    public static func fetchUnprocessedIdentifiers(
         queue: AssetQueue,
         sentinel: String,
         log: @escaping (String) -> Void = { _ in }
     ) async throws -> Int {
-        // Move the synchronous PhotoKit walk off the main thread. On a 39k-
-        // photo library the enumeration takes multiple minutes and pegs a
-        // single core, so doing it on main (via an @MainActor async caller)
-        // freezes the UI the whole time. PHFetchResult.enumerateObjects is
-        // thread-safe per Apple's docs.
         let allIds: [String] = await Task.detached(priority: .userInitiated) {
             let allAssets = PhotoLibrary.fetchAllImageAssets()
             var ids: [String] = []

@@ -71,7 +71,7 @@ public final class OpenAIClient: LLMClient {
 
     public let connection: OpenAIConnection
     public let session: URLSession
-    public var imageOptions: OpenAIImageOptions
+    public let imageOptions: OpenAIImageOptions
 
     public var providerLabel: String { "openai-compatible" }
 
@@ -116,16 +116,16 @@ public final class OpenAIClient: LLMClient {
         do {
             (data, response) = try await session.data(for: req)
         } catch {
-            throw PhotoSnailError.ollamaRequestFailed("listModels: \(error.localizedDescription)")
+            throw PhotoSnailError.llmRequestFailed("openai-compatible listModels: \(error.localizedDescription)")
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let body = String(data: data, encoding: .utf8) ?? "<binary>"
-            throw PhotoSnailError.ollamaRequestFailed("listModels HTTP \(http.statusCode): \(body)")
+            throw PhotoSnailError.llmRequestFailed("openai-compatible listModels HTTP \(http.statusCode): \(body)")
         }
 
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw PhotoSnailError.ollamaResponseParseFailed("listModels: not a JSON object")
+            throw PhotoSnailError.llmResponseParseFailed("openai-compatible listModels: not a JSON object")
         }
         // OpenAI shape: {"object": "list", "data": [{"id": "...", ...}, ...]}
         // Some servers return {"models": [...]} — accept both.
@@ -135,7 +135,7 @@ public final class OpenAIClient: LLMClient {
         } else if let m = obj["models"] as? [[String: Any]] {
             entries = m
         } else {
-            throw PhotoSnailError.ollamaResponseParseFailed("listModels: missing 'data' array")
+            throw PhotoSnailError.llmResponseParseFailed("openai-compatible listModels: missing 'data' array")
         }
 
         return entries.compactMap { entry in
@@ -189,7 +189,7 @@ public final class OpenAIClient: LLMClient {
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let respBody = String(data: data, encoding: .utf8) ?? "<binary>"
-            throw PhotoSnailError.ollamaRequestFailed("HTTP \(http.statusCode): \(respBody)")
+            throw PhotoSnailError.llmRequestFailed("openai-compatible HTTP \(http.statusCode): \(respBody)")
         }
 
         let content = try Self.parseChatCompletionContent(data)
@@ -250,7 +250,7 @@ public final class OpenAIClient: LLMClient {
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let respBody = String(data: data, encoding: .utf8) ?? "<binary>"
-            throw PhotoSnailError.ollamaRequestFailed("HTTP \(http.statusCode): \(respBody)")
+            throw PhotoSnailError.llmRequestFailed("openai-compatible HTTP \(http.statusCode): \(respBody)")
         }
 
         let (content, promptTokens, evalTokens) = try Self.parseChatCompletionContentWithUsage(data)
@@ -279,10 +279,10 @@ public final class OpenAIClient: LLMClient {
     /// completions response body.
     private static func parseChatCompletionContent(_ data: Data) throws -> String {
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw PhotoSnailError.ollamaResponseParseFailed("not a JSON object")
+            throw PhotoSnailError.llmResponseParseFailed("openai-compatible: not a JSON object")
         }
         guard let choices = obj["choices"] as? [[String: Any]], !choices.isEmpty else {
-            throw PhotoSnailError.ollamaResponseParseFailed("missing 'choices' array")
+            throw PhotoSnailError.llmResponseParseFailed("openai-compatible: missing 'choices' array")
         }
         let first = choices[0]
         if let msg = first["message"] as? [String: Any] {
@@ -299,7 +299,7 @@ public final class OpenAIClient: LLMClient {
         if let text = first["text"] as? String {
             return text
         }
-        throw PhotoSnailError.ollamaResponseParseFailed("missing 'message.content'")
+        throw PhotoSnailError.llmResponseParseFailed("openai-compatible: missing 'message.content'")
     }
 
     private static func parseChatCompletionContentWithUsage(_ data: Data) throws -> (content: String, promptTokens: Int?, completionTokens: Int?) {

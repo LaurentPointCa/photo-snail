@@ -1,6 +1,7 @@
 import Foundation
 import Photos
 import PhotoSnailCore
+import PhotoSnailPhotos
 
 /// Wires PhotoKit enumeration → AssetQueue → Pipeline → PhotosScripter write-back.
 ///
@@ -113,7 +114,8 @@ enum QueueRunner {
         do {
             _ = try await PhotoLibraryEnumerator.fetchUnprocessedIdentifiers(
                 queue: queue,
-                sentinel: config.sentinel
+                sentinel: config.sentinel,
+                log: { eprint($0) }
             )
         } catch {
             eprint("ERROR enumerating library: \(error)")
@@ -269,14 +271,14 @@ enum QueueRunner {
                         } catch let e as ScripterError {
                             // ScripterError can only happen in non-dry-run path because
                             // the AppleScript call is gated on `!dryRun` above.
-                            let wrapped = PhotoSnailError.ollamaRequestFailed("AppleScript: \(e)")
+                            let wrapped = PhotoSnailError.llmRequestFailed("AppleScript: \(e)")
                             try? await queue.markFailed(id, error: wrapped)
                             eprint("[failed] \(id) — \(e)")
                         } catch {
                             if dryRun {
                                 eprint("[skipped \(String(id.prefix(8)))] \(error)")
                             } else {
-                                let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
+                                let wrapped = PhotoSnailError.llmRequestFailed("\(error)")
                                 if wrapped.isRetriable && attempts < maxAttempts {
                                     try? await queue.recordRetry(id, error: wrapped)
                                     let delay = backoff[attempts - 1]

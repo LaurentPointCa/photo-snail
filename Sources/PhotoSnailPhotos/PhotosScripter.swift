@@ -1,7 +1,7 @@
 import Foundation
 
 /// Typed AppleScript failures.
-enum ScripterError: Error, CustomStringConvertible {
+public enum ScripterError: Error, CustomStringConvertible {
     case compileFailed(String)
     /// Common error codes:
     ///   -1743  errAEEventNotPermitted   (user denied Automation access)
@@ -10,7 +10,7 @@ enum ScripterError: Error, CustomStringConvertible {
     case executionFailed(code: Int, message: String, briefMessage: String)
     case unexpectedResult(String)
 
-    var description: String {
+    public var description: String {
         switch self {
         case .compileFailed(let msg):
             return "AppleScript compile failed: \(msg)"
@@ -40,22 +40,22 @@ enum ScripterError: Error, CustomStringConvertible {
 /// replies are dispatched to the main thread's CFRunLoop; calling from any
 /// other thread falls back to a Carbon-era WaitNextEvent path (~30 s/call).
 /// Wrap callers in `await MainActor.run { ... }`.
-enum PhotosScripter {
+public enum PhotosScripter {
 
     // MARK: - Description-only batched round-trip
 
-    struct BatchResult {
-        let stepSeconds: [Int]
-        static let stepLabels = [
+    public struct BatchResult {
+        public let stepSeconds: [Int]
+        public static let stepLabels = [
             "resolve_id_to_local_var",
             "read_pre_description",
             "write_description",
             "read_post_description",
         ]
-        let preDescription: String
-        let postDescription: String
-        let totalWallMs: Double
-        let scriptSource: String
+        public let preDescription: String
+        public let postDescription: String
+        public let totalWallMs: Double
+        public let scriptSource: String
     }
 
     /// Pin asset, read pre-description, write description, read post-description
@@ -63,7 +63,7 @@ enum PhotosScripter {
     ///
     /// The description payload carries: prose + embedded tags + sentinel.
     /// MUST be called via `await MainActor.run { ... }`.
-    static func runBatch(uuid: String, descriptionPayload: String) throws -> BatchResult {
+    public static func runBatch(uuid: String, descriptionPayload: String) throws -> BatchResult {
         let source = """
         tell application "Photos"
             try
@@ -123,7 +123,7 @@ enum PhotosScripter {
     ///
     /// Used by the write-back path to decide whether to preserve a
     /// user-written description before overwriting.
-    static func readDescription(uuid: String) throws -> String {
+    public static func readDescription(uuid: String) throws -> String {
         let source = """
         tell application "Photos"
             try
@@ -151,7 +151,7 @@ enum PhotosScripter {
 
     /// Return media-item ids whose description contains the given marker.
     /// Used to discover already-processed assets on first run (sentinel bootstrap).
-    static func findAssetsByDescriptionMarker(_ marker: String) throws -> ([String], Double) {
+    public static func findAssetsByDescriptionMarker(_ marker: String) throws -> ([String], Double) {
         let source = """
         tell application "Photos"
             set matchingItems to (every media item whose description contains "\(escape(marker))")

@@ -2,6 +2,7 @@ import SwiftUI
 import Photos
 import CoreLocation
 import PhotoSnailCore
+import PhotoSnailPhotos
 
 // MARK: - Inspector root
 

@@ -114,9 +114,13 @@ final class SettingsMigrationTests: XCTestCase {
         XCTAssertEqual(decoded.modelConfigs["qwen3-6"]?.promptLanguage, "fr")
     }
 
-    func testEncodeEmitsLegacyTopLevelFields() throws {
-        // Forward-compat: an older build (v2 reader) must still find
-        // customPrompt / promptLanguage / sentinel at the top level.
+    func testEncodeDoesNotMirrorLegacyTopLevelFields() throws {
+        // v3 schema: `modelConfigs` is the single source of truth. The
+        // encoder must NOT emit legacy `customPrompt` / `promptLanguage` /
+        // `sentinel` top-level keys — mirroring them created a split-brain
+        // risk where a v0.1.3 reader editing the file would update the
+        // mirrors without touching modelConfigs. This test guards against
+        // accidental reintroduction.
         let s = Settings(
             model: "gemma4:31b",
             modelConfigs: [
@@ -125,8 +129,8 @@ final class SettingsMigrationTests: XCTestCase {
         )
         let data = try JSONEncoder().encode(s)
         let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(json["customPrompt"] as? String, "hello")
-        XCTAssertEqual(json["promptLanguage"] as? String, "de")
-        XCTAssertEqual(json["sentinel"] as? String, "ai:gemma4-v4")
+        XCTAssertNil(json["customPrompt"], "legacy customPrompt must not be mirrored on encode")
+        XCTAssertNil(json["promptLanguage"], "legacy promptLanguage must not be mirrored on encode")
+        XCTAssertNil(json["sentinel"], "legacy sentinel must not be mirrored on encode")
     }
 }

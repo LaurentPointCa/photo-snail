@@ -39,14 +39,22 @@ final class LockWatcher {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.onLock()
+            // DistributedNotificationCenter delivers on `.main` (see queue
+            // arg above), so we can synchronously assume MainActor isolation
+            // rather than hop through a Task — this keeps the lock/unlock
+            // callback ordering deterministic.
+            MainActor.assumeIsolated {
+                self?.onLock()
+            }
         }
         self.unlockToken = center.addObserver(
             forName: Notification.Name("com.apple.screenIsUnlocked"),
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.onUnlock()
+            MainActor.assumeIsolated {
+                self?.onUnlock()
+            }
         }
     }
 

@@ -90,3 +90,29 @@ public protocol LLMClient: Sendable {
                          sourcePixelHeight: Int) async throws -> CaptionResult
     func generateText(model: String, prompt: String) async throws -> LLMTextResult
 }
+
+/// Single factory for constructing the right `LLMClient` given a provider +
+/// connection pair. Used by `Settings.makeLLMClient()` and by the GUI's
+/// ProcessingEngine (for preflight, model-list refresh, and the worker
+/// loop) so adding a third provider means touching this function only.
+///
+/// `imageOptions` is in Ollama's units; the OpenAI branch mirrors the three
+/// knobs (`downsize`, `maxPixelSize`, `jpegQuality`) into `OpenAIImageOptions`.
+public func makeLLMClient(
+    provider: LLMProvider,
+    ollama: OllamaConnection,
+    openai: OpenAIConnection,
+    imageOptions: OllamaImageOptions = OllamaImageOptions()
+) -> any LLMClient {
+    switch provider {
+    case .ollama:
+        return OllamaClient(connection: ollama, imageOptions: imageOptions)
+    case .openaiCompatible:
+        let openaiOpts = OpenAIImageOptions(
+            downsize: imageOptions.downsize,
+            maxPixelSize: imageOptions.maxPixelSize,
+            jpegQuality: imageOptions.jpegQuality
+        )
+        return OpenAIClient(connection: openai, imageOptions: openaiOpts)
+    }
+}

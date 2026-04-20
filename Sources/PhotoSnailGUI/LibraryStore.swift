@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import Photos
 import PhotoSnailCore
+import PhotoSnailPhotos
 
 /// In-memory model for the library browser. Holds:
 /// - A `PHFetchResult<PHAsset>` of every image in the user's library (lazy)

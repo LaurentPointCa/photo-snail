@@ -137,26 +137,32 @@ public struct PipelineResult: Codable, Sendable {
 
 public enum PhotoSnailError: Error, CustomStringConvertible {
     case imageLoadFailed(String)
-    case ollamaRequestFailed(String)
-    case ollamaResponseParseFailed(String)
+    /// Provider-agnostic request failure (HTTP/timeout/network/server error).
+    /// Covers both Ollama and OpenAI-compatible backends. The inner string
+    /// should include enough context (status code, provider hint if useful)
+    /// for log readers to identify which backend failed.
+    case llmRequestFailed(String)
+    /// Provider-agnostic parse failure: the LLM returned a response that
+    /// CaptionParser or the translation path could not make sense of.
+    case llmResponseParseFailed(String)
 
     public var description: String {
         switch self {
-        case .imageLoadFailed(let s): return "imageLoadFailed: \(s)"
-        case .ollamaRequestFailed(let s): return "ollamaRequestFailed: \(s)"
-        case .ollamaResponseParseFailed(let s): return "ollamaResponseParseFailed: \(s)"
+        case .imageLoadFailed(let s):        return "imageLoadFailed: \(s)"
+        case .llmRequestFailed(let s):       return "llmRequestFailed: \(s)"
+        case .llmResponseParseFailed(let s): return "llmResponseParseFailed: \(s)"
         }
     }
 
     /// Whether the queue should retry this error after a backoff.
-    /// `.ollamaRequestFailed` covers HTTP/timeout/network blips and is the only retriable case.
-    /// `.imageLoadFailed` (file missing) and `.ollamaResponseParseFailed` (model produced
+    /// `.llmRequestFailed` covers HTTP/timeout/network blips and is the only retriable case.
+    /// `.imageLoadFailed` (file missing) and `.llmResponseParseFailed` (model produced
     /// non-conforming output — rare after Phase D) are treated as permanent.
     public var isRetriable: Bool {
         switch self {
-        case .imageLoadFailed:           return false
-        case .ollamaRequestFailed:       return true
-        case .ollamaResponseParseFailed: return false
+        case .imageLoadFailed:        return false
+        case .llmRequestFailed:       return true
+        case .llmResponseParseFailed: return false
         }
     }
 

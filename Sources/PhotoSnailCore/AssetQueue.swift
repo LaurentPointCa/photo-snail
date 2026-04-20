@@ -116,7 +116,7 @@ public actor AssetQueue {
     /// Current schema version. Bumped to 3 for the priority column that
     /// backs the "Process now" action (priority=1 rows jump ahead of the
     /// FIFO order in claimNext).
-    public static let currentSchemaVersion: Int64 = 3
+    public static let currentSchemaVersion: Int64 = 4
 
     private let db: SQLiteDB
     private let encoder: JSONEncoder
@@ -213,6 +213,28 @@ public actor AssetQueue {
                 try db.exec("ALTER TABLE assets ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;")
             }
             try db.exec("PRAGMA user_version = 3;")
+        }
+
+        // v3 → v4: composite index for `claimNext` — the pattern is
+        //   WHERE status = 'pending' ORDER BY priority DESC, rowid LIMIT 1
+        // Without a composite index SQLite filters on idx_assets_status
+        // then loads every matching row and sorts in memory. With the
+        // composite index it's a one-row index lookup. Negligible at 1k
+        // rows, material once queues grow past 10k.
+        //
+        // NOTE: `rowid` is a hidden column in SQLite and can't appear in
+        // a CREATE INDEX column list (it raises "no such column: rowid").
+        // We don't need to name it — SQLite automatically appends rowid
+        // as the implicit tiebreaker for any non-unique index, so the
+        // physical index layout is still (status, priority DESC, rowid).
+        if current < 4 {
+            try db.transaction {
+                try db.exec("""
+                    CREATE INDEX IF NOT EXISTS idx_assets_claim
+                    ON assets(status, priority DESC);
+                    """)
+            }
+            try db.exec("PRAGMA user_version = 4;")
         }
     }
 

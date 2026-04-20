@@ -8,6 +8,7 @@ let package = Package(
     ],
     products: [
         .library(name: "PhotoSnailCore", targets: ["PhotoSnailCore"]),
+        .library(name: "PhotoSnailPhotos", targets: ["PhotoSnailPhotos"]),
         .executable(name: "photo-snail-cli", targets: ["photo-snail-cli"]),
         .executable(name: "photo-snail-app", targets: ["photo-snail-app"]),
         .executable(name: "photo-snail-gui", targets: ["photo-snail-gui"]),
@@ -20,6 +21,17 @@ let package = Package(
                 .linkedLibrary("sqlite3"),
             ]
         ),
+        // PhotoKit + AppleScript surface shared by `photo-snail-app` and
+        // `photo-snail-gui`. Kept out of `PhotoSnailCore` so the file-path
+        // CLI doesn't have to link `Photos.framework`.
+        .target(
+            name: "PhotoSnailPhotos",
+            dependencies: ["PhotoSnailCore"],
+            path: "Sources/PhotoSnailPhotos",
+            linkerSettings: [
+                .linkedFramework("Photos"),
+            ]
+        ),
         .executableTarget(
             name: "photo-snail-cli",
             dependencies: ["PhotoSnailCore"],
@@ -27,11 +39,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "photo-snail-app",
-            dependencies: ["PhotoSnailCore"],
+            dependencies: ["PhotoSnailCore", "PhotoSnailPhotos"],
             path: "Sources/PhotoSnailApp",
             exclude: ["Info.plist"],
             linkerSettings: [
-                .linkedFramework("Photos"),
                 .unsafeFlags([
                     "-Xlinker", "-sectcreate",
                     "-Xlinker", "__TEXT",
@@ -42,11 +53,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "photo-snail-gui",
-            dependencies: ["PhotoSnailCore"],
+            dependencies: ["PhotoSnailCore", "PhotoSnailPhotos"],
             path: "Sources/PhotoSnailGUI",
             exclude: ["Info.plist"],
             linkerSettings: [
-                .linkedFramework("Photos"),
                 .unsafeFlags([
                     "-Xlinker", "-sectcreate",
                     "-Xlinker", "__TEXT",

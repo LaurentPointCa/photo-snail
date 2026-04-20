@@ -1,6 +1,7 @@
 import Foundation
 import Photos
 import PhotoSnailCore
+import PhotoSnailPhotos
 import CoreGraphics
 
 @Observable
@@ -79,6 +80,11 @@ final class ProcessingEngine {
     /// in Settings.autoStartWhenLocked; loaded in `loadInitialStats`.
     var autoStartWhenLocked: Bool = false
 
+    /// When true, `launchWorker` renices the active LLM server downward
+    /// for the duration of the batch and restores it on exit. Persisted in
+    /// Settings.lowerLLMPriority; loaded in `loadInitialStats`.
+    var lowerLLMPriority: Bool = true
+
     /// Tracks whether the current run was initiated by the lock watcher so
     /// we only auto-pause on unlock if we auto-started on lock (don't
     /// pause a user-initiated batch just because they unlocked).
@@ -124,20 +130,30 @@ final class ProcessingEngine {
     /// Exposed read-only for the settings sheet's requeue dialog.
     let queue: AssetQueue
     private var workerTask: Task<Void, Never>?
-    private var isPausedFlag = false
+
+    /// Pause intent driving the worker loop. Three values:
+    ///  - `.none` — worker should keep running.
+    ///  - `.armed` — worker should park at its next checkpoint (top of loop).
+    ///  - `.afterPhoto(id)` — worker should finish the named photo, then
+    ///    transition this state to `.armed` so the next iteration parks.
+    ///    Set by "Process now"; consumed in `consumeStopAfterIfMatches`.
+    ///
+    /// Replaces the old trio of `isPausedFlag` + `stopAfterPhotoID` +
+    /// ad-hoc bool juggling. `pauseContinuation` remains separate because
+    /// it's the mechanism (the park point), not the intent.
+    enum PauseRequest: Equatable, Sendable {
+        case none
+        case armed
+        case afterPhoto(id: String)
+    }
+    private var pauseRequest: PauseRequest = .none
     private var pauseContinuation: CheckedContinuation<Void, Never>?
 
     /// Exposed for the UI: true from the moment the user hits Pause until
     /// the worker actually reaches its next pause checkpoint. Lets the
     /// RunnerDock swap the Pause button for a disabled "Waiting to
     /// finish…" label so double-clicks don't do anything weird.
-    var isPausing: Bool { isPausedFlag && state == .running }
-
-    /// "Process now" target. When the worker finishes processing an asset
-    /// whose id matches this, it flips `isPausedFlag` so the next loop
-    /// iteration parks in the pause continuation. Cleared as part of the
-    /// pause so subsequent Resume / Start runs aren't also one-shot.
-    private var stopAfterPhotoID: String? = nil
+    var isPausing: Bool { pauseRequest != .none && state == .running }
 
     /// Lives for the engine's lifetime. Instantiated in `loadInitialStats`
     /// (after settings are loaded) and forwards screen lock/unlock events
@@ -178,6 +194,7 @@ final class ProcessingEngine {
         self.customPrompt = runtime.customPrompt
         self.promptLanguage = runtime.promptLanguage
         self.autoStartWhenLocked = runtime.autoStartWhenLocked
+        self.lowerLLMPriority = runtime.lowerLLMPriority
 
         // 2. Queue stats. The queue was passed in at init — we just read.
         do {
@@ -250,16 +267,15 @@ final class ProcessingEngine {
         }
     }
 
-    /// Build the `LLMClient` for the currently-selected provider. Centralized
-    /// so preflight, model discovery, and the worker loop all agree on which
-    /// backend is active.
+    /// Build the `LLMClient` for the currently-selected provider. Thin
+    /// adapter over PhotoSnailCore.makeLLMClient so preflight, model
+    /// discovery, and the worker loop all route through one factory.
     private func makeCurrentClient() -> any LLMClient {
-        switch apiProvider {
-        case .ollama:
-            return OllamaClient(connection: self.connection)
-        case .openaiCompatible:
-            return OpenAIClient(connection: self.openaiConnection)
-        }
+        makeLLMClient(
+            provider: apiProvider,
+            ollama: self.connection,
+            openai: self.openaiConnection
+        )
     }
 
     /// "Continue anyway" from the preflight sheet: acknowledge the failure
@@ -391,18 +407,25 @@ final class ProcessingEngine {
         saved.ollama = persistedOllama
         saved.openai = persistedOpenAI
         saved.autoStartWhenLocked = autoStartWhenLocked
+        saved.lowerLLMPriority = lowerLLMPriority
         saved.modelConfigs = modelConfigs
 
+        // Save FIRST, then mirror into the engine's read-through fields.
+        // If the save throws (disk full, permissions, etc.) the engine
+        // state stays aligned with what's on disk — the user sees the
+        // error and the UI still reflects the previously-persisted config.
+        // Otherwise a failed save would silently diverge the in-memory
+        // state from disk and the next launch would roll back without
+        // warning.
         do {
             try saved.save()
-            settingsSnapshot = saved
-            statusMessage = Localizer.shared.t("status.settings_saved")
         } catch {
             statusMessage = "\(Localizer.shared.t("error.save_failed")): \(error)"
+            log.append(.error, "Settings save failed: \(error)")
+            return
         }
 
-        // Mirror the active config into the engine's read-through fields so
-        // the worker loop picks up the new values on the next start.
+        settingsSnapshot = saved
         self.model = saved.model
         self.sentinel = saved.sentinel
         self.apiProvider = saved.apiProvider
@@ -410,6 +433,7 @@ final class ProcessingEngine {
         self.openaiConnection = saved.openai
         self.customPrompt = saved.customPrompt
         self.promptLanguage = saved.promptLanguage
+        statusMessage = Localizer.shared.t("status.settings_saved")
 
         // Re-probe the (possibly-new) provider.
         await refreshAvailableModels()
@@ -417,17 +441,36 @@ final class ProcessingEngine {
 
     /// Toggle the auto-start-when-locked preference and persist to disk.
     /// The LockWatcher polls this property; no need to re-wire observers.
+    /// Save first so a disk failure keeps the in-memory state aligned
+    /// with what's on disk (see `applyConfigChange` for the same pattern).
     func setAutoStartWhenLocked(_ flag: Bool) {
-        self.autoStartWhenLocked = flag
-        // Load, update, and re-save settings so we don't stomp on unrelated fields.
         do {
             var s = try Settings.load()
             s.autoStartWhenLocked = flag
             try s.save()
-            log.append(.info, "autoStartWhenLocked = \(flag)")
         } catch {
             log.append(.error, "Failed to persist autoStartWhenLocked: \(error)")
+            return
         }
+        self.autoStartWhenLocked = flag
+        log.append(.info, "autoStartWhenLocked = \(flag)")
+    }
+
+    /// Toggle the lower-LLM-priority preference and persist. Only takes
+    /// effect on the NEXT batch — flipping mid-run doesn't touch PIDs that
+    /// were already adjusted, and the `defer` in `launchWorker` will still
+    /// restore whatever it set at the start.
+    func setLowerLLMPriority(_ flag: Bool) {
+        do {
+            var s = try Settings.load()
+            s.lowerLLMPriority = flag
+            try s.save()
+        } catch {
+            log.append(.error, "Failed to persist lowerLLMPriority: \(error)")
+            return
+        }
+        self.lowerLLMPriority = flag
+        log.append(.info, "lowerLLMPriority = \(flag)")
     }
 
     // MARK: - Controls
@@ -533,7 +576,7 @@ final class ProcessingEngine {
                 log.append(.info, "Process now: \(String(id.prefix(8))) is already in-flight")
                 return
             }
-            stopAfterPhotoID = id
+            pauseRequest = .afterPhoto(id: id)
             log.append(.info, "Process now: \(String(id.prefix(8))) queued at priority=1; worker will pause after")
             if state == .idle || state == .finished {
                 await start()
@@ -574,22 +617,21 @@ final class ProcessingEngine {
         }
     }
 
-    /// Called by the worker (on MainActor) after a successful markDone
-    /// so Process now's one-shot semantics can trigger a pause without
-    /// the worker having direct access to `isPausedFlag`. Returns true
-    /// if we just triggered a stop so the caller can update state.
+    /// Called by the worker (on MainActor) after a successful markDone.
+    /// If the completed photo was the `afterPhoto(id:)` target, promote
+    /// the pause request to `.armed` so the next loop iteration parks.
+    /// Returns true on a match so the caller can update UI state.
     @discardableResult
     fileprivate func consumeStopAfterIfMatches(_ id: String) -> Bool {
-        guard stopAfterPhotoID == id else { return false }
-        stopAfterPhotoID = nil
-        isPausedFlag = true
+        guard case .afterPhoto(let target) = pauseRequest, target == id else { return false }
+        pauseRequest = .armed
         statusMessage = Localizer.shared.t("status.pausing")
         log.append(.info, "Process now done — pausing worker")
         return true
     }
 
     func pause() {
-        isPausedFlag = true
+        pauseRequest = .armed
         statusMessage = Localizer.shared.t("status.pausing")
         log.append(.info, "Pause requested")
     }
@@ -602,7 +644,7 @@ final class ProcessingEngine {
     }
 
     func resume() {
-        isPausedFlag = false
+        pauseRequest = .none
         pausedByUnlock = false
         state = .running
         statusMessage = Localizer.shared.t("status.resuming")
@@ -610,6 +652,16 @@ final class ProcessingEngine {
         sleepManager?.preventIdleSleep()
         pauseContinuation?.resume()
         pauseContinuation = nil
+    }
+
+    /// Worker-side read for the park-at-next-checkpoint decision. Returns
+    /// true only for `.armed`; `.afterPhoto(id:)` doesn't park yet because
+    /// the worker is still finishing that photo. Kept as a method so the
+    /// detached worker can call it via `await self?.shouldPauseNow() == true`
+    /// without exporting the full `PauseRequest` enum across the weak
+    /// optional chain.
+    fileprivate func shouldPauseNow() -> Bool {
+        pauseRequest == .armed
     }
 
     func retryFailed(_ id: String) async {
@@ -634,30 +686,82 @@ final class ProcessingEngine {
 
     // MARK: - Worker
 
-    private func launchWorker() {
-        // Try to lower Ollama's scheduling priority so interactive apps
-        // stay responsive during long batches. Silent on failure — this
-        // is a nice-to-have, not a correctness requirement. The worker's
-        // `defer` below restores the original nice values on exit (normal
-        // finish, cancellation, or errors) so other tools sharing Ollama
-        // don't keep feeling the lowered priority forever.
-        let priorityEntries = OllamaPriorityManager.lower(by: 10)
-        if !priorityEntries.isEmpty {
-            let pids = priorityEntries.map { "\($0.pid)(\($0.previousNice)→\($0.newNice))" }.joined(separator: ", ")
-            log.append(.info, "Lowered Ollama priority: \(pids)")
+    /// Snapshot of the config the worker consults on every photo. Refreshed
+    /// from engine state (via `currentRunConfig()`) at the top of each loop
+    /// iteration so mid-batch settings changes — provider, URL, API key,
+    /// headers, model, custom prompt, prompt language, sentinel — take
+    /// effect on the NEXT photo instead of only on the next `start()`.
+    /// Pause + Resume goes through the same re-read, so changing the URL
+    /// while paused and hitting Resume now picks up the new URL.
+    private struct RunConfig: Sendable {
+        let apiProvider: LLMProvider
+        let ollama: OllamaConnection
+        let openai: OpenAIConnection
+        let model: String
+        let sentinel: String
+        let customPrompt: String?
+        let promptLanguage: String?
+
+        func makeClient() -> any LLMClient {
+            makeLLMClient(provider: apiProvider, ollama: ollama, openai: openai)
         }
 
-        // Capture the queue (and other settings) into locals so the detached
-        // worker task can reference them without a main-actor hop. All are
-        // Sendable: `AssetQueue` is an actor, the rest are value types.
+        func makePipeline() -> Pipeline {
+            Pipeline(
+                model: model,
+                promptStyle: .sideChannel,
+                llm: makeClient(),
+                customPrompt: customPrompt
+            )
+        }
+    }
+
+    private func currentRunConfig() -> RunConfig {
+        RunConfig(
+            apiProvider: self.apiProvider,
+            ollama: self.connection,
+            openai: self.openaiConnection,
+            model: self.model,
+            sentinel: self.sentinel,
+            customPrompt: self.customPrompt,
+            promptLanguage: self.promptLanguage
+        )
+    }
+
+    private func launchWorker() {
+        // Try to lower the active LLM server's scheduling priority so
+        // interactive apps stay responsive during long batches. Silent on
+        // failure — this is a nice-to-have, not a correctness requirement.
+        // The worker's `defer` below restores the original nice values on
+        // exit (normal finish, cancellation, or errors) so other tools
+        // sharing the server don't keep feeling the lowered priority
+        // forever.
+        //
+        // Presets are selected by provider so we don't renice processes
+        // that aren't actually serving this run. When the user has the
+        // toggle off, we skip entirely and the defer has nothing to restore.
+        let priorityEntries: [LLMPriorityManager.Entry]
+        if lowerLLMPriority {
+            let presets: [LLMPriorityManager.ProviderPreset]
+            switch apiProvider {
+            case .ollama:            presets = [.ollama]
+            case .openaiCompatible:  presets = [.openAICompatible]
+            }
+            priorityEntries = LLMPriorityManager.lower(presets: presets, by: 10)
+            if !priorityEntries.isEmpty {
+                let pids = priorityEntries.map { "\($0.pid)(\($0.previousNice)→\($0.newNice))" }.joined(separator: ", ")
+                log.append(.info, "Lowered LLM priority: \(pids)")
+            }
+        } else {
+            priorityEntries = []
+        }
+
+        // Only capture the handful of values that genuinely don't change
+        // mid-run. Everything provider- / model- / prompt-related is re-read
+        // per iteration inside the loop via `currentRunConfig()` so a
+        // settings edit applies on the next photo. AssetQueue is an actor;
+        // dryRun is set at launch and not editable during a run.
         let queue = self.queue
-        let model = self.model
-        let sentinel = self.sentinel
-        let apiProvider = self.apiProvider
-        let ollamaConnection = self.connection
-        let openaiConnection = self.openaiConnection
-        let customPrompt = self.customPrompt
-        let promptLanguage = self.promptLanguage
         let dryRun = self.dryRun
 
         // Capture localized strings before detaching — launchWorker() is on
@@ -685,25 +789,11 @@ final class ProcessingEngine {
             // MainActor so the restore still runs if the engine is torn
             // down mid-batch.
             defer {
-                OllamaPriorityManager.restore(entries: priorityEntries)
+                LLMPriorityManager.restore(entries: priorityEntries)
             }
 
-            // Build the right LLM client for the selected provider. The
-            // translation branch reuses the same client — both Ollama and
-            // OpenAI-compatible implement `generateText`.
-            let llmClient: any LLMClient
-            switch apiProvider {
-            case .ollama:
-                llmClient = OllamaClient(connection: ollamaConnection)
-            case .openaiCompatible:
-                llmClient = OpenAIClient(connection: openaiConnection)
-            }
-            let pipeline = Pipeline(
-                model: model,
-                promptStyle: .sideChannel,
-                llm: llmClient,
-                customPrompt: customPrompt
-            )
+            // LLM client + pipeline are rebuilt per iteration from a fresh
+            // `RunConfig` snapshot, so we don't construct them up front.
 
             let dryRunCursor: DryRunCursor?
             let log = await LogStore.shared
@@ -713,27 +803,41 @@ final class ProcessingEngine {
                     await MainActor.run { log.append(.info, "Dry-run: snapshot taken") }
                 }
             } catch {
-                await MainActor.run {
-                    self?.statusMessage = "Snapshot error: \(error)"
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.statusMessage = "Snapshot error: \(error)"
                     log.append(.error, "Snapshot error: \(error)")
                 }
                 return
             }
 
             while true {
-                // Pause check
-                if await self?.isPausedFlag == true {
-                    await MainActor.run {
-                        self?.state = .paused
-                        self?.statusMessage = locPaused
-                        self?.sleepManager?.allowIdleSleep()
+                // Pause check — parks only on `.armed`. `.afterPhoto(id)`
+                // is transient (set in Process now, promoted to `.armed`
+                // by `consumeStopAfterIfMatches` when that photo finishes).
+                if await self?.shouldPauseNow() == true {
+                    await MainActor.run { [weak self] in
+                        guard let self else { return }
+                        self.state = .paused
+                        self.statusMessage = locPaused
+                        self.sleepManager?.allowIdleSleep()
                     }
                     await withCheckedContinuation { cont in
-                        Task { @MainActor in
+                        Task { @MainActor [weak self] in
                             self?.pauseContinuation = cont
                         }
                     }
                 }
+
+                // Fresh config snapshot per iteration. A Settings change made
+                // while the worker was paused (URL, provider, model, prompt,
+                // language, sentinel, API key) lands here on the next loop
+                // pass — including right after Resume, which is the whole
+                // point: the worker keeps its captured connection otherwise
+                // and would keep POSTing to the old URL.
+                guard let config = await self?.currentRunConfig() else { return }
+                let llmClient = config.makeClient()
+                let pipeline = config.makePipeline()
 
                 // Source the next ID: dry-run uses the in-memory cursor (no
                 // queue mutation), real run uses claimNext.
@@ -742,10 +846,11 @@ final class ProcessingEngine {
                 let taskType: String
                 if let cursor = dryRunCursor {
                     guard let nextId = await cursor.next() else {
-                        await MainActor.run {
-                            self?.state = .finished
-                            self?.statusMessage = locDryrunComplete
-                            self?.sleepManager?.allowIdleSleep()
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.state = .finished
+                            self.statusMessage = locDryrunComplete
+                            self.sleepManager?.allowIdleSleep()
                             log.append(.success, "Dry-run complete — queue not mutated")
                         }
                         return
@@ -758,18 +863,20 @@ final class ProcessingEngine {
                     do {
                         claim = try await queue.claimNext()
                     } catch {
-                        await MainActor.run {
-                            self?.statusMessage = "\(locQueueError): \(error)"
-                            self?.sleepManager?.allowIdleSleep()
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.statusMessage = "\(locQueueError): \(error)"
+                            self.sleepManager?.allowIdleSleep()
                             log.append(.error, "Queue error: \(error)")
                         }
                         return
                     }
                     guard let c = claim else {
-                        await MainActor.run {
-                            self?.state = .finished
-                            self?.statusMessage = locAllProcessed
-                            self?.sleepManager?.allowIdleSleep()
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.state = .finished
+                            self.statusMessage = locAllProcessed
+                            self.sleepManager?.allowIdleSleep()
                             log.append(.success, "All photos processed")
                         }
                         return
@@ -779,17 +886,21 @@ final class ProcessingEngine {
                     taskType = c.taskType
                 }
 
-                await MainActor.run {
-                    self?.currentPhotoID = id
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.currentPhotoID = id
                     let verb = taskType == "translate" ? verbTranslating : verbProcessing
-                    self?.statusMessage = "\(verb) \(String(id.prefix(8)))..."
+                    self.statusMessage = "\(verb) \(String(id.prefix(8)))..."
                     log.append(.info, "\(verb) \(String(id.prefix(8)))…", assetId: id)
                 }
 
                 // Load thumbnail for preview
                 if let asset = PhotoLibrary.fetch(id: id) {
                     let thumb = await Self.loadThumbnail(asset: asset)
-                    await MainActor.run { self?.currentThumbnail = thumb }
+                    await MainActor.run { [weak self] in
+                        guard let self else { return }
+                        self.currentThumbnail = thumb
+                    }
                 }
 
                 // Translation branch: text-only Ollama call, no image/Vision
@@ -803,7 +914,7 @@ final class ProcessingEngine {
                             continue
                         }
                         let origTags = row?.originalTags.isEmpty == false ? row!.originalTags : row?.tags ?? []
-                        let langName = Localizer.languageName(for: promptLanguage ?? "en")
+                        let langName = Localizer.languageName(for: config.promptLanguage ?? "en")
                         let translationPrompt = """
                             Translate the following photo description and tags to \(langName). \
                             Keep the same format exactly. Do not add or remove content, just translate.
@@ -815,37 +926,23 @@ final class ProcessingEngine {
                             TAGS: \(origTags.joined(separator: ", "))
                             """
                         let t0 = Date()
-                        let textResult = try await llmClient.generateText(model: model, prompt: translationPrompt)
+                        let textResult = try await llmClient.generateText(model: config.model, prompt: translationPrompt)
                         let ollamaMs = Int64(Date().timeIntervalSince(t0) * 1000)
                         let parsed = CaptionParser.parse(textResult.response)
 
-                        let uuid = PhotoLibrary.uuidPrefix(id)
-                        let preDesc = try await MainActor.run {
-                            try PhotosScripter.readDescription(uuid: uuid)
-                        }
-                        let payload = Pipeline.formatDescription(
-                            description: parsed.description,
-                            tags: parsed.tags,
-                            sentinel: sentinel,
-                            existingDescription: preDesc
+                        try await Self.performWriteBack(
+                            id: id, description: parsed.description,
+                            tags: parsed.tags, sentinel: config.sentinel
                         )
-                        _ = try await MainActor.run {
-                            try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
-                        }
 
                         try? await queue.markTranslationDone(
                             id, description: parsed.description, tags: parsed.tags,
-                            sentinel: sentinel, model: model, ollamaMs: ollamaMs
+                            sentinel: config.sentinel, model: config.model, ollamaMs: ollamaMs
                         )
 
-                        await MainActor.run {
-                            self?.completedPhotoID = self?.currentPhotoID
-                            self?.completedThumbnail = self?.currentThumbnail
-                            self?.completedDescription = parsed.description
-                            self?.completedTags = parsed.tags
-                            self?.currentThumbnail = nil
-                            self?.photosProcessedThisSession += 1
-                            self?.updateThroughput()
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.recordCompletion(description: parsed.description, tags: parsed.tags)
                             log.append(.success, "Translated: \(String(id.prefix(8)))", assetId: id)
                         }
                         await self?.refreshStatsAndFailures()
@@ -858,7 +955,7 @@ final class ProcessingEngine {
                         }
                         await self?.refreshStatsAndFailures()
                     } catch {
-                        let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
+                        let wrapped = PhotoSnailError.llmRequestFailed("\(error)")
                         try? await queue.markFailed(id, error: wrapped)
                         await self?.refreshStatsAndFailures()
                     }
@@ -872,8 +969,9 @@ final class ProcessingEngine {
                         if !dryRun {
                             try? await queue.markFailed(id, error: err)
                         }
-                        await MainActor.run {
-                            self?.statusMessage = "\(locAssetNotFound): \(String(id.prefix(8)))"
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.statusMessage = "\(locAssetNotFound): \(String(id.prefix(8)))"
                             log.append(.error, "Asset not found: \(String(id.prefix(8)))", assetId: id)
                         }
                         await self?.refreshStatsAndFailures()
@@ -888,45 +986,24 @@ final class ProcessingEngine {
                     }
 
                     if !dryRun {
-                        let uuid = PhotoLibrary.uuidPrefix(id)
-                        let preDesc = try await MainActor.run {
-                            try PhotosScripter.readDescription(uuid: uuid)
-                        }
-                        let payload = Pipeline.formatDescription(
-                            description: result.caption.description,
-                            tags: result.mergedTags,
-                            sentinel: sentinel,
-                            existingDescription: preDesc
+                        try await Self.performWriteBack(
+                            id: id, description: result.caption.description,
+                            tags: result.mergedTags, sentinel: config.sentinel
                         )
-                        _ = try await MainActor.run {
-                            try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
-                        }
                         await MainActor.run {
                             log.append(.info, "Write-back complete for \(String(id.prefix(8)))", assetId: id)
                         }
-                    }
-
-                    // markDone only in real mode — dry-run leaves the queue untouched.
-                    if !dryRun {
-                        try? await queue.markDone(id, result: result, sentinel: sentinel)
+                        try? await queue.markDone(id, result: result, sentinel: config.sentinel)
                     }
 
                     // "Process now" one-shot: if this photo was the
                     // explicit Process-now target, arm the pause flag so
                     // the next loop iteration parks instead of draining
                     // the rest of the queue.
-                    await MainActor.run {
-                        self?.consumeStopAfterIfMatches(id)
-                    }
-
-                    await MainActor.run {
-                        self?.completedPhotoID = self?.currentPhotoID
-                        self?.completedThumbnail = self?.currentThumbnail
-                        self?.completedDescription = result.caption.description
-                        self?.completedTags = result.mergedTags
-                        self?.currentThumbnail = nil
-                        self?.photosProcessedThisSession += 1
-                        self?.updateThroughput()
+                    await MainActor.run { [weak self] in
+                        guard let self else { return }
+                        self.consumeStopAfterIfMatches(id)
+                        self.recordCompletion(description: result.caption.description, tags: result.mergedTags)
                         log.append(.success, "Done: \(String(id.prefix(8))) — \(result.mergedTags.count) tags", assetId: id)
                     }
                     if !dryRun {
@@ -935,14 +1012,16 @@ final class ProcessingEngine {
 
                 } catch let e as PhotoSnailError {
                     if dryRun {
-                        await MainActor.run {
-                            self?.statusMessage = "Skipped \(String(id.prefix(8))): \(e.shortMessage)"
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.statusMessage = "Skipped \(String(id.prefix(8))): \(e.shortMessage)"
                             log.append(.warning, "Dry-run skipped \(String(id.prefix(8))): \(e.shortMessage)", assetId: id)
                         }
                     } else if e.isRetriable && attempts < 3 {
                         try? await queue.recordRetry(id, error: e)
-                        await MainActor.run {
-                            self?.statusMessage = "Retrying \(String(id.prefix(8)))..."
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.statusMessage = "Retrying \(String(id.prefix(8)))..."
                             log.append(.warning, "Retrying \(String(id.prefix(8))) (attempt \(attempts)): \(e.shortMessage)", assetId: id)
                         }
                         try? await Task.sleep(nanoseconds: UInt64([10, 30, 60][attempts - 1]) * 1_000_000_000)
@@ -956,12 +1035,13 @@ final class ProcessingEngine {
                     }
                 } catch {
                     if dryRun {
-                        await MainActor.run {
-                            self?.statusMessage = "Skipped \(String(id.prefix(8))): \(error)"
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            self.statusMessage = "Skipped \(String(id.prefix(8))): \(error)"
                             log.append(.warning, "Dry-run skipped \(String(id.prefix(8))): \(error)", assetId: id)
                         }
                     } else {
-                        let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
+                        let wrapped = PhotoSnailError.llmRequestFailed("\(error)")
                         try? await queue.markFailed(id, error: wrapped)
                         await MainActor.run {
                             log.append(.error, "Failed: \(String(id.prefix(8))) — \(error)", assetId: id)
@@ -1019,6 +1099,43 @@ final class ProcessingEngine {
         } else {
             return "\(minutes)m"
         }
+    }
+
+    /// Read the current Photos.app description for `id`, merge our caption
+    /// into it, and write the result back. Two MainActor hops (NSAppleScript
+    /// must run on the main thread). Shared by the caption and translation
+    /// branches so the write-back contract lives in exactly one place.
+    private nonisolated static func performWriteBack(
+        id: String,
+        description: String,
+        tags: [String],
+        sentinel: String
+    ) async throws {
+        let uuid = PhotoLibrary.uuidPrefix(id)
+        let preDesc = try await MainActor.run {
+            try PhotosScripter.readDescription(uuid: uuid)
+        }
+        let payload = Pipeline.formatDescription(
+            description: description,
+            tags: tags,
+            sentinel: sentinel,
+            existingDescription: preDesc
+        )
+        _ = try await MainActor.run {
+            try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: payload)
+        }
+    }
+
+    /// Flip the `completed*` preview fields and the session counters to
+    /// reflect a just-finished photo. Callers hop to MainActor first.
+    fileprivate func recordCompletion(description: String, tags: [String]) {
+        self.completedPhotoID = self.currentPhotoID
+        self.completedThumbnail = self.currentThumbnail
+        self.completedDescription = description
+        self.completedTags = tags
+        self.currentThumbnail = nil
+        self.photosProcessedThisSession += 1
+        self.updateThroughput()
     }
 
     private static func loadThumbnail(asset: PHAsset) async -> CGImage? {

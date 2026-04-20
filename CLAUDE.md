@@ -16,7 +16,9 @@ The user's priorities, in order:
 
 ## Status
 
-Phases A–L complete, plus a 2026-04-18 drop adding OpenAI-compatible (local) provider support and a lock-watcher auto-resume fix. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, failure inspector, custom prompt editor, runtime localization (8 languages), and a provider toggle between Ollama and a locally-hosted OpenAI-compatible server (mlx-vlm, LM Studio, vLLM). Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
+Phases A–O complete. The CLI (`photo-snail-app`) processes the full Photos library end-to-end. The GUI (`PhotoSnail.app`) provides a SwiftUI dashboard with live photo preview, status, pause/resume, failure inspector, custom prompt editor, runtime localization (8 languages), and a provider toggle between Ollama and a locally-hosted OpenAI-compatible server (mlx-vlm, LM Studio, vLLM). Both share the same SQLite queue. Phase H was deferred on 2026-04-11 after a mid-batch quality review showed no weak-output cluster to rescue — see `TODO.md` → "Potential future improvements" for the parked items.
+
+**v0.1.5 (2026-04-20):** Hardening release. Worker now re-reads its config from engine state at the top of every loop iteration via a `RunConfig` snapshot, so a mid-batch Settings change (URL, provider, model, prompt, language, sentinel) lands on the next photo instead of requiring a full stop+start. `LLMPriorityManager` generalized with `ProviderPreset` enum covering Ollama / mlx-vlm / vLLM / LM Studio; paired with a "Lower LLM priority" toggle in the runner dock (default on). Pause state consolidated into a `PauseRequest` enum (`.none` / `.armed` / `.afterPhoto(id:)`). `PhotoLibrary.swift` / `PhotosScripter.swift` / `PhotoLibraryEnumerator.swift` moved out of the two executables into a new shared `PhotoSnailPhotos` target. Single `makeLLMClient` factory in Core; callers route through it. Queue schema bumped 3 → 4 — adds a composite `(status, priority DESC)` index matching `claimNext`'s query. `PhotoSnailError.ollamaRequestFailed` renamed to `.llmRequestFailed` (provider-agnostic) with provider-tagged message prefixes. Settings save-before-mirror ordering fix: the engine no longer shows an edit as persisted if the save to disk actually threw.
 
 **Phase L (v0.1.2, 2026-04-14):** External-tester feedback batch. Queue is now empty by default (no auto-enroll on first launch). New "Add all unprocessed to queue" / "Add to queue" / "Process now" / "Remove from queue" / "Clear queue" actions. AssetQueue schema bumped to v3 with a `priority` column so Process now jumps ahead of FIFO. Description preservation: write-back reads pre-description and prepends user text when no PhotoSnail sentinel is found. Ollama preflight at startup with a blocking sheet (and one-click Start Ollama). LockWatcher + auto-start-when-locked toggle. OllamaPriorityManager renices Ollama during batches. UI labels normalized: "PhotoSnail" (one word) everywhere; "Start Queue" / "Queued" / "Erase description" replace older terms. Off-main-thread library enumeration so the UI doesn't freeze on large libraries. New `Tests/PhotoSnailCoreTests` target covers Sentinel and Pipeline.formatDescription.
 
@@ -104,6 +106,8 @@ OpenAI mapping:
 - `max_tokens: 1024`, `temperature: 0.3`. Higher cap than most local-server defaults — prevents the DESCRIPTION + TAGS output from getting truncated.
 
 Schema v1 → v2: adds `apiProvider` and `openai: OpenAIConnection` block. Old v1 files (no `apiProvider`, no `openai`) decode cleanly with `.ollama` and defaults. `PHOTO_SNAIL_OPENAI_API_KEY` env var mirrors the Ollama one and is applied by `withEnvOverrides()` without persisting.
+
+Schema v2 → v3 (v0.1.4): adds `modelConfigs: [String: ModelConfig]` keyed by short-family. `modelConfigs` is the single source of truth — the encoder no longer mirrors `customPrompt` / `promptLanguage` / `sentinel` to top-level keys. The decoder still reads those legacy keys when `modelConfigs` is absent (v1/v2 migration), but **schema migration is one-way**: downgrading from v0.1.4 to v0.1.3 or earlier silently loses per-family prompt and sentinel customizations. Back up `settings.json` before downgrading, or re-enter the values on the older version. A v3 → v2 export tool could be added if rollbacks become a recurring need.
 
 CLI flags: `--provider ollama|openai`, `--openai-url`, `--openai-key`, `--openai-header K=V`. `--api-test` is the new provider-agnostic probe (`--ollama-test` kept as an alias).
 
@@ -199,11 +203,12 @@ photo-snail/
 │   │   ├── AssetQueue.swift           Actor-based SQLite queue (Phase E) + markBootstrapped
 │   │   └── SQLite.swift               Thin C wrapper around system sqlite3
 │   ├── photo-snail-cli/main.swift       CLI driver (file-path-based, no PhotoKit)
-│   ├── PhotoSnailApp/                   CLI Photos library processor (Phase F.2)
-│   │   ├── Info.plist                 Linker-embedded plist for TCC (Photos + AppleEvents)
+│   ├── PhotoSnailPhotos/                Shared PhotoKit + AppleScript surface
 │   │   ├── PhotoLibrary.swift         PhotoKit auth + fetch + requestImageData + uuidPrefix
 │   │   ├── PhotosScripter.swift       NSAppleScript write-back (description-only, MainActor)
-│   │   ├── PhotoLibraryEnumerator.swift  Discovers unprocessed assets + sentinel bootstrap
+│   │   └── PhotoLibraryEnumerator.swift  Discovers unprocessed assets + sentinel bootstrap
+│   ├── PhotoSnailApp/                   CLI Photos library processor (Phase F.2)
+│   │   ├── Info.plist                 Linker-embedded plist for TCC (Photos + AppleEvents)
 │   │   ├── QueueRunner.swift          Full orchestration: enumerate → queue → pipeline → write-back
 │   │   └── App.swift                  Entry point + arg parsing
 │   └── PhotoSnailGUI/                   SwiftUI GUI app (Phase G)
@@ -218,10 +223,7 @@ photo-snail/
 │       ├── SettingsSheet.swift        Modal: model picker, prompt editor, sentinel choice, Ollama connection
 │       ├── Localizer.swift           @Observable runtime language switching (8 languages)
 │       ├── Strings.swift             Localization string catalog (~181 keys × 8 languages)
-│       ├── LanguageChangeSheet.swift  Multi-step language change dialog flow
-│       ├── PhotoLibrary.swift         (copied from PhotoSnailApp)
-│       ├── PhotosScripter.swift       (copied from PhotoSnailApp)
-│       └── PhotoLibraryEnumerator.swift (adapted: logging via closure)
+│       └── LanguageChangeSheet.swift  Multi-step language change dialog flow
 ├── bundle-gui.sh                      Packages .build/release into PhotoSnail.app
 └── .build/release/
     ├── photo-snail-cli                  CLI binary (file paths)
@@ -229,7 +231,7 @@ photo-snail/
     └── PhotoSnail.app/                  GUI app bundle
 ```
 
-`PhotoSnailCore` is intentionally library-shaped — both `photo-snail-cli` (file paths) and `photo-snail-app` (PhotoKit) import it.
+`PhotoSnailCore` is intentionally PhotoKit-free so the file-path CLI doesn't link `Photos.framework`. PhotoKit + AppleScript glue lives in `PhotoSnailPhotos`, which both `photo-snail-app` and `photo-snail-gui` depend on. Adding a new LLM provider means touching the factory in `PhotoSnailCore/LLMClient.swift`; anything PhotoKit goes in `PhotoSnailPhotos`.
 
 ## Build and run
 

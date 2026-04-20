@@ -350,6 +350,8 @@ enum Strings {
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Auto-start when Mac is locked",
         "setting.auto_start_when_locked.help": "Start processing when the screen locks and pause when it unlocks. Prevents automatic sleep while processing. Useful for long batches.",
+        "setting.lower_llm_priority": "Lower LLM priority during processing",
+        "setting.lower_llm_priority.help": "Renices the active LLM server (Ollama, mlx-vlm, vLLM, LM Studio) downward while a batch is running so other apps stay responsive. The original priority is restored when processing stops.",
         "status.settings_saved": "Settings saved",
         "status.dryrun_complete": "Dry-run complete (queue not mutated)",
         "button.start": "Start Queue",
@@ -704,6 +706,8 @@ enum Strings {
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "D\u{00E9}marrer automatiquement quand le Mac est verrouill\u{00E9}",
         "setting.auto_start_when_locked.help": "D\u{00E9}marrer le traitement au verrouillage de l'\u{00E9}cran et le mettre en pause au d\u{00E9}verrouillage. Emp\u{00EA}che la mise en veille automatique pendant le traitement. Utile pour les longs traitements.",
+        "setting.lower_llm_priority": "R\u{00E9}duire la priorit\u{00E9} du LLM pendant le traitement",
+        "setting.lower_llm_priority.help": "R\u{00E9}duit la priorit\u{00E9} du serveur LLM actif (Ollama, mlx-vlm, vLLM, LM Studio) pendant un traitement pour que les autres applications restent r\u{00E9}actives. La priorit\u{00E9} d'origine est r\u{00E9}tablie \u{00E0} l'arr\u{00EA}t du traitement.",
     ]
 
     // MARK: - Spanish
@@ -1014,6 +1018,8 @@ enum Strings {
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Iniciar autom\u{00E1}ticamente cuando el Mac est\u{00E1} bloqueado",
         "setting.auto_start_when_locked.help": "Comienza el procesamiento al bloquearse la pantalla y se pausa al desbloquearla. Evita la suspensi\u{00F3}n autom\u{00E1}tica durante el procesamiento. \u{00DA}til para procesos largos.",
+        "setting.lower_llm_priority": "Reducir la prioridad del LLM durante el procesamiento",
+        "setting.lower_llm_priority.help": "Reduce la prioridad del servidor LLM activo (Ollama, mlx-vlm, vLLM, LM Studio) mientras se ejecuta un lote para que otras apps sigan respondiendo. La prioridad original se restaura al detener el procesamiento.",
     ]
 
     // MARK: - German
@@ -1323,6 +1329,8 @@ enum Strings {
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Automatisch starten, wenn der Mac gesperrt ist",
         "setting.auto_start_when_locked.help": "Verarbeitung beginnt, wenn der Bildschirm gesperrt wird, und pausiert beim Entsperren. Verhindert automatischen Ruhezustand w\u{00E4}hrend der Verarbeitung. N\u{00FC}tzlich f\u{00FC}r lange Durchl\u{00E4}ufe.",
+        "setting.lower_llm_priority": "LLM-Priorit\u{00E4}t w\u{00E4}hrend der Verarbeitung senken",
+        "setting.lower_llm_priority.help": "Senkt die Priorit\u{00E4}t des aktiven LLM-Servers (Ollama, mlx-vlm, vLLM, LM Studio) w\u{00E4}hrend eines Durchlaufs, damit andere Apps reaktionsf\u{00E4}hig bleiben. Die urspr\u{00FC}ngliche Priorit\u{00E4}t wird beim Stopp wiederhergestellt.",
     ]
 
     // MARK: - Portuguese
@@ -1633,6 +1641,8 @@ enum Strings {
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Iniciar automaticamente quando o Mac est\u{00E1} bloqueado",
         "setting.auto_start_when_locked.help": "Come\u{00E7}a o processamento ao bloquear a tela e pausa ao desbloquear. Impede a suspens\u{00E3}o autom\u{00E1}tica durante o processamento. \u{00DA}til para processamentos longos.",
+        "setting.lower_llm_priority": "Reduzir a prioridade do LLM durante o processamento",
+        "setting.lower_llm_priority.help": "Reduz a prioridade do servidor LLM ativo (Ollama, mlx-vlm, vLLM, LM Studio) enquanto um lote est\u{00E1} em execu\u{00E7}\u{00E3}o para que os outros apps permane\u{00E7}am respons\u{00ED}veis. A prioridade original \u{00E9} restaurada ao parar o processamento.",
     ]
 
     // MARK: - Japanese
@@ -1942,6 +1952,8 @@ enum Strings {
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{3066}\u{3044}\u{308B}\u{3068}\u{304D}\u{306B}\u{81EA}\u{52D5}\u{958B}\u{59CB}",
         "setting.auto_start_when_locked.help": "\u{753B}\u{9762}\u{304C}\u{30ED}\u{30C3}\u{30AF}\u{3055}\u{308C}\u{308B}\u{3068}\u{51E6}\u{7406}\u{3092}\u{958B}\u{59CB}\u{3057}\u{3001}\u{30ED}\u{30C3}\u{30AF}\u{89E3}\u{9664}\u{3067}\u{4E00}\u{6642}\u{505C}\u{6B62}\u{3057}\u{307E}\u{3059}\u{3002}\u{51E6}\u{7406}\u{4E2D}\u{306F}\u{81EA}\u{52D5}\u{30B9}\u{30EA}\u{30FC}\u{30D7}\u{3092}\u{9632}\u{6B62}\u{3057}\u{307E}\u{3059}\u{3002}\u{9577}\u{6642}\u{9593}\u{306E}\u{30D0}\u{30C3}\u{30C1}\u{306B}\u{4FBF}\u{5229}\u{3067}\u{3059}\u{3002}",
+        "setting.lower_llm_priority": "処理中に LLM の優先度を下げる",
+        "setting.lower_llm_priority.help": "バッチ処理中にアクティブな LLM サーバー (Ollama、mlx-vlm、vLLM、LM Studio) の優先度を下げ、他のアプリの応答性を維持します。処理が停止すると元の優先度に復元されます。",
     ]
 
     // MARK: - Chinese (Simplified)
@@ -2251,6 +2263,8 @@ enum Strings {
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{9501}\u{5B9A}\u{65F6}\u{81EA}\u{52A8}\u{5F00}\u{59CB}",
         "setting.auto_start_when_locked.help": "\u{5C4F}\u{5E55}\u{9501}\u{5B9A}\u{65F6}\u{5F00}\u{59CB}\u{5904}\u{7406}\u{FF0C}\u{89E3}\u{9501}\u{65F6}\u{6682}\u{505C}\u{3002}\u{5904}\u{7406}\u{671F}\u{95F4}\u{9632}\u{6B62}\u{81EA}\u{52A8}\u{4F11}\u{7720}\u{3002}\u{9002}\u{7528}\u{4E8E}\u{957F}\u{65F6}\u{95F4}\u{6279}\u{5904}\u{7406}\u{3002}",
+        "setting.lower_llm_priority": "处理期间降低 LLM 优先级",
+        "setting.lower_llm_priority.help": "批处理运行期间降低活动 LLM 服务器（Ollama、mlx-vlm、vLLM、LM Studio）的优先级，使其他应用保持响应。处理停止时恢复原始优先级。",
     ]
 
     // MARK: - Korean
@@ -2560,5 +2574,7 @@ enum Strings {
         // Auto-start-when-locked toggle
         "setting.auto_start_when_locked": "Mac \u{C7A0}\u{AE08} \u{C2DC} \u{C790}\u{B3D9} \u{C2DC}\u{C791}",
         "setting.auto_start_when_locked.help": "\u{D654}\u{BA74}\u{C774} \u{C7A0}\u{AE30}\u{BA74} \u{CC98}\u{B9AC}\u{B97C} \u{C2DC}\u{C791}\u{D558}\u{ACE0}, \u{C7A0}\u{AE08}\u{C774} \u{D574}\u{C81C}\u{B418}\u{BA74} \u{C77C}\u{C2DC} \u{C815}\u{C9C0}\u{D569}\u{B2C8}\u{B2E4}. \u{CC98}\u{B9AC} \u{C911} \u{C790}\u{B3D9} \u{C7A0}\u{C790}\u{B9AC}\u{B97C} \u{BC29}\u{C9C0}\u{D569}\u{B2C8}\u{B2E4}. \u{AE34} \u{BC30}\u{CE58} \u{C791}\u{C5C5}\u{C5D0} \u{C720}\u{C6A9}\u{D569}\u{B2C8}\u{B2E4}.",
+        "setting.lower_llm_priority": "처리 중 LLM 우선순위 낮추기",
+        "setting.lower_llm_priority.help": "배치 실행 중 활성 LLM 서버(Ollama, mlx-vlm, vLLM, LM Studio)의 우선순위를 낮춰 다른 앱의 응답성을 유지합니다. 처리가 중지되면 원래 우선순위로 복원됩니다.",
     ]
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 import Photos
 import PhotoSnailCore
+import PhotoSnailPhotos
 
 // MARK: - Top-level window
 
@@ -1487,6 +1488,21 @@ struct RunnerDock: View {
             .toggleStyle(.switch)
             .controlSize(.small)
             .help(loc.t("setting.auto_start_when_locked.help"))
+
+            // Lower-LLM-priority toggle. When on, the worker renices the
+            // active LLM server (Ollama / mlx-vlm / vLLM / LM Studio)
+            // downward at batch start and restores it on stop so the
+            // pipeline grinds without starving interactive apps.
+            Toggle(isOn: Binding(
+                get: { engine.lowerLLMPriority },
+                set: { engine.setLowerLLMPriority($0) }
+            )) {
+                Text(loc.t("setting.lower_llm_priority"))
+                    .font(AppFont.label)
+            }
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .help(loc.t("setting.lower_llm_priority.help"))
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)

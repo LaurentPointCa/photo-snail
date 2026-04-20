@@ -50,7 +50,7 @@ public final class OllamaClient: LLMClient {
 
     public let connection: OllamaConnection
     public let session: URLSession
-    public var imageOptions: OllamaImageOptions
+    public let imageOptions: OllamaImageOptions
 
     public var providerLabel: String { "ollama" }
 
@@ -153,19 +153,19 @@ public final class OllamaClient: LLMClient {
         do {
             (data, response) = try await session.data(for: req)
         } catch {
-            throw PhotoSnailError.ollamaRequestFailed("listModels: \(error.localizedDescription)")
+            throw PhotoSnailError.llmRequestFailed("ollama listModels: \(error.localizedDescription)")
         }
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let body = String(data: data, encoding: .utf8) ?? "<binary>"
-            throw PhotoSnailError.ollamaRequestFailed("listModels HTTP \(http.statusCode): \(body)")
+            throw PhotoSnailError.llmRequestFailed("ollama listModels HTTP \(http.statusCode): \(body)")
         }
 
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw PhotoSnailError.ollamaResponseParseFailed("listModels: not a JSON object")
+            throw PhotoSnailError.llmResponseParseFailed("ollama listModels: not a JSON object")
         }
         guard let models = obj["models"] as? [[String: Any]] else {
-            throw PhotoSnailError.ollamaResponseParseFailed("listModels: missing 'models' array")
+            throw PhotoSnailError.llmResponseParseFailed("ollama listModels: missing 'models' array")
         }
 
         return models.compactMap { entry in
@@ -244,14 +244,14 @@ public final class OllamaClient: LLMClient {
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let respBody = String(data: data, encoding: .utf8) ?? "<binary>"
-            throw PhotoSnailError.ollamaRequestFailed("HTTP \(http.statusCode): \(respBody)")
+            throw PhotoSnailError.llmRequestFailed("ollama HTTP \(http.statusCode): \(respBody)")
         }
 
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw PhotoSnailError.ollamaResponseParseFailed("not a JSON object")
+            throw PhotoSnailError.llmResponseParseFailed("ollama: not a JSON object")
         }
         guard let raw = obj["response"] as? String else {
-            throw PhotoSnailError.ollamaResponseParseFailed("missing 'response' field")
+            throw PhotoSnailError.llmResponseParseFailed("ollama: missing 'response' field")
         }
 
         return LLMTextResult(model: model, response: raw, elapsedSeconds: elapsed)
@@ -284,14 +284,14 @@ public final class OllamaClient: LLMClient {
 
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             let body = String(data: data, encoding: .utf8) ?? "<binary>"
-            throw PhotoSnailError.ollamaRequestFailed("HTTP \(http.statusCode): \(body)")
+            throw PhotoSnailError.llmRequestFailed("ollama HTTP \(http.statusCode): \(body)")
         }
 
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw PhotoSnailError.ollamaResponseParseFailed("not a JSON object")
+            throw PhotoSnailError.llmResponseParseFailed("ollama: not a JSON object")
         }
         guard let raw = obj["response"] as? String else {
-            throw PhotoSnailError.ollamaResponseParseFailed("missing 'response' field")
+            throw PhotoSnailError.llmResponseParseFailed("ollama: missing 'response' field")
         }
 
         let parsed = CaptionParser.parse(raw)

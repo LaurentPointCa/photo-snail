@@ -1,21 +1,19 @@
 import Foundation
 
-/// Renice the local Ollama daemon + runners during a batch so interactive
-/// apps (browser, editors) stay responsive while the pipeline grinds.
+/// Renice local LLM server processes (Ollama, mlx-vlm, vLLM, LM Studio…)
+/// during a batch so interactive apps stay responsive while the pipeline
+/// grinds. macOS lets you renice your own processes upward (higher nice =
+/// lower priority) without sudo as long as they run under your uid, which
+/// covers every locally-hosted server we target.
 ///
-/// macOS lets you renice your own processes UPWARD (higher nice = lower
-/// priority) without sudo as long as they run under your uid. Ollama
-/// installed via its .pkg / `brew services` runs under the user's uid,
-/// so this works without elevation.
-///
-/// Failures (Ollama not installed, running under a different user, etc.)
+/// Failures (server not installed, running under a different user, etc.)
 /// are silent by design — this is a quality-of-life tweak, not a
 /// correctness requirement. The caller receives a list of PIDs + nice
 /// deltas that were applied so it can log and restore on batch end.
 ///
 /// Not called automatically; callers opt in when a batch starts and must
 /// call `restore(entries:)` when it ends. See `ProcessingEngine.launchWorker`.
-public enum OllamaPriorityManager {
+public enum LLMPriorityManager {
 
     /// Result of one adjustment — the PID that was touched and the nice
     /// value it had BEFORE we changed it, so we can restore later.
@@ -25,12 +23,43 @@ public enum OllamaPriorityManager {
         public let newNice: Int
     }
 
+    /// Patterns matched against `ps -f` command lines via `pgrep -f`. Each
+    /// provider ships its own preset; callers combine them based on the
+    /// active provider. Patterns are intentionally narrow so we don't
+    /// renice unrelated Python/Node processes on a busy dev machine.
+    public enum ProviderPreset: Sendable {
+        case ollama
+        case openAICompatible
+
+        /// `pgrep -f` regex fragments. A process matching ANY pattern is
+        /// eligible. Each pattern runs as its own `pgrep` invocation and
+        /// the results are unioned (deduped) before renicing.
+        public var patterns: [String] {
+            switch self {
+            case .ollama:
+                // Covers the main daemon and any transient `ollama runner`
+                // subprocesses spawned per request.
+                return ["ollama"]
+            case .openAICompatible:
+                // Covers the three common self-hosted OpenAI-compatible
+                // servers. Patterns are specific enough to avoid catching
+                // arbitrary Python processes: mlx-vlm runs as
+                // `python -m mlx_vlm.server`, vLLM exposes `vllm.entrypoints`
+                // or a `vllm` binary, LM Studio ships as `LM Studio` /
+                // `lms` CLI.
+                return ["mlx[_-]vlm", "vllm", "LM Studio", "lms server"]
+            }
+        }
+    }
+
     /// Raise the nice value (lower the scheduling priority) of every
-    /// Ollama-related process currently running by `delta`. Returns the
-    /// list of adjustments for later restoration. Empty on failure.
+    /// process matching one of `presets`' patterns by `delta`. Returns the
+    /// list of adjustments for later restoration. Empty on failure or when
+    /// nothing matched.
     @discardableResult
-    public static func lower(by delta: Int = 10) -> [Entry] {
-        let pids = findOllamaPids()
+    public static func lower(presets: [ProviderPreset], by delta: Int = 10) -> [Entry] {
+        let patterns = Array(Set(presets.flatMap(\.patterns)))
+        let pids = findPids(matching: patterns)
         var out: [Entry] = []
         for pid in pids {
             guard let current = getpriority(pid) else { continue }
@@ -42,7 +71,7 @@ public enum OllamaPriorityManager {
         return out
     }
 
-    /// Undo a previous `lower(by:)` call. Best-effort: a PID that has
+    /// Undo a previous `lower(...)` call. Best-effort: a PID that has
     /// since exited (runner subprocess finished a request) is silently
     /// skipped.
     public static func restore(entries: [Entry]) {
@@ -53,17 +82,23 @@ public enum OllamaPriorityManager {
 
     // MARK: - Internals
 
-    /// Return PIDs for every process whose command matches "ollama" —
-    /// covers both the main daemon and any active `ollama runner`
-    /// subprocesses. Uses `pgrep -f ollama` and filters out our own
-    /// PID + any `grep`-style false positives defensively.
-    private static func findOllamaPids() -> [Int32] {
-        let output = runCommand("/usr/bin/pgrep", args: ["-f", "ollama"]) ?? ""
+    /// Return PIDs for every process whose command matches ANY of `patterns`.
+    /// Each pattern is passed to `pgrep -f` (regex match on the full command
+    /// line); results are unioned and deduped. Filters out our own PID
+    /// defensively in case a pattern accidentally matches the app itself.
+    private static func findPids(matching patterns: [String]) -> [Int32] {
         let ownPid = ProcessInfo.processInfo.processIdentifier
-        return output
-            .split(whereSeparator: \.isNewline)
-            .compactMap { Int32($0) }
-            .filter { $0 != ownPid }
+        var seen = Set<Int32>()
+        var out: [Int32] = []
+        for pattern in patterns {
+            let output = runCommand("/usr/bin/pgrep", args: ["-f", pattern]) ?? ""
+            for line in output.split(whereSeparator: \.isNewline) {
+                guard let pid = Int32(line), pid != ownPid, !seen.contains(pid) else { continue }
+                seen.insert(pid)
+                out.append(pid)
+            }
+        }
+        return out
     }
 
     /// `getpriority(2)` wrapper for PID priority reads. Uses the raw BSD
@@ -110,3 +145,4 @@ public enum OllamaPriorityManager {
         return (out, proc.terminationStatus)
     }
 }
+

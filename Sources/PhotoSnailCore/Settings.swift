@@ -56,9 +56,10 @@ public struct ModelConfig: Codable, Sendable, Equatable {
 ///    `openai` block, preserving pre-upgrade behavior.
 ///  - v3 (v0.1.4): adds `modelConfigs` dict keyed by short-family so each
 ///    model keeps its own prompt, sentinel version, and prompt language.
-///    The top-level `customPrompt` / `promptLanguage` / `sentinel` fields
-///    are still emitted on save for forward-compat with older readers, but
-///    on load `modelConfigs` (when present) is authoritative.
+///    `modelConfigs` is the single source of truth from v3 onward. The
+///    decoder still migrates v1/v2 files with legacy top-level
+///    `customPrompt` / `promptLanguage` / `sentinel` fields, but the
+///    encoder no longer emits them — downgrading is not supported.
 public struct Settings: Codable, Sendable {
     public var version: Int
     public var model: String
@@ -75,6 +76,13 @@ public struct Settings: Codable, Sendable {
     /// leave the machine running for weeks.
     public var autoStartWhenLocked: Bool
 
+    /// When true, the GUI renices the active LLM server process(es)
+    /// (Ollama, mlx-vlm, vLLM, LM Studio) downward during a batch so
+    /// interactive apps stay responsive. Restored to the original nice
+    /// value when processing stops. Defaults to true to preserve the
+    /// behavior shipped in v0.1.2 where the renice was unconditional.
+    public var lowerLLMPriority: Bool
+
     /// Per-family configuration. Keyed by `Sentinel.shortFamily(of: model)`.
     /// The entry matching the current model's family is the "active" config;
     /// other entries are preserved so switching back to a previous model
@@ -82,6 +90,19 @@ public struct Settings: Codable, Sendable {
     public var modelConfigs: [String: ModelConfig]
 
     // MARK: - Derived / active values (read-through to modelConfigs)
+    //
+    // The properties below are convenience views onto
+    // `modelConfigs[activeFamily]` where `activeFamily` is derived from
+    // `model`. Practical consequence: **ordering matters** when you mutate
+    // both `model` and one of these. Always set `model` FIRST, then edit
+    // `customPrompt` / `promptLanguage` / `sentinel` — otherwise the
+    // mutation lands on the old family's entry.
+    //
+    // This is a deliberate tradeoff: "edit active model's config" is the
+    // overwhelmingly common intent, so the read-through saves callers from
+    // juggling family keys. For bulk edits that span families (e.g. the
+    // Settings sheet applying a whole `modelConfigs` dict), write to
+    // `modelConfigs` directly instead.
 
     /// Short-family key for the currently-active model.
     public var activeFamily: String {
@@ -90,13 +111,14 @@ public struct Settings: Codable, Sendable {
 
     /// The active model's configuration. Returns an empty default if no
     /// entry exists yet (fresh install or a brand-new model the user just
-    /// picked).
+    /// picked). Setter writes to `modelConfigs[activeFamily]`.
     public var activeConfig: ModelConfig {
         get { modelConfigs[activeFamily] ?? ModelConfig() }
         set { modelConfigs[activeFamily] = newValue }
     }
 
     /// User-edited prompt for the active model, or `nil` to use the default.
+    /// See the read-through note above re: ordering with `model`.
     public var customPrompt: String? {
         get { activeConfig.customPrompt }
         set {
@@ -107,6 +129,7 @@ public struct Settings: Codable, Sendable {
     }
 
     /// Prompt language code for the active model.
+    /// See the read-through note above re: ordering with `model`.
     public var promptLanguage: String? {
         get { activeConfig.promptLanguage }
         set {
@@ -119,6 +142,7 @@ public struct Settings: Codable, Sendable {
     /// The sentinel marker used for write-back and bootstrap search for the
     /// active model. Derived from the family + version counter unless the
     /// user has pinned a `customSentinel`.
+    /// See the read-through note above re: ordering with `model`.
     public var sentinel: String {
         get {
             let cfg = activeConfig
@@ -150,6 +174,7 @@ public struct Settings: Codable, Sendable {
                 openai: OpenAIConnection = .default,
                 appLanguage: String? = nil,
                 autoStartWhenLocked: Bool = false,
+                lowerLLMPriority: Bool = true,
                 modelConfigs: [String: ModelConfig] = [:]) {
         self.version = version
         self.model = model
@@ -158,19 +183,18 @@ public struct Settings: Codable, Sendable {
         self.openai = openai
         self.appLanguage = appLanguage
         self.autoStartWhenLocked = autoStartWhenLocked
+        self.lowerLLMPriority = lowerLLMPriority
         self.modelConfigs = modelConfigs
     }
 
     // MARK: - Codable
 
-    // Custom Codable so:
-    //  - older settings.json files (no modelConfigs) migrate on load.
-    //  - on save we ALSO emit the top-level `customPrompt`/`promptLanguage`/
-    //    `sentinel` fields so an older build reading the file still picks up
-    //    the active config.
+    // Custom Codable so v1/v2 files (no modelConfigs) migrate to a
+    // single-entry modelConfigs dict on load. The encoder writes
+    // `modelConfigs` only; legacy top-level fields are not mirrored.
     private enum CodingKeys: String, CodingKey {
         case version, model, sentinel, apiProvider, ollama, openai, customPrompt
-        case appLanguage, promptLanguage, autoStartWhenLocked, modelConfigs
+        case appLanguage, promptLanguage, autoStartWhenLocked, lowerLLMPriority, modelConfigs
     }
 
     public init(from decoder: Decoder) throws {
@@ -182,6 +206,7 @@ public struct Settings: Codable, Sendable {
         self.openai = try c.decodeIfPresent(OpenAIConnection.self, forKey: .openai) ?? .default
         self.appLanguage = try c.decodeIfPresent(String.self, forKey: .appLanguage)
         self.autoStartWhenLocked = try c.decodeIfPresent(Bool.self, forKey: .autoStartWhenLocked) ?? false
+        self.lowerLLMPriority = try c.decodeIfPresent(Bool.self, forKey: .lowerLLMPriority) ?? true
 
         // v3 modelConfigs dict. If present, it's authoritative.
         if let configs = try c.decodeIfPresent([String: ModelConfig].self, forKey: .modelConfigs) {
@@ -228,13 +253,17 @@ public struct Settings: Codable, Sendable {
         try c.encode(openai, forKey: .openai)
         try c.encodeIfPresent(appLanguage, forKey: .appLanguage)
         try c.encode(autoStartWhenLocked, forKey: .autoStartWhenLocked)
+        try c.encode(lowerLLMPriority, forKey: .lowerLLMPriority)
         try c.encode(modelConfigs, forKey: .modelConfigs)
 
-        // Mirror the active config to top-level fields for forward-compat
-        // with readers that don't understand modelConfigs yet.
-        try c.encode(sentinel, forKey: .sentinel)
-        try c.encodeIfPresent(customPrompt, forKey: .customPrompt)
-        try c.encodeIfPresent(promptLanguage, forKey: .promptLanguage)
+        // `modelConfigs` is the single source of truth from v3 onward. The
+        // decoder still reads legacy top-level `sentinel` / `customPrompt` /
+        // `promptLanguage` keys when `modelConfigs` is absent (v1/v2 → v3
+        // migration path), but we do NOT emit those fields on write anymore.
+        // Mirroring them on save created a split-brain risk: a v0.1.3 reader
+        // editing a v0.1.4 file would update the mirrors without touching
+        // modelConfigs, silently stranding the user's per-family edits on
+        // the next v0.1.4 load. Downgrading to v0.1.3 is not supported.
     }
 
     public static let `default` = Settings()
@@ -306,19 +335,16 @@ public struct Settings: Codable, Sendable {
     }
 
     /// Build the right `LLMClient` for the currently-selected provider using
-    /// this settings object's connection blocks. Used by CLI and GUI to get
-    /// a ready-to-use client without branching on the enum at each call site.
+    /// this settings object's connection blocks. Thin adapter over the
+    /// top-level `makeLLMClient(provider:ollama:openai:imageOptions:)` so
+    /// callers that already hold a `Settings` don't have to pick apart the
+    /// connection fields themselves.
     public func makeLLMClient(imageOptions: OllamaImageOptions = OllamaImageOptions()) -> any LLMClient {
-        switch apiProvider {
-        case .ollama:
-            return OllamaClient(connection: ollama, imageOptions: imageOptions)
-        case .openaiCompatible:
-            let openaiOpts = OpenAIImageOptions(
-                downsize: imageOptions.downsize,
-                maxPixelSize: imageOptions.maxPixelSize,
-                jpegQuality: imageOptions.jpegQuality
-            )
-            return OpenAIClient(connection: openai, imageOptions: openaiOpts)
-        }
+        PhotoSnailCore.makeLLMClient(
+            provider: apiProvider,
+            ollama: ollama,
+            openai: openai,
+            imageOptions: imageOptions
+        )
     }
 }

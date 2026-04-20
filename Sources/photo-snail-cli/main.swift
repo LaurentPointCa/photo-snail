@@ -226,7 +226,7 @@ private func runQueue(args: CLIArgs) async {
                             print("[failed] \(id) — \(e.shortMessage)")
                         }
                     } catch {
-                        let wrapped = PhotoSnailError.ollamaRequestFailed("\(error)")
+                        let wrapped = PhotoSnailError.llmRequestFailed("\(error)")
                         try? await queue.markFailed(id, error: wrapped)
                         print("[failed] \(id) — \(error)")
                     }

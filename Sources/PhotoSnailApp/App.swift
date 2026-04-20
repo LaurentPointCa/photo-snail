@@ -1,5 +1,6 @@
 import Foundation
 import PhotoSnailCore
+import PhotoSnailPhotos
 
 // Usage: photo-snail-app [--list [N]] [--list-models] [--api-test] [--verify-queue]
 //                      [--provider ollama|openai]

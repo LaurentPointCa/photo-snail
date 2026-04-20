@@ -22,7 +22,8 @@ As of **v0.1.3**, PhotoSnail also supports a **6× faster** path via Qwen3.6-35B
 - **Writes back to Photos.app.** Uses AppleScript to populate the `description` field — iCloud syncs it to your iPhone, iPad, and Spotlight.
 - **Preserves your existing descriptions.** If a photo already has a caption you wrote, PhotoSnail keeps it and appends its own description after a separator. Only overwrites freely when the existing text was written by PhotoSnail (sentinel detection).
 - **Explicit queue semantics.** Queue starts empty on first launch. Add photos via "Add all unprocessed to queue" or by selecting and adding. **Process now** runs a single selected photo and stops — no surprise full-library batches.
-- **Doesn't hog your Mac.** Lowers Ollama's process priority while a batch runs so the browser, editor, and other apps stay responsive. Optional **Auto-start when Mac is locked** runs the queue only while you're away.
+- **Doesn't hog your Mac.** Optional "Lower LLM priority" toggle renices the active local server (Ollama, mlx-vlm, vLLM, LM Studio) while a batch runs so the browser, editor, and other apps stay responsive. Original priority restored on batch end. Optional **Auto-start when Mac is locked** runs the queue only while you're away.
+- **Live-reload settings mid-batch.** Change the provider URL, API key, model, prompt, language, or sentinel in Settings while the queue is paused (or running), and the next photo picks up the new values — no stop-and-restart required.
 - **Resilient.** SQLite-backed queue survives restarts, sleep/wake, and crashes. Re-running on a processed library is a no-op.
 - **Provider preflight at startup.** GUI surfaces a blocking sheet with copy-paste fix commands when Ollama is unreachable or the configured model is missing. CLI exits 2 with the same fixes printed.
 - **Configurable endpoints.** Ollama defaults to `localhost:11434`; OpenAI-compatible defaults to the last URL you configured. Both support remote instances, HTTPS proxies, and Bearer / Basic / custom-header auth.
@@ -301,7 +302,7 @@ Verify yourself: the binary makes no outbound connections except to the LLM endp
 
 ## Project status
 
-Phases A–M complete (current release: **v0.1.3**):
+Phases A–O complete (current release: **v0.1.5**):
 
 - A. Project plan
 - B. Hybrid pipeline scaffold
@@ -316,6 +317,8 @@ Phases A–M complete (current release: **v0.1.3**):
 - K. Custom prompt editor, 8-language runtime localization, translation pipeline
 - L. (v0.1.2) External-tester feedback batch — empty-queue default, Add to Queue / Process now, Remove/Clear queue actions, description preservation, Ollama preflight + Start Ollama button, auto-start when locked, Ollama priority lowered during batches, naming + label cleanup, full 8-locale translation sweep
 - M. (v0.1.3) OpenAI-compatible provider path (Qwen3.6-35B via mlx-vlm), per-model-family configs (`modelConfigs` keyed by short family), short-family sentinels that strip org/quant/size suffixes, Qwen-tuned v20 default prompt (20-iteration research batch documented in `sample/MODEL_COMPARISON.md` + `sample/PROMPT_RESEARCH.md`), JSON-aware CaptionParser, lock-watcher auto-resume fix.
+- N. (v0.1.4) Inspector polish + zoomable preview — hero-photo capping, Grid-based Identity/Processing sections, 2-column Vision classifications with inline percentages, smaller tag pills, inline per-photo timing, pinch/drag/double-click zoom, double-click opens preview, sidebar Failed tint.
+- O. (v0.1.5) Live-reload settings during a run, generalized LLM priority management (mlx-vlm / vLLM / LM Studio coverage), pause-state enum, Settings save-ordering fix, worker branch dedup via `performWriteBack` + `recordCompletion`, new `PhotoSnailPhotos` shared target, unified `makeLLMClient` factory, provider-agnostic error taxonomy, `(status, priority DESC)` index (v4 schema), Swift 6 Sendable cleanup (warning-free build).
 
 The CLI and GUI are in production use against the author's full library. See [`TODO.md`](TODO.md) for the phased plan and the parked items under "Potential future improvements".
 
