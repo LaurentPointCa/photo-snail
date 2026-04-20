@@ -177,4 +177,71 @@ final class PipelineFormatDescriptionTests: XCTestCase {
         XCTAssertEqual(prefix, "Part A\n\n---\n\nPart B")
         XCTAssertTrue(hasPayload)
     }
+
+    // MARK: - collapseMultiSegment
+
+    func testCollapse_singleSentinelSegment_returnsNil() {
+        // Canonical shape, nothing to clean.
+        XCTAssertNil(Pipeline.collapseMultiSegment(
+            "A photo. Tags: foo, ai:gemma4-v1"
+        ))
+    }
+
+    func testCollapse_userPrefixPlusOneSentinel_returnsNil() {
+        // Also canonical — user prefix + single PhotoSnail segment is the
+        // correct shape after a first-touch write.
+        XCTAssertNil(Pipeline.collapseMultiSegment(
+            "User text\n\n---\n\nOurs. Tags: foo, ai:gemma4-v1"
+        ))
+    }
+
+    func testCollapse_userTextOnly_returnsNil() {
+        XCTAssertNil(Pipeline.collapseMultiSegment("Just user prose with no AI."))
+    }
+
+    func testCollapse_twoPhotoSnailSegmentsOnly_keepsLatestOnly() {
+        // Pure accumulation: no user text anywhere, just two PhotoSnail
+        // writes stacked. Output is the latest segment alone.
+        let acc = "Old. Tags: foo, ai:gemma4-v1\n\n---\n\nNew. Tags: bar, ai:gemma4-v2"
+        XCTAssertEqual(
+            Pipeline.collapseMultiSegment(acc),
+            "New. Tags: bar, ai:gemma4-v2"
+        )
+    }
+
+    func testCollapse_fiveSegmentPileup_underscoredSentinels() {
+        // The real-world case that motivated this cleanup: the scan on
+        // 2026-04-20 found assets with 5 stacked captions where the
+        // sentinel used an underscore (`ai:qwen36_4b-v<N>`) so the prior
+        // fix's regex missed it and every reprocess appended another.
+        let acc = [
+            "v2. Tags: t2, ai:qwen36_4b-v2",
+            "v3. Tags: t3, ai:qwen36_4b-v3",
+            "v4. Tags: t4, ai:qwen36_4b-v4",
+            "v5. Tags: t5, ai:qwen36_4b-v5",
+            "v20. Tags: t20, ai:qwen36_4b-v20",
+        ].joined(separator: "\n\n---\n\n")
+        XCTAssertEqual(
+            Pipeline.collapseMultiSegment(acc),
+            "v20. Tags: t20, ai:qwen36_4b-v20"
+        )
+    }
+
+    func testCollapse_userPrefixPlusMultipleSentinels_keepsPrefixAndLatest() {
+        let acc = "Family trip 2019\n\n---\n\nv1. Tags: a, ai:gemma4-v1\n\n---\n\nv2. Tags: b, ai:gemma4-v2"
+        XCTAssertEqual(
+            Pipeline.collapseMultiSegment(acc),
+            "Family trip 2019\n\n---\n\nv2. Tags: b, ai:gemma4-v2"
+        )
+    }
+
+    func testCollapse_preservesUserSuffixAfterLastSentinel() {
+        // Rare but valid: user manually appended notes AFTER a PhotoSnail
+        // segment. Cleanup must NOT discard the trailing user text.
+        let acc = "v1. Tags: a, ai:gemma4-v1\n\n---\n\nv2. Tags: b, ai:gemma4-v2\n\n---\n\nMy post-hoc notes"
+        XCTAssertEqual(
+            Pipeline.collapseMultiSegment(acc),
+            "v2. Tags: b, ai:gemma4-v2\n\n---\n\nMy post-hoc notes"
+        )
+    }
 }

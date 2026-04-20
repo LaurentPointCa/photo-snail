@@ -44,6 +44,8 @@ struct AppArgs {
     var apiTest: Bool = false
     var verifyQueue: Bool = false
     var scanMulti: Bool = false
+    var cleanMulti: Bool = false
+    var applyWrites: Bool = false
 
     // CLI overrides; nil means "use whatever is in settings.json"
     var apiProvider: LLMProvider? = nil
@@ -86,6 +88,10 @@ func parseArgs(_ argv: [String]) -> AppArgs {
             out.verifyQueue = true
         case "--scan-multi":
             out.scanMulti = true
+        case "--clean-multi":
+            out.cleanMulti = true
+        case "--apply":
+            out.applyWrites = true
         case "--provider":
             i += 1
             if i < argv.count {
@@ -509,6 +515,151 @@ private func runScanMulti(dbPath: URL?) async {
     exit(0)
 }
 
+// MARK: - --clean-multi
+
+/// Collapse descriptions that accumulated multiple PhotoSnail payloads
+/// before the 2026-04-20 regex fix. Dry-run by default: prints every
+/// candidate with a before/after length diff. `--apply` actually writes
+/// the cleaned description back via `PhotosScripter.runBatch`, which is
+/// the same code path used by the worker loop (read-check-write pattern
+/// with pre/post verification inside one AppleScript block).
+///
+/// Uses `Pipeline.collapseMultiSegment` to compute the cleaned text —
+/// keeps user prefix (anything before the first sentinel segment) and
+/// user suffix (anything after the last sentinel segment), drops every
+/// middle PhotoSnail segment, retains only the newest.
+@MainActor
+private func runCleanMulti(dbPath: URL?, apply: Bool) async {
+    let status = await PhotoLibrary.requestAuth()
+    guard status == .authorized else {
+        eprint("ERROR: Photo Library auth \(PhotoLibrary.authStatusLabel(status))")
+        exit(1)
+    }
+
+    let path = dbPath ?? AssetQueue.defaultDBPath
+    eprint("queue: \(path.path)")
+    let queue: AssetQueue
+    do {
+        queue = try AssetQueue(dbPath: path)
+    } catch {
+        eprint("ERROR opening queue: \(error)")
+        exit(1)
+    }
+
+    var doneIds: [String] = []
+    do {
+        let sentinels = try await queue.distinctSentinels()
+        for s in sentinels {
+            let ids = try await queue.idsWithSentinel(s)
+            doneIds.append(contentsOf: ids)
+        }
+    } catch {
+        eprint("ERROR reading done ids: \(error)")
+        exit(1)
+    }
+    doneIds = Array(Set(doneIds))
+    eprint("scanning \(doneIds.count) done asset(s) for collapse candidates...")
+    if !apply {
+        eprint("DRY RUN — no writes. Pass --apply to actually rewrite descriptions.")
+    }
+
+    struct Candidate {
+        let id: String
+        let before: String
+        let after: String
+    }
+    var candidates: [Candidate] = []
+    var readErrors = 0
+    var scanned = 0
+    let startedAt = Date()
+
+    for id in doneIds {
+        let uuid = PhotoLibrary.uuidPrefix(id)
+        let current: String
+        do {
+            current = try PhotosScripter.readDescription(uuid: uuid)
+        } catch {
+            readErrors += 1
+            continue
+        }
+        if let cleaned = Pipeline.collapseMultiSegment(current), cleaned != current {
+            candidates.append(Candidate(id: id, before: current, after: cleaned))
+        }
+        scanned += 1
+        if scanned % 100 == 0 {
+            let elapsed = Date().timeIntervalSince(startedAt)
+            let rate = Double(scanned) / max(elapsed, 0.001)
+            let remaining = Double(doneIds.count - scanned) / max(rate, 0.001)
+            eprint("  \(scanned)/\(doneIds.count) · candidates=\(candidates.count) · errors=\(readErrors) · ~\(Int(remaining))s left")
+        }
+    }
+
+    let scanElapsed = Date().timeIntervalSince(startedAt)
+    eprint("scan done in \(String(format: "%.1f", scanElapsed))s — \(scanned) read, \(readErrors) errors, \(candidates.count) collapse candidates")
+    print("")
+
+    if candidates.isEmpty {
+        print("(nothing to clean)")
+        exit(0)
+    }
+
+    print("=== Collapse candidates ===")
+    var totalBefore = 0
+    var totalAfter = 0
+    for c in candidates {
+        totalBefore += c.before.count
+        totalAfter += c.after.count
+        let saved = c.before.count - c.after.count
+        let short = String(PhotoLibrary.uuidPrefix(c.id))
+        print(String(format: "%@  %5d → %5d  (−%d bytes)",
+                     short, c.before.count, c.after.count, saved))
+    }
+    let totalSaved = totalBefore - totalAfter
+    print("")
+    print(String(format: "Total: %d bytes → %d bytes (−%d, %.1f%% reduction)",
+                 totalBefore, totalAfter, totalSaved,
+                 100.0 * Double(totalSaved) / Double(max(totalBefore, 1))))
+
+    if !apply {
+        print("")
+        print("Dry run — no changes written. Re-run with --clean-multi --apply to rewrite.")
+        exit(0)
+    }
+
+    // Write phase. Same PhotosScripter.runBatch the worker loop uses so
+    // we benefit from its pre/post verification. If any write fails, log
+    // and continue — we can re-run; the already-cleaned rows will simply
+    // be skipped by `collapseMultiSegment` returning nil.
+    print("")
+    print("=== Writing cleaned descriptions ===")
+    var wrote = 0
+    var writeErrors = 0
+    let writeStarted = Date()
+    for c in candidates {
+        let uuid = PhotoLibrary.uuidPrefix(c.id)
+        do {
+            let res = try PhotosScripter.runBatch(uuid: uuid, descriptionPayload: c.after)
+            if res.postDescription != c.after {
+                eprint("  \(uuid)  WARN: post-description doesn't match written payload")
+                writeErrors += 1
+            } else {
+                wrote += 1
+            }
+        } catch {
+            eprint("  \(uuid)  ERROR: \(error)")
+            writeErrors += 1
+        }
+        if (wrote + writeErrors) % 10 == 0 {
+            eprint("  \(wrote + writeErrors)/\(candidates.count) written (\(writeErrors) errors)")
+        }
+    }
+    let writeElapsed = Date().timeIntervalSince(writeStarted)
+    print("")
+    print(String(format: "Wrote %d/%d (errors: %d) in %.1fs",
+                 wrote, candidates.count, writeErrors, writeElapsed))
+    exit(writeErrors == 0 ? 0 : 1)
+}
+
 @main
 struct App {
     static func main() async {
@@ -550,6 +701,13 @@ struct App {
         }
         if args.scanMulti {
             await runScanMulti(dbPath: args.dbPath.map { URL(fileURLWithPath: $0) })
+            return
+        }
+        if args.cleanMulti {
+            await runCleanMulti(
+                dbPath: args.dbPath.map { URL(fileURLWithPath: $0) },
+                apply: args.applyWrites
+            )
             return
         }
 

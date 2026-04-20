@@ -183,6 +183,56 @@ public final class Pipeline {
         return (userPrefix: userPrefix, hasPhotoSnailPayload: true)
     }
 
+    /// Collapse a description that has accumulated multiple PhotoSnail
+    /// payloads down to a single one. The accumulation is a real bug we
+    /// found in production on 2026-04-20: assets whose sentinel contained
+    /// an underscore (`ai:qwen36_4b-v<N>`) weren't recognized by the
+    /// original `containsAnySentinel` regex, so every reprocess appended a
+    /// fresh `\n\n---\n\n<payload>` segment instead of replacing the prior
+    /// one. One asset ended up with 5 stacked captions.
+    ///
+    /// Cleanup algorithm:
+    ///   1. Split on `\n\n---\n\n`.
+    ///   2. Find the indices of every segment containing a sentinel.
+    ///   3. If there's 0 or 1 sentinel segment, return nil — nothing to
+    ///      collapse, the text is already in canonical shape.
+    ///   4. Rebuild: segments BEFORE the first sentinel (user prefix),
+    ///      plus ONLY the LAST sentinel segment (newest PhotoSnail
+    ///      payload), plus segments AFTER the last sentinel segment
+    ///      (user suffix, rare but possible if the user appended notes
+    ///      after our write).
+    ///   5. Middle sentinel segments and anything between them are
+    ///      discarded — that's the "stale PhotoSnail copies" we're
+    ///      cleaning up.
+    ///
+    /// Returns nil when the input doesn't need cleaning (0 or 1 sentinel
+    /// segments). Returns the cleaned string otherwise. The caller decides
+    /// whether to write it back.
+    public static func collapseMultiSegment(_ text: String) -> String? {
+        let separator = "\n\n---\n\n"
+        let segments = text.components(separatedBy: separator)
+        let sentinelIndices = segments.indices.filter {
+            Sentinel.containsAnySentinel(segments[$0])
+        }
+        guard sentinelIndices.count >= 2 else { return nil }
+
+        let firstIdx = sentinelIndices.first!
+        let lastIdx = sentinelIndices.last!
+
+        var kept: [String] = []
+        // User prefix — everything before the first sentinel segment.
+        kept.append(contentsOf: segments.prefix(firstIdx))
+        // The most recent PhotoSnail payload.
+        kept.append(segments[lastIdx])
+        // User suffix — anything after the last sentinel segment. Rare; the
+        // user would have had to manually append to Photos.app's description
+        // after our write landed. Preserved because it's not ours to discard.
+        if lastIdx + 1 < segments.count {
+            kept.append(contentsOf: segments.suffix(from: lastIdx + 1))
+        }
+        return kept.joined(separator: separator)
+    }
+
     /// Merge strategy (v3):
     /// 1. LLM tags are authoritative — they go in first, in order.
     /// 2. Vision classification labels are NOT merged. They're already passed to the LLM as
