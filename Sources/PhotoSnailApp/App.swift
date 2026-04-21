@@ -46,6 +46,7 @@ struct AppArgs {
     var scanMulti: Bool = false
     var cleanMulti: Bool = false
     var applyWrites: Bool = false
+    var scanPreserved: Bool = false
 
     // CLI overrides; nil means "use whatever is in settings.json"
     var apiProvider: LLMProvider? = nil
@@ -92,6 +93,8 @@ func parseArgs(_ argv: [String]) -> AppArgs {
             out.cleanMulti = true
         case "--apply":
             out.applyWrites = true
+        case "--scan-preserved":
+            out.scanPreserved = true
         case "--provider":
             i += 1
             if i < argv.count {
@@ -515,6 +518,116 @@ private func runScanMulti(dbPath: URL?) async {
     exit(0)
 }
 
+// MARK: - --scan-preserved
+
+/// Find assets where the user authored their own description BEFORE we
+/// processed the photo and our payload preserved that text — i.e., the
+/// description has a non-empty user prefix AND a PhotoSnail sentinel.
+/// These aren't bugs; they're a legitimate "PhotoSnail + user notes"
+/// coexistence pattern.
+///
+/// Read-only, same per-asset AppleScript cost as `--scan-multi` (~50 ms
+/// with warm cache). Reuses `Pipeline.splitExistingDescription` so the
+/// definition of "user prefix" matches exactly what the write-back does.
+@MainActor
+private func runScanPreserved(dbPath: URL?) async {
+    let status = await PhotoLibrary.requestAuth()
+    guard status == .authorized else {
+        eprint("ERROR: Photo Library auth \(PhotoLibrary.authStatusLabel(status))")
+        exit(1)
+    }
+
+    let path = dbPath ?? AssetQueue.defaultDBPath
+    eprint("queue: \(path.path)")
+    let queue: AssetQueue
+    do {
+        queue = try AssetQueue(dbPath: path)
+    } catch {
+        eprint("ERROR opening queue: \(error)")
+        exit(1)
+    }
+
+    var doneIds: [String] = []
+    do {
+        let sentinels = try await queue.distinctSentinels()
+        for s in sentinels {
+            let ids = try await queue.idsWithSentinel(s)
+            doneIds.append(contentsOf: ids)
+        }
+    } catch {
+        eprint("ERROR reading done ids: \(error)")
+        exit(1)
+    }
+    doneIds = Array(Set(doneIds))
+    eprint("scanning \(doneIds.count) done asset(s) for user-preserved prefixes...")
+
+    struct Finding {
+        let id: String
+        let userPrefix: String
+        let descriptionLength: Int
+    }
+    var preserved: [Finding] = []
+    var readErrors = 0
+    var scanned = 0
+    let startedAt = Date()
+
+    for id in doneIds {
+        let uuid = PhotoLibrary.uuidPrefix(id)
+        let desc: String
+        do {
+            desc = try PhotosScripter.readDescription(uuid: uuid)
+        } catch {
+            readErrors += 1
+            continue
+        }
+        let (userPrefix, hasPayload) = Pipeline.splitExistingDescription(desc)
+        let trimmed = userPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        if hasPayload && !trimmed.isEmpty {
+            preserved.append(Finding(
+                id: id,
+                userPrefix: trimmed,
+                descriptionLength: desc.count
+            ))
+        }
+        scanned += 1
+        if scanned % 200 == 0 {
+            let elapsed = Date().timeIntervalSince(startedAt)
+            let rate = Double(scanned) / max(elapsed, 0.001)
+            let remaining = Double(doneIds.count - scanned) / max(rate, 0.001)
+            eprint("  \(scanned)/\(doneIds.count) · preserved=\(preserved.count) · errors=\(readErrors) · ~\(Int(remaining))s left")
+        }
+    }
+
+    let elapsed = Date().timeIntervalSince(startedAt)
+    eprint("scan done in \(String(format: "%.1f", elapsed))s — \(scanned) read, \(readErrors) errors, \(preserved.count) preserved")
+    print("")
+    print("=== Assets with both user-authored text AND PhotoSnail payload ===")
+    if preserved.isEmpty {
+        print("(none — no asset in the queue has a user-authored prefix coexisting with our payload)")
+        exit(0)
+    }
+    for f in preserved.sorted(by: { $0.userPrefix.count > $1.userPrefix.count }) {
+        let short = String(PhotoLibrary.uuidPrefix(f.id))
+        // Collapse newlines to glyphs so the per-row output stays single-line
+        // readable in a terminal. The raw prefix is printed on a follow-up
+        // line for any row where newlines actually matter.
+        let hasNewlines = f.userPrefix.contains("\n")
+        let oneLine = f.userPrefix.replacingOccurrences(of: "\n", with: "⏎")
+        let trimmedPreview = oneLine.count > 120
+            ? String(oneLine.prefix(120)) + "…"
+            : oneLine
+        print(String(format: "%@  len=%d  user-prefix (%d chars): %@",
+                     short, f.descriptionLength, f.userPrefix.count, trimmedPreview))
+        if hasNewlines {
+            print("    ▸ full prefix:")
+            for line in f.userPrefix.split(separator: "\n", omittingEmptySubsequences: false) {
+                print("      \(line)")
+            }
+        }
+    }
+    exit(0)
+}
+
 // MARK: - --clean-multi
 
 /// Collapse descriptions that accumulated multiple PhotoSnail payloads
@@ -708,6 +821,10 @@ struct App {
                 dbPath: args.dbPath.map { URL(fileURLWithPath: $0) },
                 apply: args.applyWrites
             )
+            return
+        }
+        if args.scanPreserved {
+            await runScanPreserved(dbPath: args.dbPath.map { URL(fileURLWithPath: $0) })
             return
         }
 
