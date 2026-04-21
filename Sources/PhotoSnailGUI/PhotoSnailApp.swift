@@ -42,12 +42,35 @@ struct PhotoSnailApp: App {
             CommandGroup(after: .windowArrangement) {
                 OpenLogsMenuButton()
             }
+            CommandMenu("Tools") {
+                OpenToolMenuButton(mode: .scanMulti)
+                OpenToolMenuButton(mode: .cleanMulti)
+                OpenToolMenuButton(mode: .scanPreserved)
+            }
         }
 
         Window("Logs", id: "log-window") {
             LogWindow()
         }
         .defaultSize(width: 700, height: 500)
+
+        // Tools — one Window scene per tool so each gets its own keyed
+        // lifecycle. `Window(id:)` enforces singleton-per-id, matching
+        // the "open / bring-to-front if already open" menu behavior.
+        Window("Scan: Multi-segment descriptions", id: ToolMode.scanMulti.windowId) {
+            ToolWindow(mode: .scanMulti)
+        }
+        .defaultSize(width: 820, height: 600)
+
+        Window("Clean: Multi-segment descriptions", id: ToolMode.cleanMulti.windowId) {
+            ToolWindow(mode: .cleanMulti)
+        }
+        .defaultSize(width: 820, height: 600)
+
+        Window("Scan: Preserved original descriptions", id: ToolMode.scanPreserved.windowId) {
+            ToolWindow(mode: .scanPreserved)
+        }
+        .defaultSize(width: 820, height: 600)
     }
 
     private func showAbout() {
@@ -160,5 +183,19 @@ private struct OpenLogsMenuButton: View {
             openWindow(id: "log-window")
         }
         .keyboardShortcut("l", modifiers: [.command, .shift])
+    }
+}
+
+/// Menu command that opens one of the Tools windows. Same environment-
+/// access rationale as `OpenLogsMenuButton` — `openWindow` isn't
+/// reachable from a raw CommandMenu closure.
+private struct OpenToolMenuButton: View {
+    let mode: ToolMode
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button(mode.title) {
+            openWindow(id: mode.windowId)
+        }
     }
 }

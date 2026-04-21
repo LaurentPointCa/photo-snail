@@ -130,6 +130,21 @@ struct LibraryWindow: View {
                         AppCommands.shared.pendingSettingsOpen = false
                     }
                 }
+                // Reveal signal from a Tools window. The tool set pendingReveal,
+                // we respond by resetting filter to .all, dropping any search,
+                // selecting the asset, and flipping scrollOnSelectionChange so
+                // the grid centers on the cell. The `if let` double-fires-proof:
+                // the finally-nil-ing means a subsequent reveal of the same id
+                // still triggers onChange.
+                .onChange(of: ToolsRouter.shared.pendingReveal) { _, new in
+                    guard let id = new else { return }
+                    store.filter = .all
+                    store.searchText = ""
+                    store.activeTagFilters.removeAll()
+                    store.select(id)
+                    store.scrollOnSelectionChange = true
+                    ToolsRouter.shared.pendingReveal = nil
+                }
                 .sheet(isPresented: Binding(
                     get: { loc.pendingLanguageChange != nil },
                     set: { if !$0 { loc.pendingLanguageChange = nil } }
