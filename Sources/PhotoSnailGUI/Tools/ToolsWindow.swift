@@ -380,6 +380,27 @@ private func revealMenu(for id: String) -> some View {
     }
 }
 
+/// Per-row "Show in library" button. The context menu alone isn't reliable
+/// on rows that contain selectable text — AppKit shows the text field's
+/// own right-click menu instead of SwiftUI's `.contextMenu`. An explicit
+/// button keeps the verb reachable regardless of where the pointer lands.
+private struct RevealInLibraryButton: View {
+    let id: String
+
+    var body: some View {
+        Button {
+            ToolsRouter.shared.pendingReveal = id
+            ToolsRouter.shared.activateLibraryWindow()
+        } label: {
+            Label("Show in library", systemImage: "photo.on.rectangle.angled")
+                .labelStyle(.titleAndIcon)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .help("Open this asset in the PhotoSnail library window")
+    }
+}
+
 /// Results list for `scanMulti`. Tabular: uuid · sentinels · seps · len ·
 /// preview. Monospaced columns so the counts align at a glance.
 private struct MultiResultsList: View {
@@ -410,6 +431,8 @@ private struct MultiResultsList: View {
                             .font(.callout)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        RevealInLibraryButton(id: f.id)
                     }
                     .contextMenu { revealMenu(for: f.id) }
                 }
@@ -450,6 +473,7 @@ private struct PreservedResultsList: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
+                            RevealInLibraryButton(id: f.id)
                         }
                         Text(f.userPrefix)
                             .font(.system(.body, design: .default))
@@ -509,6 +533,8 @@ private struct CleanResultsList: View {
                             .font(.callout)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        RevealInLibraryButton(id: c.id)
                     }
                     .contextMenu { revealMenu(for: c.id) }
                 }

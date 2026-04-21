@@ -24,6 +24,8 @@ As of **v0.1.3**, PhotoSnail also supports a **6× faster** path via Qwen3.6-35B
 - **Explicit queue semantics.** Queue starts empty on first launch. Add photos via "Add all unprocessed to queue" or by selecting and adding. **Process now** runs a single selected photo and stops — no surprise full-library batches.
 - **Doesn't hog your Mac.** Optional "Lower LLM priority" toggle renices the active local server (Ollama, mlx-vlm, vLLM, LM Studio) while a batch runs so the browser, editor, and other apps stay responsive. Original priority restored on batch end. Optional **Auto-start when Mac is locked** runs the queue only while you're away.
 - **Live-reload settings mid-batch.** Change the provider URL, API key, model, prompt, language, or sentinel in Settings while the queue is paused (or running), and the next photo picks up the new values — no stop-and-restart required.
+- **Pause vs Stop, with intent-aware lock handling.** **Pause** is soft — *Auto-start when Mac is locked* will auto-resume on the next lock. **Stop** is hard — the watcher leaves you alone until you press Start again. No ambiguous "did I actually tell it to keep going?" states.
+- **Library inspection tools.** A built-in **Tools** menu surfaces three read-only/one-click-write diagnostics over already-processed photos: *Scan multi-segment* finds assets whose descriptions accumulated multiple PhotoSnail payloads across reprocessings; *Clean multi-segment* collapses each down to the latest payload (preserving any user prefix/suffix); *Scan preserved* lists assets where a user-authored description was kept before PhotoSnail's section. Each finding has a *Show in library* button that jumps straight to the asset.
 - **Resilient.** SQLite-backed queue survives restarts, sleep/wake, and crashes. Re-running on a processed library is a no-op.
 - **Provider preflight at startup.** GUI surfaces a blocking sheet with copy-paste fix commands when Ollama is unreachable or the configured model is missing. CLI exits 2 with the same fixes printed.
 - **Configurable endpoints.** Ollama defaults to `localhost:11434`; OpenAI-compatible defaults to the last URL you configured. Both support remote instances, HTTPS proxies, and Bearer / Basic / custom-header auth.
@@ -214,6 +216,25 @@ While processing, PhotoSnail renices the Ollama daemon to keep your other apps r
 
 The first run requests Photos and Automation permissions. The queue persists at `~/Library/Application Support/photo-snail/queue.sqlite` — you can interrupt and resume freely.
 
+### CLI — library diagnostics
+
+Read-only / dry-run-by-default tools for inspecting descriptions already written to Photos.app. The GUI exposes the same three under the **Tools** menu.
+
+```bash
+# Find processed assets whose description contains 2+ PhotoSnail payloads
+# (the accumulation bug from pre-v0.1.7 reprocessing)
+.build/release/photo-snail-app --scan-multi
+
+# Dry-run: preview what would be collapsed
+.build/release/photo-snail-app --clean-multi
+
+# Actually rewrite the cleaned descriptions via AppleScript
+.build/release/photo-snail-app --clean-multi --apply
+
+# List assets where user-authored text was preserved before PhotoSnail's section
+.build/release/photo-snail-app --scan-preserved
+```
+
 ### CLI — picking a provider, model, and endpoint
 
 ```bash
@@ -302,7 +323,7 @@ Verify yourself: the binary makes no outbound connections except to the LLM endp
 
 ## Project status
 
-Phases A–O complete (current release: **v0.1.5**):
+Phases A–Q complete (current release: **v0.1.7**):
 
 - A. Project plan
 - B. Hybrid pipeline scaffold
@@ -319,6 +340,8 @@ Phases A–O complete (current release: **v0.1.5**):
 - M. (v0.1.3) OpenAI-compatible provider path (Qwen3.6-35B via mlx-vlm), per-model-family configs (`modelConfigs` keyed by short family), short-family sentinels that strip org/quant/size suffixes, Qwen-tuned v20 default prompt (20-iteration research batch documented in `sample/MODEL_COMPARISON.md` + `sample/PROMPT_RESEARCH.md`), JSON-aware CaptionParser, lock-watcher auto-resume fix.
 - N. (v0.1.4) Inspector polish + zoomable preview — hero-photo capping, Grid-based Identity/Processing sections, 2-column Vision classifications with inline percentages, smaller tag pills, inline per-photo timing, pinch/drag/double-click zoom, double-click opens preview, sidebar Failed tint.
 - O. (v0.1.5) Live-reload settings during a run, generalized LLM priority management (mlx-vlm / vLLM / LM Studio coverage), pause-state enum, Settings save-ordering fix, worker branch dedup via `performWriteBack` + `recordCompletion`, new `PhotoSnailPhotos` shared target, unified `makeLLMClient` factory, provider-agnostic error taxonomy, `(status, priority DESC)` index (v4 schema), Swift 6 Sendable cleanup (warning-free build).
+- P. (v0.1.6) Window-wide LLM status bar (provider pill + live tail of API activity with in-flight elapsed timer), update notifier polling GitHub Releases on a 24h cadence with in-app Markdown-rendered release notes, About panel + `CFBundleShortVersionString` derived from `git describe`.
+- Q. (v0.1.7) Library inspection Tools menu (Scan multi-segment / Clean multi-segment / Scan preserved) with per-row *Show in library* routing; Pause vs Stop split (soft pause yields to lock auto-resume, hard stop opts out entirely); user-prefix preservation across reprocess via segment-based rewrite; broadened sentinel regex (`ai:[A-Za-z0-9._-]+-v[0-9]+`) covers custom underscore/dot/uppercase families set in the GUI; provider-aware preflight copy for OpenAI-compatible servers; About build-stamp restored as a tertiary line; status-bar tail refreshes after a successful preflight retry. New CLI diagnostics: `--scan-multi`, `--clean-multi` (+ `--apply`), `--scan-preserved`.
 
 The CLI and GUI are in production use against the author's full library. See [`TODO.md`](TODO.md) for the phased plan and the parked items under "Potential future improvements".
 

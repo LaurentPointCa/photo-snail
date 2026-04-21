@@ -23,8 +23,8 @@ xcuserdata/
 .idea/
 .vscode/
 
-# Claude Code local settings (local permission allowlist, not for sharing)
-.claude/settings.local.json
+# Claude Code local settings and scheduler state (not for sharing)
+.claude/
 
 # Sample images — keep the folder, ignore the contents. The research/benchmark
 # markdown docs are explicitly checked in alongside the empty folder; the
